@@ -1,0 +1,12 @@
+{
+  "name": "uidesired",
+  "private": true,
+  "packageManager": "pnpm@11.22.0",
+  "scripts": {
+    "dev:dashboard": "pnpm --filter dashboard dev",
+    "dev:renderer": "pnpm --filter renderer dev",
+    "build": "pnpm --filter dashboard build && pnpm --filter renderer build",
+    "blocks:catalog": "pnpm --filter @uidesired/blocks catalog",
+    "test": "pnpm --filter dashboard test && pnpm --filter renderer test"
+  }
+}

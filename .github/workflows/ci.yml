@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  api:
+    name: Laravel tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: mbstring, pdo, sqlite, pcntl, posix, gd, zip, redis
+          coverage: none
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          mkdir -p database
+          touch database/database.sqlite
+      - name: Run tests
+        env:
+          CACHE_STORE: array
+        run: php artisan test
+
+  dashboard:
+    name: Dashboard Vitest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: pnpm install --no-frozen-lockfile
+      - name: Dashboard tests
+        run: pnpm --filter dashboard test
+      - name: Dashboard typecheck
+        continue-on-error: true
+        run: pnpm --filter dashboard exec tsc -b --pretty false
+
+  renderer:
+    name: Renderer tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: pnpm install --no-frozen-lockfile
+      - name: Renderer typecheck
+        run: pnpm --filter renderer typecheck
+      - name: Renderer unit tests
+        run: pnpm --filter renderer test
+      - name: Install Playwright Chromium
+        run: pnpm --filter renderer exec playwright install --with-deps chromium
+      - name: Renderer Playwright
+        run: pnpm --filter renderer test:e2e

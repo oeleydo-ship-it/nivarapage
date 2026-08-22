@@ -1,0 +1,17 @@
+**/node_modules
+**/vendor
+**/.next
+**/dist
+**/.git
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.docker.example
+**/storage/logs
+**/storage/framework/cache/data
+**/coverage
+**/playwright-report
+**/test-results
+**/*.md
+!docs/**
+!.github/**

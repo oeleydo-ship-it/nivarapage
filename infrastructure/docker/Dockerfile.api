@@ -1,0 +1,35 @@
+FROM php:8.4-cli-bookworm
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        git \
+        curl \
+        unzip \
+        libpng-dev \
+        libjpeg62-turbo-dev \
+        libfreetype6-dev \
+        libzip-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) pcntl posix pdo_mysql gd zip \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+COPY infrastructure/docker/php.ini /usr/local/etc/php/conf.d/uidesired.ini
+COPY infrastructure/docker/api-entrypoint.sh /usr/local/bin/api-entrypoint.sh
+RUN chmod +x /usr/local/bin/api-entrypoint.sh \
+    && sed -i 's/\r$//' /usr/local/bin/api-entrypoint.sh
+
+WORKDIR /var/www/html
+
+COPY apps/api /var/www/html
+RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader \
+    && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+
+ENV RUN_MIGRATIONS=false
+EXPOSE 8000
+
+ENTRYPOINT ["api-entrypoint.sh"]
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]

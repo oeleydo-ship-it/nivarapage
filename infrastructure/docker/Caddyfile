@@ -1,0 +1,18 @@
+http://api.localhost {
+	reverse_proxy laravel-api:8000
+}
+
+http://app.localhost {
+	reverse_proxy react-dashboard:5173 {
+		header_up Host {host}
+		header_up X-Forwarded-Host {host}
+	}
+}
+
+http://preview.localhost, http://fallback.sites.localhost, http://*.sites.localhost, http://sites.localhost {
+	reverse_proxy next-renderer:3000 {
+		header_up Host {host}
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+}

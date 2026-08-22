@@ -1,0 +1,420 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --ui-bg: #09090b;
+  --ui-fg: #e4e4e7;
+  --ui-strong: #ffffff;
+}
+
+/*
+ * Light theme.
+ *
+ * Tailwind v4 compiles `bg-zinc-800` to `background-color: var(--color-zinc-800)`,
+ * so flipping the ramp here re-themes every surface, border and text colour in the
+ * app at once instead of adding a `dark:` variant to ~950 utility classes.
+ */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --ui-bg: #f2f4f8;
+  --ui-fg: #1f2430;
+  --ui-strong: #0b0d12;
+
+  /* Surfaces, from the page canvas up to hovered rows. */
+  --color-zinc-950: #f2f4f8;
+  --color-zinc-900: #ffffff;
+  --color-zinc-800: #d5dbe4;
+  --color-zinc-700: #bfc6d2;
+  --color-zinc-600: #98a0ad;
+  /* Text, from muted captions down to the strongest headings. */
+  --color-zinc-500: #5f6673;
+  --color-zinc-400: #4a5160;
+  --color-zinc-300: #333a47;
+  --color-zinc-200: #1f2430;
+  --color-zinc-100: #141821;
+  --color-zinc-50: #0b0d12;
+
+  /*
+   * Accents are written as `text-*-400` on dark surfaces and `bg-*-950/40` for
+   * tinted panels, so those two ends of each ramp swap roles in light mode:
+   * the light steps become readable ink, the dark steps become soft tints.
+   */
+  --color-blue-200: #1e3a8a;
+  --color-blue-300: #1d4ed8;
+  --color-blue-400: #1d4ed8;
+  --color-blue-800: #bfdbfe;
+  --color-blue-900: #bfdbfe;
+  --color-blue-950: #eff6ff;
+  --color-emerald-200: #064e3b;
+  --color-emerald-300: #047857;
+  --color-emerald-400: #047857;
+  --color-emerald-800: #a7f3d0;
+  --color-emerald-900: #a7f3d0;
+  --color-emerald-950: #ecfdf5;
+  --color-green-300: #15803d;
+  --color-green-400: #15803d;
+  --color-green-900: #bbf7d0;
+  --color-green-950: #f0fdf4;
+  --color-red-200: #7f1d1d;
+  --color-red-300: #b91c1c;
+  --color-red-400: #b91c1c;
+  --color-red-800: #fecaca;
+  --color-red-900: #fecaca;
+  --color-red-950: #fef2f2;
+  --color-rose-300: #be123c;
+  --color-rose-400: #be123c;
+  --color-rose-900: #fecdd3;
+  --color-rose-950: #fff1f2;
+  --color-amber-200: #78350f;
+  --color-amber-300: #b45309;
+  --color-amber-400: #b45309;
+  --color-amber-800: #fde68a;
+  --color-amber-900: #fde68a;
+  --color-amber-950: #fffbeb;
+  --color-orange-300: #c2410c;
+  --color-orange-400: #c2410c;
+  --color-orange-900: #fed7aa;
+  --color-orange-950: #fff7ed;
+  --color-violet-300: #6d28d9;
+  --color-violet-400: #6d28d9;
+  --color-violet-900: #ddd6fe;
+  --color-violet-950: #f5f3ff;
+  --color-indigo-300: #4338ca;
+  --color-indigo-400: #4338ca;
+  --color-indigo-900: #c7d2fe;
+  --color-indigo-950: #eef2ff;
+  --color-sky-300: #0369a1;
+  --color-sky-400: #0369a1;
+  --color-sky-900: #bae6fd;
+  --color-sky-950: #f0f9ff;
+  --color-teal-300: #0f766e;
+  --color-teal-400: #0f766e;
+  --color-cyan-300: #0e7490;
+  --color-cyan-400: #0e7490;
+  --color-pink-300: #be185d;
+  --color-pink-400: #be185d;
+  --color-purple-300: #7e22ce;
+  --color-purple-400: #7e22ce;
+  --color-yellow-300: #a16207;
+  --color-yellow-400: #a16207;
+}
+
+/*
+ * Surfaces that are deliberately white in both themes — the AI panel, block
+ * previews, the site canvas — keep the standard ramp so their dark-on-white text
+ * stays dark instead of inverting into the background.
+ */
+:root[data-theme='light'] .bg-white {
+  --color-zinc-950: #09090b;
+  --color-zinc-900: #18181b;
+  --color-zinc-800: #27272a;
+  --color-zinc-700: #3f3f46;
+  --color-zinc-600: #52525b;
+  --color-zinc-500: #71717a;
+  --color-zinc-400: #a1a1aa;
+  --color-zinc-300: #d4d4d8;
+  --color-zinc-200: #e4e4e7;
+  --color-zinc-100: #f4f4f5;
+  --color-zinc-50: #fafafa;
+}
+
+/*
+ * Dark-by-design surfaces (preview chrome, image scrims) keep the standard ramp
+ * too, so the muted text drawn on them stays light instead of turning to ink.
+ */
+:root[data-theme='light'] [class*='bg-black/'] {
+  --color-zinc-950: #09090b;
+  --color-zinc-900: #18181b;
+  --color-zinc-800: #27272a;
+  --color-zinc-700: #3f3f46;
+  --color-zinc-600: #52525b;
+  --color-zinc-500: #a1a1aa;
+  --color-zinc-400: #d4d4d8;
+  --color-zinc-300: #e4e4e7;
+  --color-zinc-200: #f4f4f5;
+  --color-zinc-100: #fafafa;
+  --color-zinc-50: #ffffff;
+}
+
+/*
+ * Over a light page a 40% black scrim lands on mid-grey, which the light text it
+ * carries cannot beat. Deepen the scrim instead of re-colouring the text, since
+ * these sit on top of site thumbnails whose colours are unknown.
+ */
+:root[data-theme='light'] [class*='bg-black/'] {
+  background-color: color-mix(in srgb, #000000 62%, transparent);
+}
+
+/* `text-white` is the app's "strongest text" colour, so it inverts with the theme… */
+:root[data-theme='light'] [class~='text-white'] {
+  color: var(--ui-strong);
+}
+
+:root[data-theme='light'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class~='focus:text-white']:focus,
+:root[data-theme='light'] .group:hover [class~='group-hover:text-white'] {
+  color: var(--ui-strong);
+}
+
+/* …except on a saturated or dark surface, where white is the readable choice. */
+:root[data-theme='light'] [class*='bg-blue-5'] [class~='text-white'],
+:root[data-theme='light'] [class*='bg-blue-5'][class~='text-white'],
+:root[data-theme='light'] [class*='bg-blue-5'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-blue-5'][class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-blue-6'] [class~='text-white'],
+:root[data-theme='light'] [class*='bg-blue-6'][class~='text-white'],
+:root[data-theme='light'] [class*='bg-blue-6'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-blue-6'][class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-blue-7'] [class~='text-white'],
+:root[data-theme='light'] [class*='bg-blue-7'][class~='text-white'],
+:root[data-theme='light'] [class*='bg-blue-7'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-blue-7'][class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-emerald-5'] [class~='text-white'],
+:root[data-theme='light'] [class*='bg-emerald-5'][class~='text-white'],
+:root[data-theme='light'] [class*='bg-emerald-5'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-emerald-5'][class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-emerald-6'] [class~='text-white'],
+:root[data-theme='light'] [class*='bg-emerald-6'][class~='text-white'],
+:root[data-theme='light'] [class*='bg-emerald-6'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-emerald-6'][class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-green-6'] [class~='text-white'],
+:root[data-theme='light'] [class*='bg-green-6'][class~='text-white'],
+:root[data-theme='light'] [class*='bg-green-6'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-green-6'][class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-red-5'] [class~='text-white'],
+:root[data-theme='light'] [class*='bg-red-5'][class~='text-white'],
+:root[data-theme='light'] [class*='bg-red-5'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-red-5'][class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-red-6'] [class~='text-white'],
+:root[data-theme='light'] [class*='bg-red-6'][class~='text-white'],
+:root[data-theme='light'] [class*='bg-red-6'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-red-6'][class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-rose-6'] [class~='text-white'],
+:root[data-theme='light'] [class*='bg-rose-6'][class~='text-white'],
+:root[data-theme='light'] [class*='bg-rose-6'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-rose-6'][class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-amber-5'] [class~='text-white'],
+:root[data-theme='light'] [class*='bg-amber-5'][class~='text-white'],
+:root[data-theme='light'] [class*='bg-amber-5'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-amber-5'][class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-amber-6'] [class~='text-white'],
+:root[data-theme='light'] [class*='bg-amber-6'][class~='text-white'],
+:root[data-theme='light'] [class*='bg-amber-6'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-amber-6'][class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-violet-6'] [class~='text-white'],
+:root[data-theme='light'] [class*='bg-violet-6'][class~='text-white'],
+:root[data-theme='light'] [class*='bg-violet-6'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-violet-6'][class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-indigo-6'] [class~='text-white'],
+:root[data-theme='light'] [class*='bg-indigo-6'][class~='text-white'],
+:root[data-theme='light'] [class*='bg-indigo-6'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-indigo-6'][class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-sky-6'] [class~='text-white'],
+:root[data-theme='light'] [class*='bg-sky-6'][class~='text-white'],
+:root[data-theme='light'] [class*='bg-sky-6'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-sky-6'][class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-black'] [class~='text-white'],
+:root[data-theme='light'] [class*='bg-black'][class~='text-white'],
+:root[data-theme='light'] [class*='bg-black'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-black'][class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-gradient'] [class~='text-white'],
+:root[data-theme='light'] [class*='bg-gradient'][class~='text-white'],
+:root[data-theme='light'] [class*='bg-gradient'] [class~='hover:text-white']:hover,
+:root[data-theme='light'] [class*='bg-gradient'][class~='hover:text-white']:hover {
+  color: #ffffff;
+}
+
+/* Hairlines and rings drawn in white read as nothing on a light page. */
+:root[data-theme='light'] [class*='border-white/'] {
+  border-color: color-mix(in srgb, #0b0d12 12%, transparent);
+}
+
+:root[data-theme='light'] [class*='ring-white/'] {
+  --tw-ring-color: color-mix(in srgb, #0b0d12 18%, transparent);
+}
+
+/*
+ * The sign-in screens are dark by design in both themes, so they opt out of the
+ * light-theme swap entirely: the standard ramp is restored inside `.auth-shell`
+ * and the `text-white` / `border-white` inversions above are undone. Without
+ * this the glass card renders as dark ink on a pale panel.
+ */
+:root[data-theme='light'] .auth-shell {
+  color-scheme: dark;
+  --color-zinc-950: #09090b;
+  --color-zinc-900: #18181b;
+  --color-zinc-800: #27272a;
+  --color-zinc-700: #3f3f46;
+  --color-zinc-600: #52525b;
+  --color-zinc-500: #a1a1aa;
+  --color-zinc-400: #d4d4d8;
+  --color-zinc-300: #e4e4e7;
+  --color-zinc-200: #f4f4f5;
+  --color-zinc-100: #fafafa;
+  --color-zinc-50: #ffffff;
+  --color-teal-300: #5eead4;
+  --color-teal-400: #2dd4bf;
+}
+
+:root[data-theme='light'] .auth-shell [class~='text-white'],
+:root[data-theme='light'] .auth-shell [class~='hover:text-white']:hover {
+  color: #ffffff;
+}
+
+:root[data-theme='light'] .auth-shell [class*='border-white/'] {
+  border-color: color-mix(in srgb, #ffffff 12%, transparent);
+}
+
+:root[data-theme='light'] .auth-shell [class*='ring-white/'] {
+  --tw-ring-color: color-mix(in srgb, #ffffff 20%, transparent);
+}
+
+/* Belt and braces: the blanket `aside` rule below must not reach this subtree. */
+:root[data-theme='light'] .auth-shell aside {
+  background: transparent;
+  border-color: transparent;
+}
+
+/* The sidebar shares the page background in dark mode; light mode needs an edge. */
+/* The sidebar sits a step darker than the canvas so the two panes read apart. */
+:root[data-theme='light'] aside {
+  background: #e3e7ee;
+  border-color: #ccd3de;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  background: var(--ui-bg);
+  color: var(--ui-fg);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.template-live-preview .ud-anim,
+.template-live-preview .ud-anim[data-ud-anim='scroll'] {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.rich-text-editor .tiptap {
+  padding: 12px 14px;
+  outline: none;
+}
+
+.rich-text-editor .tiptap p.is-editor-empty:first-child::before {
+  color: #71717a;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.rich-text-editor .tiptap h1 {
+  font-size: 1.75rem;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+
+.rich-text-editor .tiptap h2 {
+  font-size: 1.35rem;
+  font-weight: 650;
+}
+
+.rich-text-editor .tiptap h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.rich-text-editor .tiptap ul,
+.rich-text-editor .tiptap ol {
+  padding-left: 1.3em;
+}
+
+.rich-text-editor .tiptap blockquote {
+  border-left: 3px solid #3b82f6;
+  color: #a1a1aa;
+  margin: 0;
+  padding-left: 0.9em;
+}
+
+.rich-text-editor .tiptap img {
+  border-radius: 8px;
+  height: auto;
+  max-width: 100%;
+}
+
+.rich-text-editor .tiptap pre {
+  background: #18181b;
+  border-radius: 8px;
+  overflow-x: auto;
+  padding: 12px;
+}
+
+.rich-text-editor .tiptap code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.rich-text-editor .tiptap hr {
+  border: 0;
+  border-top: 1px solid #3f3f46;
+  margin: 1.2em 0;
+}
+
+.rich-text-editor .tiptap table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.rich-text-editor .tiptap th,
+.rich-text-editor .tiptap td {
+  border: 1px solid #3f3f46;
+  padding: 6px 8px;
+  vertical-align: top;
+}
+
+.rich-text-editor .tiptap a {
+  color: #60a5fa;
+  text-decoration: underline;
+}
+
+.canvas-theme {
+  /*
+   * The canvas is its own stacking context. Block stylesheets legitimately use
+   * z-index up to 80 for sticky navbars and submenus; without this they resolve
+   * against the root context and paint over the editor's own chrome — the page
+   * menu (z-50) disappeared behind a template's sticky header. Isolating here
+   * caps every block z-index inside the canvas and cannot affect the published
+   * page, which never renders this wrapper.
+   */
+  isolation: isolate;
+  --color-primary: #2563eb;
+  --color-secondary: #0f172a;
+  --color-accent: #f59e0b;
+  --color-background: #ffffff;
+  --color-surface: #f8fafc;
+  --color-text: #0f172a;
+  --color-muted: #64748b;
+  --font-heading: Inter, system-ui, sans-serif;
+  --font-body: Inter, system-ui, sans-serif;
+  --radius-button: 8px;
+  --radius-card: 12px;
+  --container-width: 1120px;
+  --section-spacing: 80px;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
