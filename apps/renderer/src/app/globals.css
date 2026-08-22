@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+:root {
+  --color-primary: #111827;
+  --color-secondary: #4b5563;
+  --color-accent: #2563eb;
+  --color-background: #ffffff;
+  --color-surface: #f8fafc;
+  --color-text: #0f172a;
+  --color-muted: #64748b;
+  --font-heading: Inter, system-ui, sans-serif;
+  --font-body: Inter, system-ui, sans-serif;
+  --font-heading-weight: 700;
+  --font-body-weight: 400;
+  --radius-button: 8px;
+  --radius-card: 12px;
+  --container-width: 1120px;
+  --section-spacing: 80px;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-weight: var(--font-body-weight);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+}
