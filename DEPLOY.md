@@ -106,6 +106,52 @@ https://preview.sites.example.com, https://fallback.sites.example.com, https://*
 
 Also update the `reverse-proxy` network aliases in `docker-compose.prod.yml` to match those hostnames if you rely on Compose DNS aliases.
 
+### 1.2b Uplary Cloud Custom Docker
+
+If the host is already an Uplary Cloud Docker server (Traefik on 80/443), do **not** start this repo’s Caddy on those ports. Build the single Custom Docker image and pull it from Uplary:
+
+```bash
+docker build -f infrastructure/docker/Dockerfile.uplary -t YOUR_DOCKERHUB_USER/uidesired:uplary .
+docker push YOUR_DOCKERHUB_USER/uidesired:uplary
+```
+
+In Uplary: **Applications → Custom Docker**, image `YOUR_DOCKERHUB_USER/uidesired`, tag `uplary`, **port 8080**, and a **persistent volume mounted at `/data`**. Start from `infrastructure/docker/uplary-custom-docker.env.example`. Details: [docs/deployment-uplary.md](docs/deployment-uplary.md). Updates: [docs/update-uplary-custom-docker.md](docs/update-uplary-custom-docker.md).
+
+#### Where the database comes from
+
+The image bundles MariaDB, so it can run with no external database at all. `DB_EMBEDDED` picks which one is used:
+
+| `DB_EMBEDDED` | Behaviour |
+| --- | --- |
+| `true` | Always use the bundled MariaDB. Data goes to `/data/mysql`. Nothing external required. |
+| `auto` (image default) | Try `DB_HOST` first, fall back to the bundled MariaDB if nothing answers within `DB_WAIT_SECONDS`. Once the bundled database holds data it keeps being used. |
+| `false` | External only. The container serves the dashboard and health check while it waits, and restarts itself once the database answers. |
+
+On every boot the entrypoint creates the database and application account if they are missing, runs `php artisan migrate --force`, and seeds plans, templates and the super admin. All of it is idempotent, so redeploys are safe.
+
+**Standalone (no external database)** — set `DB_EMBEDDED=true` and leave `DB_PASSWORD` blank; a password is generated on first boot and kept at `/data/db-password`.
+
+**Uplary-provisioned MariaDB** — set `DB_EMBEDDED=false`, `DB_HOST=db` and a real `DB_PASSWORD`, and let Uplary add the sidecar. The entrypoint issues `CREATE DATABASE IF NOT EXISTS` when the server is up but the schema has not been created, and probes the usual renamed hostnames (`{slug}-db`, `mariadb`, `mysql`) when the panel rewrites `DB_HOST` without telling you.
+
+> **`/data` must be a persistent volume.** The database, uploads, `APP_KEY`, the Reverb secret and the generated database password all live there. Without it, every redeploy comes up as a brand new install.
+
+#### Minimum variables to change
+
+Everything else in the example file has a working default:
+
+```bash
+APP_URL=https://app.example.com
+FRONTEND_URL=https://app.example.com
+SANCTUM_STATEFUL_DOMAINS=app.example.com   # login fails without this
+SESSION_SECURE_COOKIE=true
+PLATFORM_DOMAIN=sites.example.com          # must match the *.sites DNS record
+REVERB_HOST=app.example.com
+INTERNAL_RENDERER_SECRET=<long random string>
+SUPER_ADMIN_EMAIL=you@example.com          # image default is a public one
+SUPER_ADMIN_PASSWORD=<strong password>
+DB_EMBEDDED=true                           # or false with a real DB_PASSWORD
+```
+
 ### 1.3 Build and start
 
 ```bash

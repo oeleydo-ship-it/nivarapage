@@ -12,18 +12,22 @@ wait_for_mysql() {
 
   echo "Waiting for MySQL at ${host}:${port}..."
   i=0
-  until php -r "
+  # Credentials go through the environment, never through string interpolation:
+  # a password containing a quote or a backslash would otherwise produce invalid
+  # PHP and make a perfectly reachable database look permanently unreachable.
+  until PROBE_HOST="$host" PROBE_PORT="$port" PROBE_DB="$database" \
+        PROBE_USER="$user" PROBE_PASS="$password" php -r '
     try {
       new PDO(
-        'mysql:host=${host};port=${port};dbname=${database}',
-        '${user}',
-        '${password}'
+        sprintf("mysql:host=%s;port=%s;dbname=%s", getenv("PROBE_HOST"), getenv("PROBE_PORT"), getenv("PROBE_DB")),
+        getenv("PROBE_USER"),
+        getenv("PROBE_PASS")
       );
-    } catch (Throwable \$e) {
-      fwrite(STDERR, \$e->getMessage());
+    } catch (Throwable $e) {
+      fwrite(STDERR, $e->getMessage().PHP_EOL);
       exit(1);
     }
-  "; do
+  '; do
     i=$((i + 1))
     if [ "$i" -gt 60 ]; then
       echo "MySQL was not ready in time."
@@ -51,7 +55,14 @@ fi
 
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
   php artisan migrate --force
-  if [ "${SEED_DEMO}" = "true" ]; then
+  if [ "${SEED_TEMPLATES:-true}" = "true" ]; then
+    php artisan db:seed --class=PlanSeeder --force
+    php artisan db:seed --class=TemplateSeeder --force
+  fi
+  if [ "${SEED_SUPER_ADMIN:-true}" = "true" ]; then
+    php artisan db:seed --class=SuperAdminSeeder --force
+  fi
+  if [ "${SEED_DEMO:-false}" = "true" ]; then
     php artisan db:seed --force
   fi
 fi

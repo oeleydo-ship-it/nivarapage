@@ -3,9 +3,28 @@ http://api.localhost {
 }
 
 http://app.localhost {
-	reverse_proxy react-dashboard:5173 {
-		header_up Host {host}
-		header_up X-Forwarded-Host {host}
+	# The dashboard bundle calls the API on its own origin (VITE_API_URL
+	# defaults to /api/v1), so the proxy has to route those paths itself.
+	# Without this the static production build 404s on every request.
+	@backend path /api* /sanctum* /storage* /broadcasting*
+	handle @backend {
+		reverse_proxy laravel-api:8000 {
+			header_up Host {host}
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	# Reverb serves websockets under /app/{key}.
+	handle /app/* {
+		reverse_proxy laravel-reverb:8080
+	}
+
+	handle {
+		reverse_proxy react-dashboard:5173 {
+			header_up Host {host}
+			header_up X-Forwarded-Host {host}
+		}
 	}
 }
 

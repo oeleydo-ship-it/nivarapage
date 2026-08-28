@@ -20,12 +20,18 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 COPY infrastructure/docker/php.ini /usr/local/etc/php/conf.d/uidesired.ini
 COPY infrastructure/docker/api-entrypoint.sh /usr/local/bin/api-entrypoint.sh
 RUN chmod +x /usr/local/bin/api-entrypoint.sh \
-    && sed -i 's/\r$//' /usr/local/bin/api-entrypoint.sh
+    && sed -i 's/\r$//' /usr/local/bin/api-entrypoint.sh \
+        /usr/local/etc/php/conf.d/uidesired.ini
 
 WORKDIR /var/www/html
 
 COPY apps/api /var/www/html
-RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader \
+# The build context prunes local storage state, so the tree can be missing
+# directories Laravel expects to exist before anything writes to them.
+RUN mkdir -p storage/app/public storage/framework/cache/data \
+        storage/framework/sessions storage/framework/views storage/logs \
+        bootstrap/cache \
+    && composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader \
     && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 ENV RUN_MIGRATIONS=false
