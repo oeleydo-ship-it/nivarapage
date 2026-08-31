@@ -22,6 +22,18 @@ class CloudflareClient
             ]]];
         }
 
+        // With no token the Authorization header goes out as a bare "Bearer ",
+        // and Cloudflare replies "Missing X-Auth-Key, X-Auth-Email or
+        // Authorization headers" - which reads like the client is sending the
+        // wrong kind of credentials rather than none. The common way to arrive
+        // here is a token that was stored under a previous APP_KEY and can no
+        // longer be decrypted, so it is worth naming.
+        if (blank(config('services.cloudflare.api_token'))) {
+            return ['success' => false, 'errors' => [[
+                'message' => 'Cloudflare API token is not configured on this deployment. Enter it in Admin → Domain HTTPS. If a token is already stored there, it was encrypted with a different APP_KEY and has to be entered again.',
+            ]]];
+        }
+
         $client = $this->http ?? new Client([
             'base_uri' => 'https://api.cloudflare.com/client/v4/',
             'headers' => [
