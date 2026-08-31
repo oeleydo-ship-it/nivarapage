@@ -329,11 +329,34 @@ export interface PlanLimits {
   pages_per_site?: number
   form_submissions?: number
   team_members?: number
+  blog_posts?: number
+  clients?: number
+  funnels?: number
+  ai_generations?: number
   premium_templates?: boolean
   revision_history?: number
   remove_branding?: boolean
   [key: string]: number | boolean | undefined
 }
+
+/**
+ * One limit as the API describes it. The admin screen renders whatever the
+ * server sends rather than a list compiled into the bundle, so a limit added
+ * on the server shows up without shipping a new front end.
+ *
+ * A `quota` is an integer where -1 is unlimited and 0 excludes the feature; a
+ * `flag` is a plain boolean entitlement.
+ */
+export interface PlanLimitDefinition {
+  type: 'quota' | 'flag'
+  label: string
+  group: string
+  default: number | boolean
+  unit: string | null
+  help: string
+}
+
+export type PlanLimitSchema = Record<string, PlanLimitDefinition>
 
 export interface Plan {
   id: number

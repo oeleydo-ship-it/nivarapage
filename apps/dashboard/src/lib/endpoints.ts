@@ -17,6 +17,7 @@ import type {
   PageContent,
   PageSection,
   Plan,
+  PlanLimitSchema,
   Site,
   SiteForm,
   SiteSettings,
@@ -485,7 +486,19 @@ export const adminApi = {
     is_featured?: boolean
   }) => http.post<{ preset: BlockPreset; report?: { sections?: string[] } }>('/admin/ai/generate-block', body),
   plans: () => http.get<Plan[]>('/admin/plans'),
+  /**
+   * Plans together with the limit schema the server sent alongside them, so
+   * the editor renders the limits this deployment actually knows about.
+   */
+  plansWithSchema: async (): Promise<{ plans: Plan[]; schema: PlanLimitSchema }> => {
+    const res = await apiPaginated<Plan>('/admin/plans')
+    const meta = res.meta as { limit_schema?: PlanLimitSchema } | undefined
+
+    return { plans: res.data, schema: meta?.limit_schema ?? {} }
+  },
+  createPlan: (body: Record<string, unknown>) => http.post<Plan>('/admin/plans', body),
   updatePlan: (id: number, body: Record<string, unknown>) => http.patch<Plan>(`/admin/plans/${id}`, body),
+  deletePlan: (id: number) => http.delete<{ deleted: boolean }>(`/admin/plans/${id}`),
   subscriptions: (params?: { page?: number; q?: string }) =>
     apiPaginated<AdminSubscription>(`/admin/subscriptions${queryString({ ...params })}`),
   storage: (params?: { page?: number; q?: string }) =>
