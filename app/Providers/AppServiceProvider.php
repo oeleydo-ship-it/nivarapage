@@ -39,6 +39,7 @@ use App\Services\Storage\StorageSettingsService;
 use App\Support\CurrentWorkspace;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
@@ -321,9 +322,20 @@ class AppServiceProvider extends ServiceProvider
             $this->app->make(CloudflareSettingsService::class)->apply();
             $this->registerMediaDisk();
             $this->app->make(MailSettingsService::class)->apply();
-        } catch (\Throwable) {
-            // Table may not exist yet during migrate, or the database is down.
-            $this->rememberDatabaseUnavailable();
+        } catch (\Throwable $e) {
+            // Only a database that is genuinely unreachable should arm the flag:
+            // it suppresses these settings for every request until the TTL
+            // expires, so arming it for an unrelated failure blanks the
+            // Cloudflare and mail configuration long after the thing that
+            // actually broke. Anything else is reported rather than swallowed,
+            // so it reaches the log instead of resurfacing as a downstream
+            // error that points nowhere near the cause.
+            if ($e instanceof QueryException || $e instanceof \PDOException) {
+                // Table may not exist yet during migrate, or the database is down.
+                $this->rememberDatabaseUnavailable();
+            } else {
+                report($e);
+            }
         }
 
         $this->refreshCloudflareSettingsPerJob();

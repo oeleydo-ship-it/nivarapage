@@ -11,6 +11,17 @@ class CloudflareClient
 
     public function request(string $method, string $uri, array $options = []): array
     {
+        // Every zone endpoint is built as 'zones/'.$zoneId.'/…', so an
+        // unconfigured zone produces 'zones//…'. Cloudflare answers that with
+        // "Could not route to /client/v4/zones/custom_hostnames, perhaps your
+        // object identifier is invalid?", which sends operators hunting for a
+        // permissions problem that does not exist. Say what is actually wrong.
+        if (str_contains($uri, 'zones//')) {
+            return ['success' => false, 'errors' => [[
+                'message' => 'Cloudflare zone ID is not configured on this deployment. Set it in Admin → Domain HTTPS, and check that the stored API token can still be read.',
+            ]]];
+        }
+
         $client = $this->http ?? new Client([
             'base_uri' => 'https://api.cloudflare.com/client/v4/',
             'headers' => [

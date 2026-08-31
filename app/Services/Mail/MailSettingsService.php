@@ -3,6 +3,7 @@
 namespace App\Services\Mail;
 
 use App\Models\MailSetting;
+use App\Support\EncryptedSettings;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -88,11 +89,11 @@ class MailSettingsService
             'port' => (int) ($row->port ?: $this->env('port') ?: 587),
             'encryption' => $encryption,
             'username' => $this->first($row->username, $this->env('username')),
-            'password' => $this->first($row->password, $envPassword),
+            'password' => $this->first(EncryptedSettings::read($row, 'password'), $envPassword),
             'from_address' => $this->first($row->from_address, $this->env('from_address')),
             'from_name' => $this->first($row->from_name, $this->env('from_name')),
             'timeout' => (int) ($row->timeout ?: 10),
-            'password_source' => filled($row->password) ? 'database' : (filled($envPassword) ? 'env' : 'none'),
+            'password_source' => filled(EncryptedSettings::read($row, 'password')) ? 'database' : (filled($envPassword) ? 'env' : 'none'),
         ];
     }
 

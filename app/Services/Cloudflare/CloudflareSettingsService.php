@@ -3,6 +3,7 @@
 namespace App\Services\Cloudflare;
 
 use App\Models\CloudflareSetting;
+use App\Support\EncryptedSettings;
 use App\Services\Domains\ApexAddressResolver;
 use Illuminate\Support\Facades\Config;
 
@@ -84,8 +85,11 @@ class CloudflareSettingsService
     {
         $row = $this->settings();
 
-        $token = $this->resolve($row->api_token, $this->env('api_token'));
-        $webhook = $this->resolve($row->webhook_secret, $this->env('webhook_secret'));
+        // Read through EncryptedSettings: an APP_KEY that no longer opens the
+        // stored token must not stop the zone id and fallback origin beside it
+        // from being applied.
+        $token = $this->resolve(EncryptedSettings::read($row, 'api_token'), $this->env('api_token'));
+        $webhook = $this->resolve(EncryptedSettings::read($row, 'webhook_secret'), $this->env('webhook_secret'));
         $zone = $this->resolve($row->zone_id, $this->env('zone_id'));
         $account = $this->resolve($row->account_id, $this->env('account_id'));
         $fallback = $this->resolve($row->fallback_origin, $this->env('fallback_origin'));
@@ -191,6 +195,10 @@ class CloudflareSettingsService
             'configured' => $this->usable(),
             'provider' => (string) config('uidesired.domain_provider', 'cloudflare'),
             'live' => $this->usable() && config('uidesired.domain_provider') !== 'fake',
+
+            // Distinguishes "nobody entered a token" from "a token is stored
+            // but this APP_KEY cannot open it" - same empty value, different fix.
+            'api_token_unreadable' => EncryptedSettings::unreadable($row, 'api_token'),
 
             'api_token_configured' => filled($config['api_token']),
             'api_token_source' => $config['api_token_source'],
