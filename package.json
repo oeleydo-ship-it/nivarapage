@@ -8,7 +8,7 @@
     "dev": "concurrently -k -n dashboard,site \"pnpm dev:dashboard\" \"pnpm dev:site\"",
     "dev:dashboard": "pnpm --filter dashboard dev",
     "dev:site": "pnpm --filter site-runtime dev",
-    "build": "pnpm --filter dashboard build && pnpm --filter site-runtime build",
+    "build": "npx --yes pnpm@11.22.0 install --frozen-lockfile && npx --yes pnpm@11.22.0 --filter dashboard build && npx --yes pnpm@11.22.0 --filter site-runtime build",
     "blocks:catalog": "pnpm --filter @uidesired/blocks catalog",
     "test": "pnpm --filter dashboard test"
   },

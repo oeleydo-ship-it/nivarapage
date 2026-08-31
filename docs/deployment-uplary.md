@@ -43,13 +43,25 @@ Set on the site:
 - **Shared `.env`** at the release root - the same file every release symlinks to.
 - **Shared `storage/`**, so uploads and logs survive a release swap.
 
-Two things the pipeline does not do for you:
+## The front-end build
 
-- **Build the front end.** Uplary's Node step runs npm, but this repo is a pnpm
-  workspace and the dashboard depends on `workspace:*` packages that npm cannot
-  resolve. Add `corepack enable && pnpm install --frozen-lockfile && pnpm build`
-  as a deploy hook, or build `public/dashboard` and `public/site` in CI and ship
-  them as artefacts. Without it the release serves no dashboard.
+Uplary's asset step runs `npm install && npm run build`, but this is a pnpm
+workspace: the dashboard depends on `workspace:*` packages that npm cannot
+resolve, and `public/dashboard` is gitignored, so a release clone starts with no
+dashboard at all.
+
+The root `build` script therefore fetches pnpm through `npx` and runs the
+workspace build itself. `npm run build` works unmodified, and no deploy hook is
+needed. Two consequences worth knowing:
+
+- The build needs network access to fetch pnpm on first run.
+- `pnpm-lock.yaml` must stay in step with the root `package.json`, because the
+  script installs with `--frozen-lockfile`. If you change a dependency, commit
+  the regenerated lockfile with it or the deploy fails with
+  `ERR_PNPM_OUTDATED_LOCKFILE`.
+
+One thing the pipeline still does not do for you:
+
 - **Run a queue worker.** Add the daemon and the `schedule:run` cron from
   DEPLOY.md.
 
