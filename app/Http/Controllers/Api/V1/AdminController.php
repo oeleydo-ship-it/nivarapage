@@ -28,6 +28,7 @@ use App\Services\StripeGateway;
 use App\Support\AiGeneratedSite;
 use App\Support\BlockCatalog;
 use App\Support\Hostname;
+use App\Support\PlanLimits;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -276,7 +277,41 @@ class AdminController extends Controller
 
     public function plans()
     {
-        return PlanResource::collection(Plan::query()->withCount('subscriptions')->orderBy('id')->get());
+        // The schema rides along so the admin screen renders whatever limits
+        // this build knows about instead of a hardcoded list that goes stale.
+        return PlanResource::collection(Plan::query()->withCount('subscriptions')->orderBy('id')->get())
+            ->additional(['meta' => ['limit_schema' => PlanLimits::schema()]]);
+    }
+
+    public function storePlan(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'slug' => ['required', 'string', 'max:60', 'regex:/^[a-z0-9][a-z0-9-]*$/', 'unique:plans,slug'],
+            'name' => ['required', 'string', 'max:255'],
+            'is_active' => ['sometimes', 'boolean'],
+            'prices' => ['sometimes', 'array'],
+            'prices.monthly' => ['nullable', 'integer', 'min:0'],
+            'prices.yearly' => ['nullable', 'integer', 'min:0'],
+            'limits' => ['sometimes', 'array'],
+            'stripe_price_monthly' => ['nullable', 'string', 'max:255'],
+            'stripe_price_yearly' => ['nullable', 'string', 'max:255'],
+            ...PlanLimits::rules(),
+        ], [
+            'slug.regex' => 'Use lowercase letters, numbers and hyphens, starting with a letter or number.',
+        ]);
+
+        $plan = Plan::query()->create([
+            'slug' => $data['slug'],
+            'name' => $data['name'],
+            'is_active' => $data['is_active'] ?? true,
+            'prices' => ['monthly' => $data['prices']['monthly'] ?? 0, 'yearly' => $data['prices']['yearly'] ?? 0],
+            // Always stored complete, so a plan can never be half-authored.
+            'limits' => PlanLimits::normalize($data['limits'] ?? []),
+            'stripe_price_monthly' => $data['stripe_price_monthly'] ?? null,
+            'stripe_price_yearly' => $data['stripe_price_yearly'] ?? null,
+        ]);
+
+        return (new PlanResource($plan->loadCount('subscriptions')))->response()->setStatusCode(201);
     }
 
     public function updatePlan(Request $request, Plan $plan): PlanResource
@@ -290,10 +325,11 @@ class AdminController extends Controller
             'limits' => ['sometimes', 'array'],
             'stripe_price_monthly' => ['nullable', 'string', 'max:255'],
             'stripe_price_yearly' => ['nullable', 'string', 'max:255'],
+            ...PlanLimits::rules(),
         ]);
 
         if (isset($data['limits'])) {
-            $data['limits'] = array_merge($plan->limits ?? [], $data['limits']);
+            $data['limits'] = PlanLimits::normalize($data['limits'], $plan->limits ?? []);
         }
         if (isset($data['prices'])) {
             $data['prices'] = array_merge($plan->prices ?? [], $data['prices']);
@@ -302,6 +338,28 @@ class AdminController extends Controller
         $plan->update($data);
 
         return new PlanResource($plan->fresh()->loadCount('subscriptions'));
+    }
+
+    public function destroyPlan(Plan $plan): JsonResponse
+    {
+        // Free is what assignFreePlan looks up for every new workspace, so
+        // removing it would break registration outright.
+        if ($plan->slug === 'free') {
+            return response()->json([
+                'message' => 'The free plan cannot be deleted; every new workspace is assigned to it.',
+            ], 422);
+        }
+
+        $subscriptions = $plan->subscriptions()->count();
+        if ($subscriptions > 0) {
+            return response()->json([
+                'message' => "This plan has {$subscriptions} subscription(s). Move them to another plan first, or mark it inactive to hide it from checkout.",
+            ], 422);
+        }
+
+        $plan->delete();
+
+        return response()->json(['data' => ['deleted' => true]]);
     }
 
     public function subscriptions(Request $request)

@@ -271,7 +271,9 @@ Route::prefix('v1')->group(function () {
             Route::post('/ai/generate-template', [AdminLibraryController::class, 'generateTemplate']);
             Route::post('/ai/generate-block', [AdminLibraryController::class, 'generateBlock']);
             Route::get('/plans', [AdminController::class, 'plans']);
+            Route::post('/plans', [AdminController::class, 'storePlan']);
             Route::patch('/plans/{plan}', [AdminController::class, 'updatePlan']);
+            Route::delete('/plans/{plan}', [AdminController::class, 'destroyPlan']);
             Route::get('/subscriptions', [AdminController::class, 'subscriptions']);
             Route::get('/storage', [AdminController::class, 'storage']);
             Route::get('/storage-settings', [AdminStorageSettingsController::class, 'show']);

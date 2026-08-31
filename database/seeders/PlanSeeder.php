@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Plan;
+use App\Support\PlanLimits;
 use Illuminate\Database\Seeder;
 
 class PlanSeeder extends Seeder
@@ -24,6 +25,9 @@ class PlanSeeder extends Seeder
                     'revision_history' => 5,
                     'remove_branding' => false,
                     // Monthly AI generations. 0 = plan not entitled, -1 = unlimited.
+                    'blog_posts' => 3,
+                    'clients' => 5,
+                    'funnels' => 1,
                     'ai_generations' => 0,
                 ],
             ],
@@ -40,6 +44,9 @@ class PlanSeeder extends Seeder
                     'premium_templates' => false,
                     'revision_history' => 20,
                     'remove_branding' => true,
+                    'blog_posts' => 50,
+                    'clients' => 100,
+                    'funnels' => 3,
                     'ai_generations' => 25,
                 ],
             ],
@@ -56,6 +63,9 @@ class PlanSeeder extends Seeder
                     'premium_templates' => true,
                     'revision_history' => 100,
                     'remove_branding' => true,
+                    'blog_posts' => 500,
+                    'clients' => 1000,
+                    'funnels' => 25,
                     'ai_generations' => 200,
                 ],
             ],
@@ -72,6 +82,9 @@ class PlanSeeder extends Seeder
                     'premium_templates' => true,
                     'revision_history' => -1,
                     'remove_branding' => true,
+                    'blog_posts' => -1,
+                    'clients' => -1,
+                    'funnels' => -1,
                     'ai_generations' => -1,
                 ],
             ],
@@ -82,7 +95,9 @@ class PlanSeeder extends Seeder
             Plan::query()->updateOrCreate(['slug' => $slug], [
                 'name' => $plan['name'],
                 'prices' => $plan['prices'],
-                'limits' => $plan['limits'],
+                // Normalized so a tier that forgets a key still stores a
+                // complete set rather than inheriting a silent default.
+                'limits' => PlanLimits::normalize($plan['limits']),
                 'is_active' => true,
                 'stripe_price_monthly' => env("STRIPE_PRICE_{$envKey}_MONTHLY") ?: null,
                 'stripe_price_yearly' => env("STRIPE_PRICE_{$envKey}_YEARLY") ?: null,

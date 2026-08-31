@@ -14,6 +14,7 @@ class ClientService
     public function __construct(
         private readonly AuditService $audit,
         private readonly CurrentWorkspace $currentWorkspace,
+        private readonly PlanLimitService $limits,
     ) {}
 
     /**
@@ -23,6 +24,7 @@ class ClientService
     {
         $workspace = $this->currentWorkspace->workspace;
         abort_unless($workspace, 422, 'Workspace is required.');
+        $this->limits->assertOrFail($workspace, 'clients');
 
         $client = Client::query()->create([
             ...$this->clientAttributes($data),

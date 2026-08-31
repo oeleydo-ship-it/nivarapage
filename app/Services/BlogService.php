@@ -17,6 +17,7 @@ class BlogService
         private readonly CurrentWorkspace $currentWorkspace,
         private readonly TenantCacheService $cache,
         private readonly HtmlSanitizer $html,
+        private readonly PlanLimitService $limits,
     ) {}
 
     /**
@@ -26,6 +27,7 @@ class BlogService
     {
         $workspace = $this->currentWorkspace->workspace;
         abort_unless($workspace, 422, 'Workspace is required.');
+        $this->limits->assertOrFail($workspace, 'blog_posts');
 
         $site = Site::query()
             ->where('workspace_id', $workspace->id)

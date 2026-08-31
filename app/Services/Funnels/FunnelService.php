@@ -8,6 +8,7 @@ use App\Models\FunnelStep;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\AuditService;
+use App\Services\PlanLimitService;
 use App\Support\PageSchemaValidator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -18,11 +19,14 @@ class FunnelService
     public function __construct(
         private readonly AuditService $audit,
         private readonly PageSchemaValidator $validator,
+        private readonly PlanLimitService $limits,
     ) {}
 
     /** @param array<string, mixed> $data */
     public function create(Workspace $workspace, User $user, array $data): Funnel
     {
+        $this->limits->assertOrFail($workspace, 'funnels');
+
         return DB::transaction(function () use ($workspace, $user, $data) {
             $slug = $this->uniqueFunnelSlug($workspace->id, $data['slug'] ?? $data['name']);
             $funnel = Funnel::query()->create([

@@ -4,14 +4,18 @@ namespace App\Services;
 
 use App\Exceptions\PlanQuotaException;
 use App\Models\Activity;
+use App\Models\BlogPost;
+use App\Models\Client;
 use App\Models\Domain;
 use App\Models\FormSubmission;
+use App\Models\Funnel;
 use App\Models\Media;
 use App\Models\Page;
 use App\Models\Site;
 use App\Models\Workspace;
 use App\Models\WorkspaceInvitation;
 use App\Models\WorkspaceUser;
+use App\Support\PlanLimits;
 
 class PlanLimitService
 {
@@ -49,11 +53,20 @@ class PlanLimitService
     /**
      * @return array<string, mixed>
      */
+    /**
+     * The workspace's limits, with every known key present.
+     *
+     * Reading a limit that a plan never set used to return null, and null
+     * denies in allows() - so one field left unauthored locked a paying
+     * workspace out of a feature its plan was meant to include. Filling the
+     * gaps from PlanLimits::defaults() makes an incomplete plan degrade to the
+     * free tier's ceiling instead of to zero.
+     */
     public function limitsFor(Workspace $workspace): array
     {
         $workspace->loadMissing('subscription.plan');
 
-        return $workspace->subscription?->plan?->limits ?? [];
+        return PlanLimits::normalize($workspace->subscription?->plan?->limits ?? []);
     }
 
     public function usage(Workspace $workspace, string $key): int
@@ -65,9 +78,14 @@ class PlanLimitService
                 ->where('type', 'custom')
                 ->count(),
             'storage_mb' => (int) ceil((Media::query()->where('workspace_id', $workspace->id)->sum('size') ?: 0) / 1048576),
+            // Counted per site by assertPagesPerSite; there is no workspace-wide
+            // number for it, and returning 0 keeps it out of the ceiling check.
             'pages_per_site' => 0,
             'form_submissions' => FormSubmission::query()->where('workspace_id', $workspace->id)->count(),
             'team_members' => WorkspaceUser::query()->where('workspace_id', $workspace->id)->count(),
+            'blog_posts' => BlogPost::query()->where('workspace_id', $workspace->id)->count(),
+            'clients' => Client::query()->where('workspace_id', $workspace->id)->count(),
+            'funnels' => Funnel::query()->where('workspace_id', $workspace->id)->count(),
             'ai_generations' => $this->aiGenerationsThisMonth($workspace),
             default => 0,
         };
@@ -92,18 +110,28 @@ class PlanLimitService
     public function usageSummary(Workspace $workspace): array
     {
         $limits = $this->limitsFor($workspace);
-        $keys = ['number_of_sites', 'custom_domains', 'storage_mb', 'form_submissions', 'team_members', 'ai_generations'];
         $summary = [];
-        foreach ($keys as $key) {
+
+        foreach (PlanLimits::schema() as $key => $definition) {
+            if ($definition['type'] === PlanLimits::FLAG) {
+                $summary[$key] = ['enabled' => (bool) ($limits[$key] ?? false)];
+
+                continue;
+            }
+
+            // Ceilings that are not counted across the workspace: pages are
+            // counted per site, and revisions are a retention depth per page.
+            if (in_array($key, ['pages_per_site', 'revision_history'], true)) {
+                $summary[$key] = ['limit' => $limits[$key] ?? null];
+
+                continue;
+            }
+
             $summary[$key] = [
                 'used' => $this->usage($workspace, $key),
                 'limit' => $limits[$key] ?? null,
             ];
         }
-        $summary['pages_per_site'] = ['limit' => $limits['pages_per_site'] ?? null];
-        $summary['revision_history'] = ['limit' => $limits['revision_history'] ?? null];
-        $summary['premium_templates'] = ['enabled' => (bool) ($limits['premium_templates'] ?? false)];
-        $summary['remove_branding'] = ['enabled' => (bool) ($limits['remove_branding'] ?? false)];
 
         return $summary;
     }
