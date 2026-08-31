@@ -9,6 +9,21 @@ return [
     'domain_provider' => env('DOMAIN_PROVIDER', 'cloudflare'),
     'media_disk' => env('MEDIA_DISK', env('FILESYSTEM_DISK', 'public')),
     'seed_demo' => (bool) env('SEED_DEMO', false),
+    'super_admin' => [
+        'email' => env('SUPER_ADMIN_EMAIL', env('SUPER_ADMIN_USERNAME', 'admin@uidesired.test')),
+        'password' => env('SUPER_ADMIN_PASSWORD', 'password'),
+        'name' => env('SUPER_ADMIN_NAME', 'Super Admin'),
+    ],
+    // Hostnames that serve the builder dashboard. Every other hostname that
+    // reaches the app is treated as a published customer site, so this list is
+    // what separates "the product" from "a customer's website".
+    'dashboard_hosts' => array_values(array_unique(array_filter([
+        parse_url((string) env('APP_URL', ''), PHP_URL_HOST),
+        parse_url((string) env('FRONTEND_URL', ''), PHP_URL_HOST),
+    ]))),
+    // Comma separated additions for deployments that reach the dashboard on
+    // more than the two canonical URLs (a staging alias, a bare IP).
+    'extra_dashboard_hosts' => env('DASHBOARD_HOSTS', ''),
     'trusted_hosts' => array_values(array_unique(array_filter(array_merge(
         [
             parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST) ?: 'localhost',
@@ -34,8 +49,10 @@ return [
         // vanity record rather than exposing the fallback origin directly; when
         // unset we fall back to the origin so a minimal setup still works.
         'cname_target' => env('CLOUDFLARE_CNAME_TARGET', env('CLOUDFLARE_FALLBACK_ORIGIN')),
-        // A records for apex domains at registrars with no ALIAS/ANAME support.
-        // Comma separated; leave empty to tell customers to use www instead.
+        // A/AAAA records handed to root domains at registrars with no
+        // ALIAS/ANAME support. Comma separated. Leave empty and
+        // ApexAddressResolver resolves the CNAME target instead; set it only
+        // when the deployment has its own dedicated or BYOIP addresses.
         'apex_ips' => array_values(array_filter(array_map(
             'trim',
             explode(',', (string) env('CLOUDFLARE_APEX_IPS', '')),

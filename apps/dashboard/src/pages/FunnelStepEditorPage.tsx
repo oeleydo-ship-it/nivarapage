@@ -27,6 +27,7 @@ import { FieldControl, fieldVisible } from '../components/FieldControls'
 import { funnelsApi } from '../lib/endpoints'
 import { standaloneFunnelUrl } from '../lib/siteUrls'
 import { Button } from '../ui/primitives'
+import { publishFunnelWithRenders } from '@/lib/publishSite'
 
 const LANDING_CATEGORIES: BlockCategory[] = [
   'navigation',
@@ -101,7 +102,7 @@ export function FunnelStepEditorPage() {
   const publish = useMutation({
     mutationFn: async () => {
       if (dirty) await funnelsApi.saveStepContent(id!, stepId!, content)
-      return funnelsApi.publish(id!)
+      return publishFunnelWithRenders(id!)
     },
     onSuccess: (saved) => {
       qc.setQueryData(['funnel', id], saved)

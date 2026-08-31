@@ -3,7 +3,9 @@
 use App\Http\Controllers\Api\V1\ActivityController;
 use App\Http\Controllers\Api\V1\AdminAiController;
 use App\Http\Controllers\Api\V1\AdminBrandingController;
+use App\Http\Controllers\Api\V1\AdminCloudflareController;
 use App\Http\Controllers\Api\V1\AdminController;
+use App\Http\Controllers\Api\V1\AdminDiagnosticsController;
 use App\Http\Controllers\Api\V1\AdminLibraryController;
 use App\Http\Controllers\Api\V1\AdminMailSettingsController;
 use App\Http\Controllers\Api\V1\AdminGoogleAuthController;
@@ -30,6 +32,8 @@ use App\Http\Controllers\Api\V1\PublicFunnelController;
 use App\Http\Controllers\Api\V1\PublicLivechatController;
 use App\Http\Controllers\Api\V1\PublicSiteController;
 use App\Http\Controllers\Api\V1\SiteController;
+use App\Http\Controllers\Api\V1\FunnelRenderController;
+use App\Http\Controllers\Api\V1\SiteRenderController;
 use App\Http\Controllers\Api\V1\StripeWebhookController;
 use App\Http\Controllers\Api\V1\TemplateController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
@@ -125,6 +129,7 @@ Route::prefix('v1')->group(function () {
                 Route::patch('/funnels/{funnel}', [FunnelController::class, 'update']);
                 Route::delete('/funnels/{funnel}', [FunnelController::class, 'destroy']);
                 Route::post('/funnels/{funnel}/publish', [FunnelController::class, 'publish']);
+                Route::get('/funnels/{funnel}/render-payload', [FunnelRenderController::class, 'payload']);
                 Route::post('/funnels/{funnel}/pause', [FunnelController::class, 'pause']);
                 Route::post('/funnels/{funnel}/duplicate', [FunnelController::class, 'duplicate']);
                 Route::get('/funnels/{funnel}/analytics', [FunnelController::class, 'analytics']);
@@ -148,6 +153,8 @@ Route::prefix('v1')->group(function () {
             Route::get('/sites/{site}/theme', [SiteController::class, 'theme']);
             Route::put('/sites/{site}/theme', [SiteController::class, 'updateTheme']);
             Route::post('/sites/{site}/publish', [SiteController::class, 'publish']);
+            Route::post('/sites/{site}/renders', [SiteRenderController::class, 'store']);
+            Route::get('/sites/{site}/render-payload', [SiteRenderController::class, 'payload']);
             Route::post('/sites/{site}/preview-token', [PreviewController::class, 'token']);
             Route::post('/sites/{site}/apply-template', [TemplateController::class, 'apply']);
 
@@ -270,6 +277,12 @@ Route::prefix('v1')->group(function () {
             Route::get('/storage-settings', [AdminStorageSettingsController::class, 'show']);
             Route::put('/storage-settings', [AdminStorageSettingsController::class, 'update']);
             Route::post('/storage-settings/test', [AdminStorageSettingsController::class, 'test']);
+            Route::get('/cloudflare', [AdminCloudflareController::class, 'show']);
+            Route::put('/cloudflare', [AdminCloudflareController::class, 'update']);
+            Route::post('/cloudflare/test', [AdminCloudflareController::class, 'test']);
+            Route::get('/cloudflare/apex-addresses', [AdminCloudflareController::class, 'apexAddresses']);
+            Route::get('/cloudflare/fallback-origin', [AdminCloudflareController::class, 'fallbackOrigin']);
+            Route::post('/cloudflare/fallback-origin', [AdminCloudflareController::class, 'syncFallbackOrigin']);
             Route::get('/payment-gateway', [AdminPaymentGatewayController::class, 'show']);
             Route::put('/payment-gateway', [AdminPaymentGatewayController::class, 'update']);
             Route::post('/payment-gateway/test', [AdminPaymentGatewayController::class, 'test']);
@@ -292,6 +305,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/workspaces/{id}/suspend', [AdminController::class, 'suspendWorkspace']);
             Route::get('/domains/lookup', [AdminController::class, 'lookupDomain']);
             Route::get('/health', [AdminController::class, 'health']);
+            Route::get('/diagnostics', [AdminDiagnosticsController::class, 'show']);
+            Route::get('/diagnostics/host', [AdminDiagnosticsController::class, 'host']);
             Route::get('/settings', [AdminController::class, 'settings']);
             Route::put('/settings', [AdminController::class, 'updateSettings']);
 

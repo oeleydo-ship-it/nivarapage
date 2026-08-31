@@ -11,6 +11,7 @@ import { funnelsApi } from '../lib/endpoints'
 import { Badge, Button, Card, DataTable, EmptyState, Input, Label, PageHeader, Select } from '../ui/primitives'
 import { cn } from '@uidesired/utilities'
 import { standaloneFunnelUrl } from '../lib/siteUrls'
+import { publishFunnelWithRenders } from '@/lib/publishSite'
 
 const funnelTypes = [
   ['lead_generation', 'Lead Generation'], ['sales', 'Sales Funnel'], ['booking', 'Booking Funnel'],
@@ -93,7 +94,7 @@ export function FunnelBuilderPage() {
   const [connectFrom, setConnectFrom] = useState<number | null>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   const refresh = () => qc.invalidateQueries({ queryKey: ['funnel', id] })
-  const publish = useMutation({ mutationFn: () => funnelsApi.publish(id!), onSuccess: refresh })
+  const publish = useMutation({ mutationFn: () => publishFunnelWithRenders(id!), onSuccess: refresh })
   const pause = useMutation({ mutationFn: () => funnelsApi.pause(id!), onSuccess: refresh })
   const duplicate = useMutation({ mutationFn: () => funnelsApi.duplicate(id!), onSuccess: (copy) => window.location.assign(`/funnels/${copy.id}`) })
   const remove = useMutation({ mutationFn: () => funnelsApi.remove(id!), onSuccess: () => { qc.invalidateQueries({queryKey:['funnels']}); navigate('/funnels') } })

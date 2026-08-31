@@ -75,6 +75,7 @@ import { useSelectionStore } from '../stores/selectionStore'
 import { useSiteStore } from '../stores/siteStore'
 import { Button } from '../ui/primitives'
 import { applyPageStyleProfile } from '../lib/sectionDefaults'
+import { publishSiteWithRenders } from '@/lib/publishSite'
 
 const TABS: Array<{ id: BlockFieldGroup; label: string }> = [
   { id: 'content', label: 'Content' },
@@ -701,7 +702,7 @@ export function BuilderPage() {
     try {
       const saved = await persistDraft()
       if (!saved.ok) throw new Error(saved.error)
-      await sitesApi.publish(id!)
+      await publishSiteWithRenders(id!)
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['site', id] }),
         qc.invalidateQueries({ queryKey: ['pages', id] }),

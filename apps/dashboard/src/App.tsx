@@ -27,6 +27,7 @@ import { FunnelStepEditorPage } from './pages/FunnelStepEditorPage'
 import { getToken } from './lib/api'
 import { featuresApi } from './lib/endpoints'
 import { useQuery } from '@tanstack/react-query'
+import SitePreviewPage from '@/pages/SitePreviewPage'
 
 function RequireAuth({ children }: { children: ReactNode }) {
   if (!getToken()) return <Navigate to="/login" replace />
@@ -43,6 +44,10 @@ function RequireFunnels({ children }: { children: ReactNode }) {
 export default function App() {
   return (
     <Routes>
+      {/* Signed, noindex draft preview. Public in the routing sense: the
+          signed token is the credential, so a client can open it without
+          a dashboard session. */}
+      <Route path="/preview" element={<SitePreviewPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />

@@ -8,6 +8,13 @@ const dir = fileURLToPath(new URL('.', import.meta.url))
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // The dashboard is served by Laravel from public/dashboard, and its assets
+  // are requested from that prefix while the app itself runs at the site root.
+  base: '/dashboard/',
+  build: {
+    outDir: path.resolve(dir, '../api/public/dashboard'),
+    emptyOutDir: true,
+  },
   esbuild: {
     jsx: 'automatic',
   },
@@ -22,13 +29,15 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_PROXY || 'http://localhost:8000',
+        // Prefer IPv4. On Windows, `localhost` often resolves to ::1 and can
+        // hit a different process already bound on port 8000.
+        target: process.env.VITE_API_PROXY || 'http://127.0.0.1:8000',
         changeOrigin: true,
         timeout: 180_000,
         proxyTimeout: 180_000,
       },
       '/storage': {
-        target: process.env.VITE_API_PROXY || 'http://localhost:8000',
+        target: process.env.VITE_API_PROXY || 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
     },

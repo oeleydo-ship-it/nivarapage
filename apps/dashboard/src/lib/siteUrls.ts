@@ -1,11 +1,11 @@
 import type { Site } from '@uidesired/types'
 
 /**
- * Public sites are served by the Next renderer, which runs on its own port in
- * development (see docs/ports.md). Site hostnames are stored without a port, so
- * the dashboard has to add it back when linking to a live or preview page.
+ * Published sites are served by the Laravel application itself, which listens
+ * on one port in development. Site hostnames are stored without a port, so the
+ * dashboard has to add it back when linking to a live page.
  */
-const DEFAULT_RENDERER_PORT = '3100'
+const DEFAULT_SITE_PORT = '8000'
 
 function isLocalHost(hostname: string): boolean {
   return (
@@ -27,7 +27,7 @@ export function siteOrigin(hostname?: string | null): string | null {
   if (!hostname) return null
   if (hostname.includes('://')) return hostname.replace(/\/$/, '')
   if (!isLocalHost(hostname)) return `https://${hostname}`
-  const port = import.meta.env.VITE_RENDERER_PORT || DEFAULT_RENDERER_PORT
+  const port = import.meta.env.VITE_SITE_PORT || DEFAULT_SITE_PORT
   return `http://${hostname}${port ? `:${port}` : ''}`
 }
 
@@ -38,13 +38,14 @@ export function liveUrl(site?: Site | null, path = '/'): string | null {
 }
 
 /**
- * Turns the API's signed preview token into a renderer URL. The token URL points
- * at the API's POST-only, renderer-secret-protected endpoint, so it cannot be
- * opened in a browser; only its signed query string is reusable.
+ * Turns the API's signed preview token into a link a person can open.
+ *
+ * Preview is a route in this application, so the link stays on the dashboard
+ * origin. The token URL points at a POST-only API endpoint that cannot be
+ * opened in a browser; only its signed query string is reusable, and the
+ * preview page replays it to fetch the draft.
  */
-export function previewUrl(site: Site | null | undefined, tokenUrl: string, path = '/'): string | null {
-  const origin = siteOrigin(primaryHostname(site))
-  if (!origin) return null
+export function previewUrl(_site: Site | null | undefined, tokenUrl: string, path = '/'): string | null {
   let query = ''
   try {
     query = new URL(tokenUrl).search.replace(/^\?/, '')
@@ -53,7 +54,7 @@ export function previewUrl(site: Site | null | undefined, tokenUrl: string, path
   }
   const params = new URLSearchParams(query)
   params.set('path', path.startsWith('/') ? path : `/${path}`)
-  return `${origin}/preview?${params.toString()}`
+  return `${window.location.origin}/preview?${params.toString()}`
 }
 
 export function pagePath(page?: { slug?: string; is_homepage?: boolean } | null): string {
@@ -64,7 +65,9 @@ export function pagePath(page?: { slug?: string; is_homepage?: boolean } | null)
 
 export function standaloneFunnelUrl(publicId?: string | null, step = 'start'): string | null {
   if (!publicId) return null
-  const configured = String(import.meta.env.VITE_RENDERER_URL || '').replace(/\/$/, '')
-  const origin = configured || `${window.location.protocol}//${window.location.hostname}:${import.meta.env.VITE_RENDERER_PORT || DEFAULT_RENDERER_PORT}`
+  const configured = String(import.meta.env.VITE_SITE_URL || '').replace(/\/$/, '')
+  const origin =
+    configured ||
+    `${window.location.protocol}//${window.location.hostname}:${import.meta.env.VITE_SITE_PORT || DEFAULT_SITE_PORT}`
   return `${origin}/f/${publicId}/${step}`
 }

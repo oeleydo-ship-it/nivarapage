@@ -23,6 +23,7 @@ import { primaryHost, relativeTime, sitePreviewUrl, statusTone } from '../compon
 import { ApiError } from '../lib/api'
 import { sitesApi } from '../lib/endpoints'
 import { Badge, Button, Card, Input, Label, PageHeader, Select } from '../ui/primitives'
+import { publishSiteWithRenders } from '@/lib/publishSite'
 
 const textareaClass =
   'w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-blue-500'
@@ -141,7 +142,7 @@ export function SiteSettingsPage() {
   })
 
   const publish = useMutation({
-    mutationFn: () => sitesApi.publish(id!),
+    mutationFn: () => publishSiteWithRenders(id!),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['site', id] })
       qc.invalidateQueries({ queryKey: ['sites'] })

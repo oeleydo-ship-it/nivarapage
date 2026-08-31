@@ -38,3 +38,11 @@ tmp-*.html
 tmp-*.txt
 tmp-*.mjs
 tmp-upload-probe/
+
+# Front-end build output. Produced by `pnpm build` on deploy and served by
+# Laravel; committing it would put two sources of truth in the repo.
+apps/api/public/dashboard/
+apps/api/public/site/
+
+# Local databases.
+apps/api/database/*.sqlite

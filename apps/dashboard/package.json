@@ -28,6 +28,7 @@
     "@uidesired/blocks": "workspace:*",
     "@uidesired/design-system": "workspace:*",
     "@uidesired/schemas": "workspace:*",
+    "@uidesired/site-render": "workspace:*",
     "@uidesired/types": "workspace:*",
     "@uidesired/utilities": "workspace:*",
     "clsx": "^2.1.1",

@@ -1,6 +1,6 @@
 packages:
   - "apps/dashboard"
-  - "apps/renderer"
+  - "apps/site-runtime"
   - "packages/*"
 
 allowBuilds:

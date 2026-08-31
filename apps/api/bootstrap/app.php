@@ -41,13 +41,23 @@ return Application::configure(basePath: dirname(__DIR__))
             SecurityHeaders::class,
         ]);
 
-        $middleware->trustHosts(at: fn () => config('uidesired.trusted_hosts', ['localhost']));
+        // TrustHosts is deliberately not armed. This application answers on
+        // every customer's custom domain, so the set of valid Host headers is
+        // a database table, not a config list, and an allow-list here would
+        // reject every published site. Host validation moved to
+        // PublicSiteResolver: a hostname with no active domain row gets a 404.
+        // The headers that TrustHosts normally protects are safe regardless -
+        // password reset and verification links are built from
+        // config('uidesired.frontend_url'), never from the request host, and
+        // published HTML is rendered at publish time so it contains no
+        // host-derived absolute URLs.
         $middleware->trustProxies(at: '*');
 
         $middleware->statefulApi();
 
         $middleware->validateCsrfTokens(except: [
             'api/v1/billing/webhook',
+            'api/v1/public/preview',
             'api/v1/public/livechat/*',
             'api/v1/public/funnels/*',
         ]);
@@ -63,6 +73,24 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+        // A database outage otherwise reaches the browser as a bare "Server
+        // Error", which reads like an application bug and sends operators
+        // hunting in the wrong place. Name it, and point at the readiness
+        // endpoint that says which dependency is down.
+        $exceptions->render(function (\Throwable $exception, Request $request) {
+            if (! $exception instanceof \PDOException && ! $exception instanceof \Illuminate\Database\QueryException) {
+                return null;
+            }
+            if (! $request->is('api/*') && ! $request->expectsJson()) {
+                return null;
+            }
+
+            return response()->json([
+                'message' => 'The server cannot reach its database. Check the database service and the DB_* settings, then see /api/v1/health/ready.',
+                'error' => 'database_unavailable',
+            ], 503);
+        });
+
         $exceptions->render(function (\Throwable $exception, Request $request) {
             if (! $request->is('api/*') && ! $request->expectsJson()) {
                 return null;

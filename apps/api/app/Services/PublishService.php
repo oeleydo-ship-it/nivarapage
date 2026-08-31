@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Events\SitePublished;
-use App\Jobs\InvalidateRendererCache;
 use App\Jobs\RecordPublish;
 use App\Models\Page;
 use App\Models\Site;
@@ -61,7 +60,6 @@ class PublishService
 
         $freshSite = $site->fresh(['domains', 'pages.publishedRevision', 'workspace']);
         $this->cache->invalidateSite($freshSite);
-        InvalidateRendererCache::dispatch($freshSite->id)->onQueue('publishing');
 
         foreach ($publishedPages as $page) {
             RecordPublish::dispatch($page->id, $user->id)->onQueue('publishing');
@@ -106,7 +104,6 @@ class PublishService
     {
         $freshSite = $site->fresh(['domains', 'pages.publishedRevision']);
         $this->cache->invalidateSite($freshSite);
-        InvalidateRendererCache::dispatch($freshSite->id)->onQueue('publishing');
         RecordPublish::dispatch($page->id, $user->id)->onQueue('publishing');
         $this->audit->log(
             'page.published',

@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Jobs\InvalidateRendererCache;
 use App\Models\BlogPost;
 use App\Models\Page;
 use App\Models\Site;
@@ -311,6 +310,5 @@ class BlogService
             return;
         }
         $this->cache->invalidateSite($site);
-        InvalidateRendererCache::dispatch($site->id);
     }
 }

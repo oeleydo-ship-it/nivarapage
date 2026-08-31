@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\SiteResource;
-use App\Jobs\InvalidateRendererCache;
 use App\Models\Site;
 use App\Services\PublishService;
 use App\Services\SeoService;
@@ -137,6 +136,5 @@ class SiteController extends Controller
     private function bustPublicCache(Site $site): void
     {
         app(TenantCacheService::class)->invalidateSite($site->fresh(['domains', 'pages.publishedRevision']));
-        InvalidateRendererCache::dispatch($site->id)->onQueue('publishing');
     }
 }

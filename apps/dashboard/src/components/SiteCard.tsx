@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { sitesApi } from '../lib/endpoints'
 import { Badge, Button, Card, type BadgeTone } from '../ui/primitives'
+import { publishSiteWithRenders } from '@/lib/publishSite'
 
 export function primaryHost(site: Site): string {
   const primary = site.domains?.find((d) => d.is_primary) || site.domains?.[0]
@@ -185,7 +186,7 @@ export function SiteCard({ site, layout = 'list' }: { site: Site; layout?: SiteC
     },
   })
   const publish = useMutation({
-    mutationFn: () => sitesApi.publish(site.id),
+    mutationFn: () => publishSiteWithRenders(site.id),
     onSuccess: () => {
       setMenuOpen(false)
       qc.invalidateQueries({ queryKey: ['sites'] })
