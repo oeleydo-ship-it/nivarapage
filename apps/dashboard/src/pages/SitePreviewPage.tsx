@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { MouseEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PublishedPage } from '@uidesired/site-render'
 import type { Menu, PublicPage, ResolvedSite } from '@uidesired/site-render'
@@ -27,7 +28,7 @@ type PreviewPayload = {
  * use, with no third implementation to keep in step.
  */
 export default function SitePreviewPage() {
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const wanted = params.get('path') || '/'
   // `previewUrl` forwards the minted token's signed query on this origin rather
   // than a single `token` parameter, so the signed API URL is rebuilt from it.
@@ -63,16 +64,75 @@ export default function SitePreviewPage() {
     }
   }, [tokenUrl])
 
+  /** Moves the preview to another page of the same site, keeping the signature. */
+  const goTo = useCallback(
+    (path: string) => {
+      const next = new URLSearchParams(params)
+      next.set('path', path.startsWith('/') ? path : `/${path}`)
+      setParams(next)
+      window.scrollTo({ top: 0 })
+    },
+    [params, setParams],
+  )
+
+  /**
+   * Keeps in-site navigation inside the preview.
+   *
+   * A published page links to its own pages with site-relative hrefs, which is
+   * right on the site's own hostname. The preview is served from the dashboard
+   * origin, so following one leaves the preview and lands on a dashboard route
+   * that does not exist - a blank page. Rewrite those to move the signed
+   * `path` parameter instead, and leave everything else to the browser:
+   * external links, mail and tel, downloads, new-tab targets, in-page anchors,
+   * and any click carrying a modifier key.
+   */
+  const interceptNavigation = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      if (event.defaultPrevented || event.button !== 0) return
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+
+      const anchor = (event.target as HTMLElement | null)?.closest?.('a')
+      if (!anchor) return
+
+      const href = anchor.getAttribute('href')
+      // An in-page anchor should still scroll rather than reload the preview.
+      if (!href || href.startsWith('#') || anchor.hasAttribute('download')) return
+
+      const target = anchor.getAttribute('target')
+      if (target && target !== '_self') return
+
+      let url: URL
+      try {
+        url = new URL(href, window.location.href)
+      } catch {
+        return
+      }
+
+      // mailto:, tel: and anything off this origin resolve to a different
+      // origin and are left alone.
+      if (url.origin !== window.location.origin) return
+
+      event.preventDefault()
+      goTo(url.pathname)
+    },
+    [goTo],
+  )
+
+  const page = useMemo(() => {
+    if (!payload) return undefined
+
+    const normalized = wanted === '/' ? '' : wanted.replace(/^\/+/, '').replace(/\/+$/, '')
+    if (normalized === '') {
+      return payload.pages.find((p) => p.is_homepage) ?? payload.pages[0]
+    }
+
+    // Deliberately no fall back to the homepage: quietly rendering a different
+    // page than the link asked for reads as though the preview is broken.
+    return payload.pages.find((p) => p.slug === normalized)
+  }, [payload, wanted])
+
   const view = useMemo(() => {
-    if (!payload) return null
-
-    const normalized = wanted === '/' ? '' : wanted.replace(/^\/+/, '')
-    const page =
-      payload.pages.find((p) => (normalized === '' ? p.is_homepage : p.slug === normalized)) ??
-      payload.pages.find((p) => p.is_homepage) ??
-      payload.pages[0]
-
-    if (!page) return null
+    if (!payload || !page) return null
 
     const site = {
       site_id: payload.site.id,
@@ -94,7 +154,7 @@ export default function SitePreviewPage() {
     } as unknown as PublicPage
 
     return <PublishedPage site={site} page={publicPage} menus={payload.menus ?? []} />
-  }, [payload, wanted])
+  }, [payload, page])
 
   useEffect(() => {
     document.title = payload ? `Preview - ${payload.site.name}` : 'Preview'
@@ -113,5 +173,25 @@ export default function SitePreviewPage() {
     return <main style={{ padding: '6rem 1.5rem', textAlign: 'center' }}>Loading preview...</main>
   }
 
-  return view
+  if (!page) {
+    return (
+      <main style={{ maxWidth: '36rem', margin: '0 auto', padding: '6rem 1.5rem', textAlign: 'center' }}>
+        <p style={{ textTransform: 'uppercase', letterSpacing: '.05em', fontSize: 14, opacity: 0.7 }}>Preview</p>
+        <h1 style={{ fontSize: '1.875rem', fontWeight: 600 }}>No page at {wanted}</h1>
+        <p style={{ marginTop: '0.75rem', opacity: 0.75 }}>
+          This site has no page with that address. A template&rsquo;s menu can link to pages that have not been created
+          yet - add the page, or point the link somewhere else in Nav.
+        </p>
+        <button
+          type="button"
+          onClick={() => goTo('/')}
+          style={{ marginTop: '1.5rem', textDecoration: 'underline', cursor: 'pointer', background: 'none', border: 0 }}
+        >
+          Back to the homepage
+        </button>
+      </main>
+    )
+  }
+
+  return <div onClick={interceptNavigation}>{view}</div>
 }
