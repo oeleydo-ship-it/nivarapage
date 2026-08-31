@@ -40,6 +40,7 @@ export type BlockFieldGroup =
   | 'typography'
   | 'animation'
   | 'background'
+  | 'image'
 
 export interface BlockField {
   key: string

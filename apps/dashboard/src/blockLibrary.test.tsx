@@ -116,7 +116,7 @@ describe('block library', () => {
   }, 30_000)
 
   it('declares an editable schema with unique, grouped fields', () => {
-    const groups = new Set(['content', 'design', 'layout', 'spacing', 'typography', 'animation', 'background'])
+    const groups = new Set(['content', 'design', 'layout', 'spacing', 'typography', 'animation', 'background', 'image'])
     for (const block of blocks) {
       const fields: BlockField[] = block.schema.fields
       expect(fields.length, `${block.type} has no fields`).toBeGreaterThan(3)

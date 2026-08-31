@@ -178,6 +178,67 @@ export const backgroundFields: BlockField[] = [
   field('lightText', 'toggle', 'Light text', 'background', { when: { key: 'backgroundType', in: ['image', 'gradient', 'video'] } }),
 ]
 
+/**
+ * How the images inside a block are displayed.
+ *
+ * These are applied to the section wrapper as CSS variables and reach every
+ * image in the block, so no template markup has to change. Each group only
+ * takes effect once the person editing has actually set something in it -
+ * see `imageAttrs` - which is what keeps an untouched block rendering exactly
+ * as its template always did.
+ */
+export const imageFields: BlockField[] = [
+  select(
+    'imageFit',
+    'Fit',
+    [
+      ['', 'Template default'],
+      ['cover', 'Cover - fill the frame, crop the overflow'],
+      ['contain', 'Contain - show all of it, letterbox'],
+      ['fill', 'Stretch to the frame'],
+      ['scale-down', 'Scale down only'],
+    ],
+    'image',
+  ),
+  slider('imageFocusX', 'Focal point - across', 0, 100, 'image', {
+    unit: '%',
+    help: 'Which part of the picture stays in frame when it is cropped. 50% is the centre.',
+  }),
+  slider('imageFocusY', 'Focal point - down', 0, 100, 'image', { unit: '%' }),
+
+  select(
+    'imageAspect',
+    'Aspect ratio',
+    [
+      ['', 'Template default'],
+      ['16 / 9', 'Widescreen 16:9'],
+      ['3 / 2', 'Photo 3:2'],
+      ['4 / 3', 'Classic 4:3'],
+      ['1 / 1', 'Square'],
+      ['3 / 4', 'Portrait 3:4'],
+      ['9 / 16', 'Tall 9:16'],
+    ],
+    'image',
+  ),
+  number('imageMaxHeight', 'Maximum height', 'image', { min: 0, max: 1200, unit: 'px' }),
+
+  slider('imageRadius', 'Corner radius', 0, 80, 'image', { unit: 'px' }),
+  slider('imageBorderWidth', 'Border width', 0, 12, 'image', { unit: 'px' }),
+  field('imageBorderColor', 'color', 'Border color', 'image'),
+
+  slider('imageBrightness', 'Brightness', 0, 200, 'image', { unit: '%' }),
+  slider('imageContrast', 'Contrast', 0, 200, 'image', { unit: '%' }),
+  slider('imageSaturation', 'Saturation', 0, 200, 'image', { unit: '%' }),
+  slider('imageGrayscale', 'Grayscale', 0, 100, 'image', { unit: '%' }),
+  slider('imageBlur', 'Blur', 0, 20, 'image', { unit: 'px' }),
+
+  field('imageTintColor', 'color', 'Tint color', 'image'),
+  slider('imageTintOpacity', 'Tint strength', 0, 100, 'image', {
+    unit: '%',
+    help: 'Lays the tint colour over every image in this block.',
+  }),
+]
+
 const FONT_STACKS: Array<[string, string]> = fontStackOptions(true)
 
 export const ANIMATION_IDS = [
@@ -293,6 +354,7 @@ export function schema(...fields: BlockField[]): BlockSchema {
     ...animationFields,
     ...spacingFields,
     ...backgroundFields,
+    ...imageFields,
   ].filter((entry) => !keys.has(entry.key))
   return { fields: [...fields, ...shared] }
 }
@@ -308,6 +370,7 @@ export function bareSchema(...fields: BlockField[]): BlockSchema {
     ...animationFields,
     ...spacingFields,
     ...backgroundFields,
+    ...imageFields,
   ].filter((entry) => !keys.has(entry.key))
   return { fields: [...fields, ...extra] }
 }

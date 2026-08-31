@@ -268,6 +268,78 @@ export function isCentered(props: Props, fallback: 'left' | 'center' | 'right' =
  * Outer wrapper for every block. Applies tone, background, spacing, width and
  * alignment, then renders children inside the themed container.
  */
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
+
+/**
+ * Image display settings, as CSS variables plus the attributes that switch them on.
+ *
+ * Each group is opt-in through its own `data-img-*` attribute. Without that, a
+ * block renders exactly as its template wrote it - no rule here can reach an
+ * image until someone sets one of these fields, so adding the feature cannot
+ * restyle an existing site. It also means a person who only rounds the corners
+ * does not silently inherit a `fit` they never chose.
+ */
+export function imageSettings(props: Props): { vars: Record<string, string>; attrs: Record<string, string> } {
+  const vars: Record<string, string> = {}
+  const attrs: Record<string, string> = {}
+
+  const fit = str(props.imageFit)
+  const focusX = optNum(props.imageFocusX)
+  const focusY = optNum(props.imageFocusY)
+  if (fit || focusX !== undefined || focusY !== undefined) {
+    attrs['data-img-fit'] = ''
+    // A focal point is only meaningful once the picture is being cropped, so
+    // choosing one implies cover unless a fit was picked explicitly.
+    vars['--ud-img-fit'] = fit || 'cover'
+    vars['--ud-img-pos'] = `${clamp(focusX ?? 50, 0, 100)}% ${clamp(focusY ?? 50, 0, 100)}%`
+  }
+
+  const aspect = str(props.imageAspect)
+  const maxHeight = optNum(props.imageMaxHeight)
+  if (aspect || maxHeight !== undefined) {
+    attrs['data-img-box'] = ''
+    vars['--ud-img-aspect'] = aspect || 'auto'
+    vars['--ud-img-max-h'] = maxHeight !== undefined ? `${maxHeight}px` : 'none'
+  }
+
+  const radius = optNum(props.imageRadius)
+  const borderWidth = optNum(props.imageBorderWidth)
+  if (radius !== undefined || borderWidth !== undefined) {
+    attrs['data-img-edge'] = ''
+    vars['--ud-img-radius'] = `${clamp(radius ?? 0, 0, 400)}px`
+    vars['--ud-img-border-w'] = `${clamp(borderWidth ?? 0, 0, 40)}px`
+    vars['--ud-img-border-c'] = str(props.imageBorderColor, 'currentColor')
+  }
+
+  const filters: string[] = []
+  const brightness = optNum(props.imageBrightness)
+  const contrast = optNum(props.imageContrast)
+  const saturation = optNum(props.imageSaturation)
+  const grayscale = optNum(props.imageGrayscale)
+  const blur = optNum(props.imageBlur)
+  if (brightness !== undefined) filters.push(`brightness(${clamp(brightness, 0, 400)}%)`)
+  if (contrast !== undefined) filters.push(`contrast(${clamp(contrast, 0, 400)}%)`)
+  if (saturation !== undefined) filters.push(`saturate(${clamp(saturation, 0, 400)}%)`)
+  if (grayscale !== undefined) filters.push(`grayscale(${clamp(grayscale, 0, 100)}%)`)
+  if (blur !== undefined) filters.push(`blur(${clamp(blur, 0, 60)}px)`)
+
+  const tint = clamp(num(props.imageTintOpacity, 0), 0, 100)
+  const tintColor = str(props.imageTintColor, '#0f172a')
+
+  if (filters.length > 0 || tint > 0) {
+    attrs['data-img-fx'] = ''
+    vars['--ud-img-filter'] = filters.length > 0 ? filters.join(' ') : 'none'
+    // An inset shadow large enough to cover the box paints over the picture,
+    // which is the only way to tint a replaced element without wrapping it.
+    vars['--ud-img-tint'] =
+      tint > 0
+        ? `inset 0 0 0 9999px color-mix(in srgb, ${tintColor} ${Math.round(tint)}%, transparent)`
+        : 'none'
+  }
+
+  return { vars, attrs }
+}
+
 export function SectionShell({
   props = {},
   tone = 'default',
@@ -296,13 +368,15 @@ export function SectionShell({
     '--ud-text-duration': `${Math.min(Math.max(num(props.textAnimationDuration, 700), 100), 3000)}ms`,
     '--ud-text-delay': `${Math.min(Math.max(num(props.textAnimationDelay, 80), 0), 2000)}ms`,
   } as CSSProperties
+  const images = imageSettings(props)
   const content = bleed ? children : <div className="ud-container">{children}</div>
   return (
     <section
       id={id || undefined}
       className={cx('ud-section', bleed && 'ud-section--bleed', alignClass(props, align || 'left'), anim.className, textAnimation !== 'none' && 'ud-text-anim', textAnimation !== 'none' && `ud-text-anim--${textAnimation}`, className)}
-      style={{ ...sectionVars(props, tone), ...anim.style, ...textStyle, ...style }}
+      style={{ ...sectionVars(props, tone), ...anim.style, ...textStyle, ...images.vars, ...style } as CSSProperties}
       data-ud-anim={anim.trigger}
+      {...images.attrs}
     >
       {backgroundType === 'video' && videoSrc ? (
         <video className="ud-section__video" src={videoSrc} poster={str(props.videoPoster) || undefined} autoPlay={bool(props.videoAutoplay, true)} loop={bool(props.videoLoop, true)} muted={bool(props.videoMuted, true)} playsInline aria-hidden="true" />

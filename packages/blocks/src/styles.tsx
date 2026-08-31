@@ -18,6 +18,13 @@ export const blockCss = `
 .ud-section--bleed{padding-inline:0;}
 .ud-section__overlay{position:absolute;inset:0;z-index:-1;}
 
+/* Image display settings. Every rule is behind its own data attribute, set only
+   when that group of fields has been used, so an untouched block is unaffected. */
+.ud-section[data-img-fit] img{object-fit:var(--ud-img-fit,cover);object-position:var(--ud-img-pos,50% 50%);}
+.ud-section[data-img-box] img{aspect-ratio:var(--ud-img-aspect,auto);max-height:var(--ud-img-max-h,none);width:100%;height:auto;}
+.ud-section[data-img-box][data-img-fit] img{height:100%;}
+.ud-section[data-img-edge] img{border-radius:var(--ud-img-radius,0);border:var(--ud-img-border-w,0) solid var(--ud-img-border-c,transparent);}
+.ud-section[data-img-fx] img{filter:var(--ud-img-filter,none);box-shadow:var(--ud-img-tint,none);}
 .ud-anim{animation-duration:var(--ud-anim-duration,.7s);animation-delay:var(--ud-anim-delay,0s);animation-timing-function:cubic-bezier(.22,1,.36,1);animation-fill-mode:both;}
 .ud-anim-fade{animation-name:ud-fade;}
 .ud-anim-fade-up{animation-name:ud-fade-up;}

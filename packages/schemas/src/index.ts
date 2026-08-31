@@ -24,6 +24,7 @@ export const blockFieldGroupSchema = z.enum([
   'spacing',
   'typography',
   'background',
+  'image',
 ])
 
 export const blockFieldSchema = z.object({

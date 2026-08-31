@@ -23,6 +23,7 @@ export {
   SectionShell,
   Stars,
   animationOf,
+  imageSettings,
   sectionVars,
 } from './primitives'
 export { BlockStyles, blockCss } from './styles'

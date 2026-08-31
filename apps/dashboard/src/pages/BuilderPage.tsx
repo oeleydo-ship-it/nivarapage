@@ -85,6 +85,7 @@ const TABS: Array<{ id: BlockFieldGroup; label: string }> = [
   { id: 'typography', label: 'Type' },
   { id: 'animation', label: 'Motion' },
   { id: 'background', label: 'Background' },
+  { id: 'image', label: 'Images' },
 ]
 
 function bindFormSections(sections: PageSection[], forms: SiteForm[]): { sections: PageSection[]; changed: boolean } {
