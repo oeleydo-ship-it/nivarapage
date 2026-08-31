@@ -19,11 +19,23 @@ uses and uploads the HTML. A visitor request is one indexed lookup.
 
 ## Requirements
 
-- PHP 8.3+ with `pdo_mysql` (or `pdo_sqlite`), `mbstring`, `gd`, `zip`
-- Composer
-- MySQL/MariaDB 8+ (SQLite works for small installs)
-- Node 20+ and pnpm — **build time only**, not at runtime
-- Redis is optional; the database queue and cache drivers are fine on one server
+**PHP 8.4 or newer.** `apps/api/composer.json` says `^8.3`, but seventeen of
+the locked Symfony packages require `>=8.4.1` and use syntax that 8.3 cannot
+parse. On 8.3 the application does not boot; it fails while loading vendor.
+
+- PHP 8.4+ with these extensions:
+  - Required by dependencies: `ctype` `curl` `dom` `fileinfo` `filter` `hash`
+    `iconv` `json` `libxml` `mbstring` `openssl` `pcre` `session` `simplexml`
+    `tokenizer`
+  - Required by the queue worker and Reverb: `pcntl` `posix` (CLI)
+  - Required by the app: `pdo_mysql` (or `pdo_sqlite`)
+  - Recommended: `gd`. Image resizing is guarded with `function_exists`, so
+    uploads still work without it - they are just stored unresized.
+- Composer 2
+- MySQL 8+ / MariaDB 10.6+ (SQLite is fine for a small install)
+- Node 22.12+ (or 20.19+) and pnpm — **build time only**, never at runtime
+- Redis optional. On one server the `database` queue and cache drivers are
+  fine; Horizon and Reverb are the only parts that want Redis.
 
 ## First deploy
 
