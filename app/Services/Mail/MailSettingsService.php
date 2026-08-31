@@ -136,6 +136,9 @@ class MailSettingsService
     public function update(array $data): MailSetting
     {
         $row = $this->settings();
+        // See CloudflareSettingsService::update(): a password encrypted under a
+        // previous key blocks its own replacement.
+        EncryptedSettings::discardUnreadable($row, 'password');
         $fields = ['transport', 'host', 'port', 'encryption', 'username', 'from_address', 'from_name', 'timeout'];
 
         foreach ($fields as $field) {

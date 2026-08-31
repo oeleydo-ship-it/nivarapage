@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\PaymentGatewaySetting;
+use App\Support\EncryptedSettings;
 use Stripe\Exception\ApiErrorException;
 use Throwable;
 
@@ -38,11 +39,11 @@ class PaymentGatewaySettingsService
     {
         $row = $this->settings();
 
-        $dbSecret = $this->filledString($row->secret_key);
+        $dbSecret = $this->filledString(EncryptedSettings::read($row, 'secret_key'));
         $envSecret = $this->filledString(config('services.stripe.secret'));
         $dbPublishable = $this->filledString($row->publishable_key);
         $envPublishable = $this->filledString(config('services.stripe.key'));
-        $dbWebhook = $this->filledString($row->webhook_secret);
+        $dbWebhook = $this->filledString(EncryptedSettings::read($row, 'webhook_secret'));
         $envWebhook = $this->filledString(config('services.stripe.webhook_secret'));
 
         $secret = $dbSecret ?? $envSecret;
@@ -109,6 +110,7 @@ class PaymentGatewaySettingsService
     public function update(array $data): PaymentGatewaySetting
     {
         $row = $this->settings();
+        EncryptedSettings::discardUnreadable($row, 'secret_key', 'webhook_secret');
         $update = [];
 
         if (array_key_exists('enabled', $data)) {

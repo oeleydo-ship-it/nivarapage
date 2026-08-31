@@ -59,4 +59,38 @@ final class EncryptedSettings
 
         return false;
     }
+
+    /**
+     * Clears columns whose ciphertext the current key cannot open.
+     *
+     * Reading defensively is not enough to repair one of these rows. Eloquent
+     * decides whether an attribute changed by decrypting the stored value and
+     * comparing it - originalIsEquivalent() inside getDirty() - so save()
+     * throws on a row still holding ciphertext from a previous APP_KEY, and it
+     * throws before the replacement is ever written. The column cannot be
+     * overwritten through the model at all, which leaves the admin screen
+     * unable to fix the very thing it is for.
+     *
+     * So drop the dead value with a query that goes under the cast, and resync
+     * the model so the dirty check has nothing left to decrypt. Nothing is lost
+     * that was not already unreadable.
+     */
+    public static function discardUnreadable(Model $row, string ...$attributes): void
+    {
+        $stale = array_values(array_filter($attributes, fn (string $key) => self::unreadable($row, $key)));
+
+        if ($stale === [] || $row->getKey() === null) {
+            return;
+        }
+
+        $row->newQuery()->whereKey($row->getKey())->update(array_fill_keys($stale, null));
+
+        $raw = $row->getRawOriginal();
+        $raw = is_array($raw) ? $raw : [];
+        foreach ($stale as $attribute) {
+            $raw[$attribute] = null;
+        }
+
+        $row->setRawAttributes($raw, true);
+    }
 }

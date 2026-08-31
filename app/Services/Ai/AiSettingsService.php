@@ -3,6 +3,7 @@
 namespace App\Services\Ai;
 
 use App\Models\AiSetting;
+use App\Support\EncryptedSettings;
 
 /**
  * Reads and writes the platform AI configuration.
@@ -27,7 +28,8 @@ class AiSettingsService
         $provider = $this->normaliseProvider($row->provider ?? config('ai.provider'));
         $defaults = config('ai.defaults.'.$provider, []);
 
-        $dbKey = is_string($row->api_key) && trim($row->api_key) !== '' ? trim($row->api_key) : null;
+        $stored = EncryptedSettings::read($row, 'api_key');
+        $dbKey = $stored !== null && trim($stored) !== '' ? trim($stored) : null;
         $envKey = is_string(config('ai.api_key')) && trim((string) config('ai.api_key')) !== ''
             ? trim((string) config('ai.api_key'))
             : null;
@@ -94,6 +96,7 @@ class AiSettingsService
     public function update(array $data): AiSetting
     {
         $row = $this->settings();
+        EncryptedSettings::discardUnreadable($row, 'api_key');
         $update = [];
 
         if (array_key_exists('enabled', $data)) {

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\GoogleAuthSetting;
+use App\Support\EncryptedSettings;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Throwable;
@@ -44,7 +45,7 @@ class GoogleAuthSettingsService
 
         $dbId = $this->filledString($row->client_id);
         $envId = $this->filledString(config('services.google.client_id'));
-        $dbSecret = $this->filledString($row->client_secret);
+        $dbSecret = $this->filledString(EncryptedSettings::read($row, 'client_secret'));
         $envSecret = $this->filledString(config('services.google.client_secret'));
         $dbRedirect = $this->filledString($row->redirect_uri);
         $envRedirect = $this->filledString(config('services.google.redirect'));
@@ -121,6 +122,7 @@ class GoogleAuthSettingsService
     public function update(array $data): GoogleAuthSetting
     {
         $row = $this->settings();
+        EncryptedSettings::discardUnreadable($row, 'client_secret');
         $update = [];
 
         if (array_key_exists('enabled', $data)) {

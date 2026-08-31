@@ -273,6 +273,11 @@ class CloudflareSettingsService
     public function update(array $data): CloudflareSetting
     {
         $row = $this->settings();
+        // Secrets left over from a previous APP_KEY cannot be overwritten while
+        // they are still there: save() decrypts the old value to test whether
+        // the field changed. Clear the dead ciphertext first so entering a new
+        // token actually works.
+        EncryptedSettings::discardUnreadable($row, 'api_token', 'webhook_secret');
         $update = [];
 
         if (array_key_exists('enabled', $data)) {

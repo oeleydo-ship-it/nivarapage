@@ -3,6 +3,7 @@
 namespace App\Services\Storage;
 
 use App\Models\StorageSetting;
+use App\Support\EncryptedSettings;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -91,7 +92,7 @@ class StorageSettingsService
         ]);
         $root = $this->firstFilled([$row->root]);
         $pathStyle = $row->use_path_style_endpoint;
-        if ($row->endpoint === null && $row->bucket === null && $row->access_key_id === null) {
+        if ($row->endpoint === null && $row->bucket === null && EncryptedSettings::read($row, 'access_key_id') === null) {
             // Pure env mode: honour AWS_USE_PATH_STYLE_ENDPOINT / R2 defaults.
             $pathStyle = (bool) config('filesystems.disks.s3.use_path_style_endpoint', false);
             if ($provider === 'cloudflare_r2') {
@@ -179,6 +180,7 @@ class StorageSettingsService
     public function update(array $data): StorageSetting
     {
         $row = $this->settings();
+        EncryptedSettings::discardUnreadable($row, 'access_key_id', 'secret_access_key');
         $update = [];
 
         if (array_key_exists('provider', $data) && $data['provider'] !== null) {
@@ -316,8 +318,10 @@ class StorageSettingsService
      */
     private function resolveCredentials(StorageSetting $row, string $provider): array
     {
-        $dbKey = is_string($row->access_key_id) && trim($row->access_key_id) !== '' ? trim($row->access_key_id) : null;
-        $dbSecret = is_string($row->secret_access_key) && trim($row->secret_access_key) !== '' ? trim($row->secret_access_key) : null;
+        $storedKey = EncryptedSettings::read($row, 'access_key_id');
+        $storedSecret = EncryptedSettings::read($row, 'secret_access_key');
+        $dbKey = $storedKey !== null && trim($storedKey) !== '' ? trim($storedKey) : null;
+        $dbSecret = $storedSecret !== null && trim($storedSecret) !== '' ? trim($storedSecret) : null;
 
         if ($dbKey && $dbSecret) {
             return [$dbKey, $dbSecret, 'settings'];
