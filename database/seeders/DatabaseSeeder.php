@@ -18,9 +18,12 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // Order matters: SuperAdminSeeder gives its user a personal workspace,
+        // which is assigned the free plan, so the plans have to exist first.
         $this->call([
             PlanSeeder::class,
             TemplateSeeder::class,
+            SuperAdminSeeder::class,
         ]);
 
         if (config('uidesired.seed_demo') && app()->environment('local')) {

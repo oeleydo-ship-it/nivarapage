@@ -60,22 +60,29 @@ needed. Two consequences worth knowing:
   the regenerated lockfile with it or the deploy fails with
   `ERR_PNPM_OUTDATED_LOCKFILE`.
 
-## Seed once, by hand, after the first release
+## Reference data seeds itself
 
-The pipeline runs `migrate` but never `db:seed`, and two seeders are not
-optional - without them a fresh deployment has an empty `plans` table and no
-administrator:
+The pipeline runs `migrate` but never `db:seed`, and a deployment that only
+migrates comes up unusable: registration calls `assignFreePlan`, which does
+`Plan::where('slug', 'free')->firstOrFail()` and 404s when the table is empty;
+the template picker shows nothing; and there is no administrator to sign in as.
+
+`migrate` is the one step every pipeline runs, so the seeding hangs off it -
+`database/migrations/..._seed_reference_data.php` calls `db:seed`, which brings
+in the plans, the template catalogue and the super admin. Nothing to run by
+hand, and every seeder is keyed on a slug through `updateOrCreate`, so it is
+safe over a database that was already seeded.
+
+**Set `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD` in `.env` before that
+release.** `SuperAdminSeeder` returns without doing anything when either is
+missing, silently, and you get no administrator.
+
+To pick up templates added after that migration has already run, re-seed by
+hand - the migration will not run twice:
 
 ```bash
-cd /var/www/<site>/current
-php artisan db:seed --class=PlanSeeder --force
-php artisan db:seed --class=SuperAdminSeeder --force
+cd /var/www/<site>/current && php artisan db:seed --class=TemplateSeeder --force
 ```
-
-Registration calls `assignFreePlan`, which does `Plan::where('slug', 'free')
-->firstOrFail()`, so with no plans every sign-up returns 404. `SuperAdminSeeder`
-reads `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD` from `.env` and does nothing
-if either is unset - set them before running it. Both seeders are safe to re-run.
 
 One thing the pipeline still does not do for you:
 
