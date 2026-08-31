@@ -1,12 +1,25 @@
 {
+  "$schema": "https://www.schemastore.org/package.json",
   "name": "uidesired",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@11.22.0",
   "scripts": {
+    "dev": "concurrently -k -n dashboard,site \"pnpm dev:dashboard\" \"pnpm dev:site\"",
     "dev:dashboard": "pnpm --filter dashboard dev",
     "dev:site": "pnpm --filter site-runtime dev",
     "build": "pnpm --filter dashboard build && pnpm --filter site-runtime build",
     "blocks:catalog": "pnpm --filter @uidesired/blocks catalog",
     "test": "pnpm --filter dashboard test"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "concurrently": "^10.0.3",
+    "laravel-vite-plugin": "^3.1",
+    "tailwindcss": "^4.0.0",
+    "vite": "^8.0.0"
+  },
+  "optionalDependencies": {
+    "@laravel/multiplex": "^0.4.1"
   }
 }

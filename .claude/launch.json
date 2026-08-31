@@ -10,8 +10,14 @@
     },
     {
       "name": "api",
-      "runtimeExecutable": "C:\Users\Eleydo Family\.config\herd\bin\php84\php.exe",
-      "runtimeArgs": ["artisan", "serve", "--port=8000"],
+      "runtimeExecutable": "C:/Users/Eleydo Family/.config/herd/bin/php84/php.exe",
+      "runtimeArgs": [
+        "-d", "display_errors=0",
+        "-d", "upload_tmp_dir=C:/Users/Eleydo Family/Documents/ChatGPT/Uidesired/storage/tmp",
+        "-S", "127.0.0.1:8000",
+        "-t", "C:/Users/Eleydo Family/Documents/ChatGPT/Uidesired/public",
+        "C:/Users/Eleydo Family/Documents/ChatGPT/Uidesired/dev-server.php"
+      ],
       "port": 8000,
       "autoPort": false
     }

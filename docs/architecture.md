@@ -20,9 +20,9 @@ other hostname is a published site.
 
 | Path | Role |
 | --- | --- |
-| `apps/api` | The application: auth, workspaces, sites, pages, domains, forms, billing, and the routes that serve published sites |
-| `apps/dashboard` | Builder UI. Built into `apps/api/public/dashboard` |
-| `apps/site-runtime` | Stylesheet and hydration script for published pages. Built into `apps/api/public/site` |
+| `app/`, `routes/`, `config/`, `database/` | The Laravel application at the repository root: auth, workspaces, sites, pages, domains, forms, billing, and the routes that serve published sites |
+| `apps/dashboard` | Builder UI. Built into `public/dashboard` |
+| `apps/site-runtime` | Stylesheet and hydration script for published pages. Built into `public/site` |
 | `packages/blocks` | The block components. Used by the editor **and** the published render, so there is one implementation of each block |
 | `packages/site-render` | Composes a block tree into a complete HTML document |
 

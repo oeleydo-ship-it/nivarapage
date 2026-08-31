@@ -13,7 +13,7 @@ exist on the API.
 ## Architecture
 
 ```
-                     one Laravel app (apps/api)
+                one Laravel app (repository root)
    ┌───────────────────────────┴───────────────────────────┐
    │  app.example.com   │  /api/*  │  *.sites.example.com   │
    │        ▼           │     ▼    │           ▼            │
@@ -39,7 +39,6 @@ Details: [docs/architecture.md](docs/architecture.md).
 Laravel (SQLite is fine):
 
 ```bash
-cd apps/api
 cp .env.example .env
 composer install
 php artisan key:generate
@@ -54,7 +53,7 @@ Front end, from the repository root:
 
 ```bash
 pnpm install
-pnpm build                   # builds into apps/api/public/{dashboard,site}
+pnpm build                   # builds into public/{dashboard,site}
 ```
 
 That is enough to use the whole app on <http://localhost:8000>. For iterating

@@ -575,7 +575,7 @@ export const featureRowHalcyon = defineBlock({
     const edit = editOf(props)
     const rows = items(props.items, [])
     return (
-      <SectionShell props={props} tone="muted" align="center" className="ud-hc ud-hc-channels">
+      <SectionShell props={props} tone="surface" align="center" className="ud-hc ud-hc-channels">
         <Head props={props} align="center" />
         <div className="ud-hc-channels__row">
           {rows.map((item, index) => (
@@ -761,7 +761,7 @@ export const quoteHalcyon = defineBlock({
 export const logosHalcyon = defineBlock({
   type: 'logos.halcyon',
   version: 1,
-  category: 'logos',
+  category: 'gallery',
   label: 'Halcyon integration row',
   icon: 'Grid',
   defaultProps: {
@@ -1074,7 +1074,7 @@ export const compareHalcyon = defineBlock({
   component: function CompareHalcyon(props) {
     const edit = editOf(props)
     return (
-      <SectionShell props={props} tone="muted" align="center" className="ud-hc ud-hc-compare">
+      <SectionShell props={props} tone="surface" align="center" className="ud-hc ud-hc-compare">
         <Head props={props} align="center" />
         <div className="ud-hc-compare__grid">
           <div className="ud-hc-compare__col ud-hc-compare__col--muted">

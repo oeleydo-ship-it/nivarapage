@@ -10,6 +10,7 @@ import { TemplateSelectModal } from '../components/TemplateSelectModal'
 import { templatePreviewPath } from '../lib/templatePreview'
 import { sitesApi, subdomainsApi, templatesApi } from '../lib/endpoints'
 import { atCap, featureEnabled, useSubscription } from '../lib/plan'
+import { useBranding } from '../lib/useBranding'
 import { blankTemplateMatches, filterTemplates, templateCategoryNames } from '../lib/templateSearch'
 import { Button, Card, EmptyState, Input, Label, PageHeader, Select } from '../ui/primitives'
 
@@ -265,6 +266,7 @@ function EmptySitesIllustration() {
 export function CreateSitePage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
+  const platformDomain = useBranding().data?.platform_domain || 'sites.localhost'
   const presetSlug = params.get('template')?.trim() || ''
   const [step, setStep] = useState(1)
   const [name, setName] = useState('')
@@ -584,7 +586,7 @@ export function CreateSitePage() {
                   setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
                 }}
               />
-              <span className="shrink-0 text-sm text-zinc-500">.sites.localhost</span>
+              <span className="shrink-0 text-sm text-zinc-500">.{platformDomain}</span>
             </div>
             <p className="mt-2 text-xs text-zinc-500">Leave blank to auto-assign from the site name. At least 3 characters to check availability.</p>
             {checking ? (
@@ -627,7 +629,7 @@ export function CreateSitePage() {
               <dt className="text-zinc-500">Template</dt>
               <dd className="text-zinc-200">{selectedTemplate?.name || 'Blank'}</dd>
               <dt className="text-zinc-500">Host</dt>
-              <dd className="text-zinc-200">{subdomain || 'auto'}.sites.localhost</dd>
+              <dd className="text-zinc-200">{subdomain || 'auto'}.{platformDomain}</dd>
             </dl>
           </div>
           {create.isError ? (

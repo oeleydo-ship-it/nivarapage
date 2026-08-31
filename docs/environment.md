@@ -4,7 +4,7 @@ Copy the files below and fill secrets before starting services.
 
 ## Configuration
 
-There is one env file: `apps/api/.env`. Start from `apps/api/.env.example`.
+There is one env file: `.env` at the repository root. Start from `.env.example`.
 
 The hostname settings are the important ones - they are what separates the
 dashboard from customer sites.
@@ -47,4 +47,4 @@ it automatically.
 
 ## Local development
 
-`apps/api/.env.example` defaults to SQLite, which is enough to run everything. For Redis features locally, point `REDIS_HOST` at `127.0.0.1` and run Redis yourself, or keep `QUEUE_CONNECTION=sync` and `CACHE_STORE=file` for a minimal loop.
+`.env.example` defaults to SQLite, which is enough to run everything. For Redis features locally, point `REDIS_HOST` at `127.0.0.1` and run Redis yourself, or keep `QUEUE_CONNECTION=sync` and `CACHE_STORE=file` for a minimal loop.

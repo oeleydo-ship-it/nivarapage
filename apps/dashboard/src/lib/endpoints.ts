@@ -177,7 +177,10 @@ export const blogApi = {
 }
 
 export const subdomainsApi = {
-  check: (name: string) => http.get<{ available?: boolean; name?: string }>(`/subdomains/check?name=${encodeURIComponent(name)}`),
+  check: (name: string) =>
+    http.get<{ available?: boolean; name?: string; hostname?: string; platform_domain?: string }>(
+      `/subdomains/check?name=${encodeURIComponent(name)}`,
+    ),
 }
 
 export const pagesApi = {
@@ -492,6 +495,20 @@ export const adminApi = {
     http.put<AdminStorageSettings>('/admin/storage-settings', body),
   testStorageSettings: () =>
     http.post<{ ok: boolean; message?: string; status?: AdminStorageSettings }>('/admin/storage-settings/test'),
+  cloudflare: () => http.get<AdminCloudflareSettings>('/admin/cloudflare'),
+  updateCloudflare: (body: Record<string, unknown>) => http.put<AdminCloudflareSettings>('/admin/cloudflare', body),
+  testCloudflare: () =>
+    http.post<{ ok: boolean; message?: string; status?: AdminCloudflareSettings }>('/admin/cloudflare/test'),
+  cloudflareApexAddresses: (refresh = false) =>
+    http.get<CloudflareApexAddresses>(`/admin/cloudflare/apex-addresses${refresh ? '?refresh=1' : ''}`),
+  cloudflareFallbackOrigin: () => http.get<CloudflareFallbackOrigin>('/admin/cloudflare/fallback-origin'),
+  syncCloudflareFallbackOrigin: () =>
+    http.post<{
+      ok: boolean
+      message?: string
+      fallback?: CloudflareFallbackOrigin | null
+      status?: AdminCloudflareSettings
+    }>('/admin/cloudflare/fallback-origin'),
   paymentGateway: () => http.get<AdminPaymentGatewaySettings>('/admin/payment-gateway'),
   updatePaymentGateway: (body: Record<string, unknown>) =>
     http.put<AdminPaymentGatewaySettings>('/admin/payment-gateway', body),
@@ -515,6 +532,10 @@ export const adminApi = {
   lookupDomain: (hostname: string) =>
     http.get<DomainLookup>(`/admin/domains/lookup?hostname=${encodeURIComponent(hostname)}`),
   health: () => http.get<AdminHealth>('/admin/health'),
+  diagnostics: (params?: { host?: string; site_id?: number }) =>
+    http.get<AdminDiagnostics>(`/admin/diagnostics${queryString({ ...params })}`),
+  diagnoseHost: (host: string) =>
+    http.get<AdminHostDiagnosis>(`/admin/diagnostics/host?host=${encodeURIComponent(host)}`),
   settings: () => http.get<AdminSettings>('/admin/settings'),
   updateSettings: (body: Partial<AdminSettings>) => http.put<AdminSettings>('/admin/settings', body),
   mailSettings: () => http.get<AdminMailSettings>('/admin/mail-settings'),
@@ -555,6 +576,7 @@ export type PlatformBranding = {
   platform_tagline: string
   logo_url: string | null
   logo_dark_url: string | null
+  platform_domain?: string
 }
 
 /** Readable before sign-in, so the login screen can render the brand. */
@@ -660,6 +682,7 @@ export type AdminSettings = {
   platform_name: string
   platform_tagline: string
   support_email: string
+  platform_domain: string
   funnels_enabled: boolean
   funnel_events_retention_days: number
   funnel_sessions_retention_days: number
@@ -732,6 +755,90 @@ export type AdminGoogleAuthSettings = {
   last_tested_at: string | null
   last_test_status: string | null
   last_test_message: string | null
+}
+
+export type SettingSource = 'settings' | 'env' | 'none' | 'fallback_origin' | string
+
+export type AdminCloudflareSettings = {
+  enabled: boolean
+  enabled_source: SettingSource
+  configured: boolean
+  provider: string
+  live: boolean
+  api_token_configured: boolean
+  api_token_source: SettingSource
+  api_token_hint: string | null
+  webhook_secret_configured: boolean
+  webhook_secret_source: SettingSource
+  webhook_secret_hint: string | null
+  zone_id: string | null
+  zone_id_source: SettingSource
+  account_id: string | null
+  account_id_source: SettingSource
+  fallback_origin: string | null
+  fallback_origin_source: SettingSource
+  cname_target: string | null
+  cname_target_source: SettingSource
+  apex_ips: string
+  apex_ips_source: SettingSource
+  apex_addresses: CloudflareApexAddresses
+  ssl_validation: string
+  ssl_validations: string[]
+  min_tls_version: string
+  tls_versions: string[]
+  env: {
+    saas_enabled: boolean
+    api_token: boolean
+    zone_id: boolean
+    account_id: boolean
+    fallback_origin: boolean
+    cname_target: boolean
+    webhook_secret: boolean
+  }
+  dashboard_url: string
+  last_tested_at: string | null
+  last_test_status: string | null
+  last_test_message: string | null
+  fallback_synced_at: string | null
+  fallback_status: string | null
+  fallback_message: string | null
+}
+
+export type AdminDiagnostics = {
+  ok: boolean
+  api_url: string
+  renderer_url: string
+  platform_domain: string
+  summary: string
+  checks: Array<{ key: string; label: string; ok: boolean; detail: string }>
+}
+
+export type AdminHostDiagnosis = {
+  host: string
+  platform_domain: string
+  is_platform_subdomain: boolean
+  resolves: boolean
+  domain: { id: number; hostname: string; type: string; status: string; is_primary: boolean; ssl_status: string | null } | null
+  site: { id: number; name: string; status: string; workspace_id: number } | null
+  suggestions: string[]
+  notes: string[]
+}
+
+export type CloudflareApexAddresses = {
+  ipv4: string[]
+  ipv6: string[]
+  /** 'configured' = admin/env override, 'resolved' = looked up from the CNAME target. */
+  source: 'configured' | 'resolved' | 'none' | string
+  target: string | null
+}
+
+export type CloudflareFallbackOrigin = {
+  configured: boolean
+  origin: string | null
+  status: string | null
+  expected: string | null
+  matches: boolean
+  errors: string[]
 }
 
 export type AdminPaymentGatewaySettings = {

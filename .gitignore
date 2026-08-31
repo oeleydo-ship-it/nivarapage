@@ -1,8 +1,7 @@
 node_modules/
 vendor/
 .env
-.env.local
-.env.*.local
+.env.*
 !.env.example
 .next/
 dist/
@@ -15,20 +14,36 @@ Thumbs.db
 .idea/
 .vscode/
 .cursor/
+.nova/
+.zed/
+.codex/
+.phpactor.json
 .phpunit.result.cache
 .phpunit.cache
-apps/api/storage/*.key
-apps/api/storage/logs/*
-apps/api/storage/framework/cache/data/*
-apps/api/storage/framework/sessions/*
-apps/api/storage/framework/views/*
-!apps/api/storage/logs/.gitkeep
-!apps/api/storage/framework/cache/data/.gitkeep
-!apps/api/storage/framework/sessions/.gitkeep
-!apps/api/storage/framework/views/.gitkeep
-apps/api/bootstrap/cache/*.php
-!apps/api/bootstrap/cache/.gitkeep
-apps/api/database/database.sqlite
+_ide_helper.php
+auth.json
+Homestead.json
+Homestead.yaml
+
+# Laravel runtime state. The application lives at the repository root, so these
+# are anchored with a leading slash - `apps/dashboard/storage` is not this.
+/storage/*.key
+/storage/pail
+/storage/logs/*
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+!/storage/logs/.gitkeep
+!/storage/framework/cache/data/.gitkeep
+!/storage/framework/sessions/.gitkeep
+!/storage/framework/views/.gitkeep
+/bootstrap/cache/*.php
+!/bootstrap/cache/.gitkeep
+/public/build
+/public/hot
+/public/storage
+/public/fonts-manifest.dev.json
+
 playwright-report/
 test-results/
 .pnpm-store/
@@ -40,8 +55,12 @@ tmp-upload-probe/
 
 # Front-end build output. Produced by `pnpm build` on deploy and served by
 # Laravel; committing it would put two sources of truth in the repo.
-apps/api/public/dashboard/
-apps/api/public/site/
+/public/dashboard/
+/public/site/
 
 # Local databases.
-apps/api/database/*.sqlite
+/database/*.sqlite
+
+# Leftover from the flatten: a Herd php-cgi worker holds this file open.
+# Delete apps/ once Herd is restarted; nothing reads it any more.
+/apps/api/

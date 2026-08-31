@@ -1,12 +1,18 @@
 * text=auto eol=lf
 
-# Files that are executed inside Linux containers must keep LF endings even
-# when the repository is cloned on Windows with core.autocrlf=true.
+# Files that are executed on the Linux server must keep LF endings even when
+# the repository is cloned on Windows with core.autocrlf=true.
 *.sh text eol=lf
 *.conf text eol=lf
 *.ini text eol=lf
 Caddyfile text eol=lf
 *.ps1 text eol=crlf
+
+*.blade.php diff=html
+*.css diff=css
+*.html diff=html
+*.md diff=markdown
+*.php diff=php
 
 *.png binary
 *.jpg binary
@@ -17,3 +23,5 @@ Caddyfile text eol=lf
 *.woff binary
 *.woff2 binary
 *.sqlite binary
+
+/.github export-ignore

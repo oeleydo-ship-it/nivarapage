@@ -167,13 +167,19 @@ export interface Domain {
 export interface DomainDnsRecord {
   /** What the record is for, which drives how the UI groups and explains it. */
   purpose: 'routing' | 'ownership' | 'certificate' | string
-  type: 'CNAME' | 'ALIAS' | 'A' | 'TXT' | string
+  type: 'CNAME' | 'ALIAS' | 'A' | 'AAAA' | 'TXT' | string
   /** Relative to the zone, e.g. `www` or `@` - what a registrar's host field wants. */
   name: string
   value: string
   ttl: string
   required: boolean
   help?: string
+  /**
+   * Root domains can be routed either way; records sharing an `option` belong
+   * to the same choice and only one option should ever be created.
+   */
+  option?: 'alias' | 'address' | string | null
+  option_label?: string | null
 }
 
 export interface DomainDnsInstructions {
@@ -182,6 +188,9 @@ export interface DomainDnsInstructions {
   is_apex: boolean
   cname_target: string
   apex_ips: string[]
+  apex_ipv6?: string[]
+  /** Where the apex addresses came from: admin override, live DNS, or nothing. */
+  apex_source?: 'configured' | 'resolved' | 'none' | string
   records: DomainDnsRecord[]
   steps: Array<{ title: string; detail: string }>
   notes: string[]

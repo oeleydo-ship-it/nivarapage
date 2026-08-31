@@ -2,6 +2,7 @@ import { useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../ui/primitives'
 import { AiTab } from './admin/AiTab'
 import { PlansTab, SubscriptionsTab } from './admin/BillingTabs'
+import { CloudflareTab } from './admin/CloudflareTab'
 import { BlocksTab, TemplatesTab } from './admin/CatalogTabs'
 import { DashboardTab } from './admin/DashboardTab'
 import { GoogleAuthTab } from './admin/GoogleAuthTab'
@@ -16,6 +17,7 @@ const TABS = [
   { id: 'workspaces', label: 'Workspaces' },
   { id: 'sites', label: 'Websites' },
   { id: 'domains', label: 'Domains' },
+  { id: 'cloudflare', label: 'Domain HTTPS' },
   { id: 'templates', label: 'Templates' },
   { id: 'blocks', label: 'Blocks' },
   { id: 'plans', label: 'Plans' },
@@ -68,6 +70,7 @@ export function AdminPage() {
       {tab === 'workspaces' ? <WorkspacesTab /> : null}
       {tab === 'sites' ? <SitesTab /> : null}
       {tab === 'domains' ? <DomainsTab /> : null}
+      {tab === 'cloudflare' ? <CloudflareTab /> : null}
       {tab === 'templates' ? <TemplatesTab /> : null}
       {tab === 'blocks' ? <BlocksTab /> : null}
       {tab === 'plans' ? <PlansTab /> : null}

@@ -38,7 +38,7 @@ try {
   const { buildBlockCatalog } = await import(pathToFileURL(bundlePath).href)
   const catalog = buildBlockCatalog()
 
-  const target = resolve(packageRoot, '../../apps/api/resources/blocks/block-catalog.json')
+  const target = resolve(packageRoot, '../../resources/blocks/block-catalog.json')
   mkdirSync(dirname(target), { recursive: true })
   writeFileSync(target, `${JSON.stringify(catalog, null, 2)}\n`, 'utf8')
 

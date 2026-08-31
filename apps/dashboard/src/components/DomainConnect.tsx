@@ -36,6 +36,8 @@ function RecordValue({ value, label }: { value: string; label: string }) {
 
 const PURPOSE_GROUPS: Array<{ key: string; title: string; blurb: string }> = [
   { key: 'routing', title: '1. Send traffic here', blurb: 'The record that actually points your domain at your site.' },
+  // Root domains get two routing options; DomainConnect swaps this blurb out
+  // for that case so nobody creates both at the zone apex.
   { key: 'ownership', title: '2. Prove you own it', blurb: 'Confirms the domain is yours before we serve it.' },
   { key: 'certificate', title: '3. Issue the HTTPS certificate', blurb: 'Lets the certificate authority validate the domain.' },
 ]
@@ -50,6 +52,9 @@ function RecordGroup({ title, blurb, records }: { title: string; blurb: string; 
       </div>
       {records.map((record, index) => (
         <div key={`${record.type}-${record.name}-${index}`} className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
+          {record.option_label ? (
+            <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-blue-300">{record.option_label}</div>
+          ) : null}
           <div className="grid gap-3 sm:grid-cols-[80px_150px_1fr_70px]">
             <div>
               <div className="text-[11px] uppercase tracking-wide text-zinc-500">Type</div>
@@ -87,8 +92,13 @@ export function DomainConnect({ domain }: { domain: Domain }) {
     return <p className="text-sm text-zinc-500">DNS instructions are not available for this domain yet.</p>
   }
 
+  const hasRoutingOptions = dns.records.some((record) => record.option_label)
   const grouped = PURPOSE_GROUPS.map((group) => ({
     ...group,
+    blurb:
+      group.key === 'routing' && hasRoutingOptions
+        ? 'A root domain can be routed two ways. Create Option A if your DNS provider supports ALIAS/ANAME, otherwise create every Option B record — never both.'
+        : group.blurb,
     records: dns.records.filter((record) => record.purpose === group.key),
   }))
   const ungrouped = dns.records.filter((record) => !PURPOSE_GROUPS.some((g) => g.key === record.purpose))

@@ -19,7 +19,7 @@ uses and uploads the HTML. A visitor request is one indexed lookup.
 
 ## Requirements
 
-**PHP 8.4 or newer.** `apps/api/composer.json` says `^8.3`, but seventeen of
+**PHP 8.4 or newer.** `composer.json` says `^8.3`, but seventeen of
 the locked Symfony packages require `>=8.4.1` and use syntax that 8.3 cannot
 parse. On 8.3 the application does not boot; it fails while loading vendor.
 
@@ -42,18 +42,20 @@ parse. On 8.3 the application does not boot; it fails while loading vendor.
 ```bash
 git clone <your-repo> /var/www/uidesired
 cd /var/www/uidesired
-cp apps/api/.env.example apps/api/.env   # then edit it, see below
-composer install --no-dev --prefer-dist --optimize-autoloader -d apps/api
-php apps/api/artisan key:generate --force
-php apps/api/artisan migrate --force
-php apps/api/artisan db:seed --class=PlanSeeder --force
-php apps/api/artisan db:seed --class=SuperAdminSeeder --force
+cp .env.example .env   # then edit it, see below
+composer install --no-dev --prefer-dist --optimize-autoloader
+php artisan key:generate --force
+php artisan migrate --force
+php artisan db:seed --class=PlanSeeder --force
+php artisan db:seed --class=SuperAdminSeeder --force
 pnpm install --frozen-lockfile
 pnpm build
-php apps/api/artisan storage:link
+php artisan storage:link
 ```
 
-Point the web server's document root at **`apps/api/public`**.
+Point the web server's document root at **`public`**. The Laravel application
+is the repository root, so a managed host's stock PHP pipeline works with no
+configuration beyond that.
 
 ## Every deploy after that
 
@@ -87,7 +89,7 @@ Nginx, with `try_files` so built assets never reach PHP:
 server {
     listen 80;
     server_name app.example.com *.sites.example.com;   # plus custom domains
-    root /var/www/uidesired/apps/api/public;
+    root /var/www/uidesired/public;
     index index.php;
 
     # Hashed dashboard assets can be cached hard; the site runtime has fixed
@@ -98,7 +100,7 @@ server {
     location / { try_files $uri $uri/ /index.php?$query_string; }
 
     location ~ \.php$ {
-        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_pass unix:/run/php/php8.4-fpm.sock;
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         include fastcgi_params;
     }
@@ -111,13 +113,13 @@ that answer per site, and a static file would shadow them for every customer.
 ## Queue and scheduler
 
 ```
-* * * * * cd /var/www/uidesired/apps/api && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /var/www/uidesired && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 Run one worker, via systemd or Supervisor:
 
 ```
-php /var/www/uidesired/apps/api/artisan queue:work --queue=publishing,domains,media,notifications,default
+php /var/www/uidesired/artisan queue:work --queue=publishing,domains,media,notifications,default
 ```
 
 ## Re-rendering published sites

@@ -775,7 +775,7 @@ export const processVoltera = defineBlock({
 export const statsBandVoltera = defineBlock({
   type: 'statsband.voltera',
   version: 1,
-  category: 'stats',
+  category: 'features',
   label: 'Voltera image stats band',
   icon: 'BarChart',
   defaultProps: {
@@ -801,7 +801,7 @@ export const statsBandVoltera = defineBlock({
     const edit = editOf(props)
     const stats = items(props.stats, [])
     return (
-      <SectionShell props={props} tone="muted" className="ud-vt ud-vt-statsband" align="center">
+      <SectionShell props={props} tone="surface" className="ud-vt ud-vt-statsband" align="center">
         <div className="ud-vt-statsband__frame">
           <Media src={props.image} alt={str(props.cardTitle)} ratio="wide" edit={edit} path={['image']} />
           <div className="ud-vt-statsband__card">
@@ -852,7 +852,7 @@ export const statsBandVoltera = defineBlock({
 export const statsStripVoltera = defineBlock({
   type: 'statsstrip.voltera',
   version: 1,
-  category: 'stats',
+  category: 'features',
   label: 'Voltera stat strip',
   icon: 'BarChart',
   defaultProps: {
@@ -1069,7 +1069,7 @@ export const valuesVoltera = defineBlock({
     const edit = editOf(props)
     const rows = items(props.items, [])
     return (
-      <SectionShell props={props} tone="muted" className="ud-vt ud-vt-values" align="center">
+      <SectionShell props={props} tone="surface" className="ud-vt ud-vt-values" align="center">
         <Head props={props} align="center" />
         <div className="ud-vt-values__grid" data-cols={String(num(props.columns, 3))}>
           {rows.map((item, index) => (
@@ -2086,7 +2086,7 @@ export const mapVoltera = defineBlock({
       }
     }
     return (
-      <SectionShell props={props} tone="muted" className="ud-vt ud-vt-map" align="center">
+      <SectionShell props={props} tone="surface" className="ud-vt ud-vt-map" align="center">
         <Head props={props} align="center" />
         <div className="ud-vt-map__frame">
           <svg className="ud-vt-map__dots" viewBox={'0 0 ' + String(DOT_COLS * 10) + ' ' + String(DOT_ROWS * 10)} role="presentation">
@@ -2113,7 +2113,7 @@ export const mapVoltera = defineBlock({
 export const logosVoltera = defineBlock({
   type: 'logos.voltera',
   version: 1,
-  category: 'logos',
+  category: 'gallery',
   label: 'Voltera logo row',
   icon: 'Grid',
   defaultProps: {

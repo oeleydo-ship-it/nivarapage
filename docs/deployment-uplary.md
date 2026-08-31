@@ -16,7 +16,7 @@ the front end during deployment, not to run anything.
 ## Ploi
 
 1. Create a site, set **PHP 8.4+**, and point the web directory at
-   `/apps/api/public`.
+   `/public`.
 2. Connect the repository and enable deployments.
 3. Use `./deploy.sh` from the repository root as the deploy script, or inline
    the same steps: `composer install`, `migrate --force`, `pnpm install &&
@@ -28,13 +28,36 @@ the front end during deployment, not to run anything.
 
 ## Uplary
 
-Uplary Cloud's documented application type is Custom Docker, which this project
-no longer ships. **Confirm your plan can run a plain PHP application from git
-before relying on this path.** If it can - or if you have SSH on the VM and can
-install PHP 8.4 with nginx - the setup is identical to Ploi above.
+Uplary clones each release into `releases/<timestamp>` and then runs its own
+fixed Laravel pipeline - `composer install`, `artisan migrate`, the caches -
+**from the release root**. It never runs `deploy.sh`.
+
+That is why the Laravel application sits at the repository root rather than in
+`apps/api`. The stock pipeline finds `composer.json` and `artisan` where it
+expects them, and nothing about the deploy needs customising.
+
+Set on the site:
+
+- **PHP 8.4+**. On 8.3 the app fails while loading vendor.
+- **Web directory `/public`**.
+- **Shared `.env`** at the release root - the same file every release symlinks to.
+- **Shared `storage/`**, so uploads and logs survive a release swap.
+
+Two things the pipeline does not do for you:
+
+- **Build the front end.** Uplary's Node step runs npm, but this repo is a pnpm
+  workspace and the dashboard depends on `workspace:*` packages that npm cannot
+  resolve. Add `corepack enable && pnpm install --frozen-lockfile && pnpm build`
+  as a deploy hook, or build `public/dashboard` and `public/site` in CI and ship
+  them as artefacts. Without it the release serves no dashboard.
+- **Run a queue worker.** Add the daemon and the `schedule:run` cron from
+  DEPLOY.md.
+
+Point the dashboard hostname, `*.sites.example.com`, and every custom domain at
+the same site, so all of them reach this application.
 
 ## Do not add these files to public/
 
 `robots.txt` and `sitemap.xml` are routes that answer per site. A static file of
-either name in `apps/api/public` shadows the route and serves one customer's
+either name in `public/` shadows the route and serves one customer's
 content to everybody.

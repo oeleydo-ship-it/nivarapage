@@ -206,7 +206,116 @@ export function HealthTab() {
           </div>
         </dl>
       </Card>
+
+      <RendererDiagnosticsCard />
     </div>
+  )
+}
+
+/**
+ * The renderer talks to the API over HTTP. When that call fails, visitors see a
+ * generic "not found" page and there is nothing in the dashboard to explain it -
+ * so this replays the renderer's own calls and reports which one broke.
+ */
+function RendererDiagnosticsCard() {
+  const [host, setHost] = useState('')
+  const [checked, setChecked] = useState('')
+
+  const diagnostics = useQuery({
+    queryKey: ['admin-diagnostics', checked],
+    queryFn: () => adminApi.diagnostics(checked ? { host: checked } : undefined),
+  })
+  const hostInfo = useQuery({
+    queryKey: ['admin-diagnostics-host', checked],
+    queryFn: () => adminApi.diagnoseHost(checked),
+    enabled: checked !== '',
+  })
+
+  const data = diagnostics.data
+
+  return (
+    <Card className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-medium text-white">Renderer connection</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Runs the exact calls the renderer makes for a published page and a signed preview.
+          </p>
+        </div>
+        {data ? <Badge tone={data.ok ? 'success' : 'danger'}>{data.ok ? 'healthy' : 'broken'}</Badge> : null}
+      </div>
+
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="min-w-[240px] flex-1">
+          <Label>Hostname to test (optional)</Label>
+          <Input
+            className="mt-1"
+            placeholder="dager.sites.example.com"
+            value={host}
+            onChange={(e) => setHost(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') setChecked(host.trim())
+            }}
+          />
+        </div>
+        <Button variant="outline" disabled={diagnostics.isFetching} onClick={() => setChecked(host.trim())}>
+          {diagnostics.isFetching ? 'Checking…' : 'Run checks'}
+        </Button>
+      </div>
+
+      {data ? (
+        <>
+          <div className="space-y-2">
+            {data.checks.map((check) => (
+              <div key={check.key} className="flex gap-3 rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
+                <Badge tone={check.ok ? 'success' : 'danger'}>{check.ok ? 'pass' : 'fail'}</Badge>
+                <div className="min-w-0">
+                  <div className="text-sm text-zinc-200">{check.label}</div>
+                  <p className="text-xs text-zinc-500">{check.detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <dl className="grid gap-3 text-xs sm:grid-cols-3">
+            {[
+              ['API_URL', data.api_url],
+              ['RENDERER_URL', data.renderer_url],
+              ['Platform domain', data.platform_domain],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-zinc-500">{label}</dt>
+                <dd className="mt-1 break-all font-mono text-zinc-300">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </>
+      ) : null}
+
+      {hostInfo.data ? (
+        <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-sm text-zinc-200">{hostInfo.data.host}</span>
+            <Badge tone={hostInfo.data.resolves ? 'success' : 'warning'}>
+              {hostInfo.data.resolves ? 'resolves' : 'not connected'}
+            </Badge>
+            {hostInfo.data.domain ? <Badge tone="neutral">{hostInfo.data.domain.status}</Badge> : null}
+            {hostInfo.data.site ? <Badge tone="neutral">site #{hostInfo.data.site.id}</Badge> : null}
+          </div>
+          {hostInfo.data.notes.length ? (
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-zinc-400">
+              {hostInfo.data.notes.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          ) : null}
+          {hostInfo.data.suggestions.length ? (
+            <p className="mt-2 text-xs text-zinc-500">
+              Similar active hostnames: {hostInfo.data.suggestions.join(', ')}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </Card>
   )
 }
 
@@ -216,6 +325,7 @@ export function SettingsTab() {
   const [platformName, setPlatformName] = useState('')
   const [platformTagline, setPlatformTagline] = useState('')
   const [supportEmail, setSupportEmail] = useState('')
+  const [platformDomain, setPlatformDomain] = useState('')
   const [funnelsEnabled, setFunnelsEnabled] = useState(true)
   const [eventRetention, setEventRetention] = useState(90)
   const [sessionRetention, setSessionRetention] = useState(180)
@@ -226,13 +336,14 @@ export function SettingsTab() {
     setPlatformName(settings.data.platform_name)
     setPlatformTagline(settings.data.platform_tagline)
     setSupportEmail(settings.data.support_email)
+    setPlatformDomain(settings.data.platform_domain)
     setFunnelsEnabled(settings.data.funnels_enabled)
     setEventRetention(settings.data.funnel_events_retention_days)
     setSessionRetention(settings.data.funnel_sessions_retention_days)
   }, [settings.data])
 
   const save = useMutation({
-    mutationFn: () => adminApi.updateSettings({ platform_name: platformName, platform_tagline: platformTagline, support_email: supportEmail, funnels_enabled: funnelsEnabled, funnel_events_retention_days: eventRetention, funnel_sessions_retention_days: sessionRetention }),
+    mutationFn: () => adminApi.updateSettings({ platform_name: platformName, platform_tagline: platformTagline, support_email: supportEmail, platform_domain: platformDomain, funnels_enabled: funnelsEnabled, funnel_events_retention_days: eventRetention, funnel_sessions_retention_days: sessionRetention }),
     onSuccess: () => {
       setNotice('Settings saved.')
       qc.invalidateQueries({ queryKey: ['admin-settings'] })
@@ -260,6 +371,18 @@ export function SettingsTab() {
       <div>
         <Label>Support email</Label>
         <Input type="email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} />
+      </div>
+      <div>
+        <Label>Published sites domain</Label>
+        <Input
+          value={platformDomain}
+          onChange={(e) => setPlatformDomain(e.target.value.toLowerCase().trim())}
+          placeholder="sites.aidirectory.com"
+        />
+        <p className="mt-1.5 text-xs text-zinc-500">
+          Tenant websites are created as <span className="font-mono text-zinc-400">subdomain.{platformDomain || 'sites.example.com'}</span>.
+          No http://. DNS for this host and a wildcard must point at this server.
+        </p>
       </div>
       <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 p-4">
         <div>

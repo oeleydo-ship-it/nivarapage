@@ -142,9 +142,9 @@ export function DomainsPage() {
           />
         </div>
         {candidate && looksApex(candidate) ? (
-          <p className="text-xs text-amber-400">
-            {candidate} is a root domain. Root domains cannot use a plain CNAME - if your DNS provider has no
-            ALIAS/ANAME support, connect www.{candidate} instead.
+          <p className="text-xs text-zinc-400">
+            {candidate} is a root domain. That works: after connecting we show you an ALIAS record, plus A records to use
+            instead if your DNS provider has no ALIAS/ANAME support.
           </p>
         ) : null}
         <Button

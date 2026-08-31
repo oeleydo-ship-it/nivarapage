@@ -6,13 +6,15 @@ import { fileURLToPath } from 'node:url'
 
 const dir = fileURLToPath(new URL('.', import.meta.url))
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react(), tailwindcss()],
   // The dashboard is served by Laravel from public/dashboard, and its assets
   // are requested from that prefix while the app itself runs at the site root.
-  base: '/dashboard/',
+  // The dev server has no Laravel in front of it, so it serves the app from the
+  // root too - otherwise the router sees /dashboard/ and matches no route.
+  base: command === 'build' ? '/dashboard/' : '/',
   build: {
-    outDir: path.resolve(dir, '../api/public/dashboard'),
+    outDir: path.resolve(dir, '../../public/dashboard'),
     emptyOutDir: true,
   },
   esbuild: {
@@ -54,4 +56,4 @@ export default defineConfig({
     testTimeout: 30_000,
     hookTimeout: 30_000,
   },
-})
+}))

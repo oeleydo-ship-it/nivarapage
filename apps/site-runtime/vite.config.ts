@@ -19,7 +19,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   esbuild: { jsx: "automatic" },
   build: {
-    outDir: path.resolve(dir, "../api/public/site"),
+    outDir: path.resolve(dir, "../../public/site"),
     emptyOutDir: true,
     manifest: false,
     rollupOptions: {
