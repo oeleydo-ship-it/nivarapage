@@ -44,6 +44,7 @@ class MailSettingsService
         }
 
         Config::set(self::SNAPSHOT, [
+            'default' => config('mail.default'),
             'host' => config('mail.mailers.smtp.host'),
             'port' => config('mail.mailers.smtp.port'),
             'username' => config('mail.mailers.smtp.username'),
@@ -171,6 +172,17 @@ class MailSettingsService
         if (blank($config['host'])) {
             // Nothing usable stored and no env host: leave the framework
             // default alone rather than pointing SMTP at nowhere.
+            return;
+        }
+
+        // The transport column defaults to smtp, so a fresh deployment claims
+        // SMTP before an administrator has entered anything - and config/mail.php
+        // fills the host in with its 127.0.0.1 placeholder, so the guard above
+        // reads that as configured. Sending then throws a TransportException
+        // that takes the whole request with it, and registration is the first
+        // thing a new deployment does. Until a host is actually stored, honour
+        // the mailer the deployment itself chose.
+        if (blank($this->settings()->host) && (string) $this->env('default') !== 'smtp') {
             return;
         }
 

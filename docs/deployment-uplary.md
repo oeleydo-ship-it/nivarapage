@@ -60,6 +60,23 @@ needed. Two consequences worth knowing:
   the regenerated lockfile with it or the deploy fails with
   `ERR_PNPM_OUTDATED_LOCKFILE`.
 
+## Seed once, by hand, after the first release
+
+The pipeline runs `migrate` but never `db:seed`, and two seeders are not
+optional - without them a fresh deployment has an empty `plans` table and no
+administrator:
+
+```bash
+cd /var/www/<site>/current
+php artisan db:seed --class=PlanSeeder --force
+php artisan db:seed --class=SuperAdminSeeder --force
+```
+
+Registration calls `assignFreePlan`, which does `Plan::where('slug', 'free')
+->firstOrFail()`, so with no plans every sign-up returns 404. `SuperAdminSeeder`
+reads `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD` from `.env` and does nothing
+if either is unset - set them before running it. Both seeders are safe to re-run.
+
 One thing the pipeline still does not do for you:
 
 - **Run a queue worker.** Add the daemon and the `schedule:run` cron from
