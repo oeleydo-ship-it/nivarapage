@@ -4,7 +4,6 @@ vendor/
 .env.local
 .env.*.local
 !.env.example
-!.env.docker.example
 .next/
 dist/
 out/

@@ -10,7 +10,7 @@ All Compose services on one host is enough for early tenants. Put MySQL backups 
 
 1. **Keep Redis and MySQL** on the original box (or managed equivalents) and move `next-renderer` replicas behind Caddy. The renderer is stateless aside from ISR (`revalidate: 60`).
 2. **Horizon workers** scale independently. They need `pcntl`/`posix` (Linux images only).
-3. **Laravel API** can be replicated once sessions and cache are on Redis (already the Docker default).
+3. **Laravel API** can be replicated once sessions and cache are on Redis (set `CACHE_STORE`, `SESSION_DRIVER` and `QUEUE_CONNECTION` to `redis`).
 4. **Reverb** stays a single sticky WebSocket process until a Redis adapter is required.
 
 ## Caching
