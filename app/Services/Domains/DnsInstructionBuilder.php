@@ -15,7 +15,10 @@ use App\Support\Hostname;
  */
 class DnsInstructionBuilder
 {
-    public function __construct(private readonly ApexAddressResolver $apex) {}
+    public function __construct(
+        private readonly ApexAddressResolver $apex,
+        private readonly DnsProviderProbe $provider,
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -25,7 +28,10 @@ class DnsInstructionBuilder
         $hostname = Hostname::normalize($domain->hostname);
         $isApex = DomainName::isApex($hostname);
         $target = $this->cnameTarget();
-        $addresses = $isApex
+        // Our edge is Cloudflare, so a customer whose own DNS is on Cloudflare
+        // needs a different record entirely - see DnsProviderProbe.
+        $onCloudflare = $this->provider->isCloudflare(DomainName::registrableRoot($hostname));
+        $addresses = $isApex && $onCloudflare !== true
             ? $this->apex->addresses()
             : ['ipv4' => [], 'ipv6' => [], 'source' => 'none', 'target' => $target];
 
@@ -37,9 +43,10 @@ class DnsInstructionBuilder
             'apex_ips' => $addresses['ipv4'],
             'apex_ipv6' => $addresses['ipv6'],
             'apex_source' => $addresses['source'],
-            'records' => $this->records($domain, $hostname, $isApex, $target, $addresses),
-            'steps' => $this->steps($hostname, $isApex, $target, $addresses),
-            'notes' => $this->notes($hostname, $isApex, $target, $addresses),
+            'dns_on_cloudflare' => $onCloudflare,
+            'records' => $this->records($domain, $hostname, $isApex, $target, $addresses, $onCloudflare),
+            'steps' => $this->steps($hostname, $isApex, $target, $addresses, $onCloudflare),
+            'notes' => $this->notes($hostname, $isApex, $target, $addresses, $onCloudflare),
             'errors' => $this->errors($domain),
         ];
     }
@@ -47,13 +54,26 @@ class DnsInstructionBuilder
     /**
      * @return list<array<string, mixed>>
      */
-    private function records(Domain $domain, string $hostname, bool $isApex, string $target, array $addresses): array
+    private function records(Domain $domain, string $hostname, bool $isApex, string $target, array $addresses, ?bool $onCloudflare): array
     {
         $records = [];
         $data = is_array($domain->verification_data) ? $domain->verification_data : [];
 
         // 1. Routing: what actually sends traffic to us.
-        if ($isApex) {
+        if ($onCloudflare === true) {
+            // One record, root or not: Cloudflare flattens a CNAME at the apex,
+            // and proxying is what keeps it out of Error 1000 territory.
+            $records[] = [
+                'purpose' => 'routing',
+                'type' => 'CNAME',
+                'name' => DomainName::recordName($hostname),
+                'value' => $target,
+                'ttl' => 'Auto',
+                'required' => true,
+                'proxied' => true,
+                'help' => 'Leave this Proxied (the orange cloud). Cloudflare flattens a CNAME at the root, so this is also how a root domain is connected.',
+            ];
+        } elseif ($isApex) {
             $records = $this->apexRoutingRecords($hostname, $target, $addresses);
         } else {
             $records[] = [
@@ -193,7 +213,7 @@ class DnsInstructionBuilder
     /**
      * @return list<array{title: string, detail: string}>
      */
-    private function steps(string $hostname, bool $isApex, string $target, array $addresses): array
+    private function steps(string $hostname, bool $isApex, string $target, array $addresses, ?bool $onCloudflare): array
     {
         $steps = [
             [
@@ -206,7 +226,7 @@ class DnsInstructionBuilder
             ],
         ];
 
-        if ($isApex) {
+        if ($isApex && $onCloudflare !== true) {
             $hasAddresses = $addresses['ipv4'] !== [] || $addresses['ipv6'] !== [];
             $steps[] = [
                 'title' => 'Pick one routing option',
@@ -216,10 +236,15 @@ class DnsInstructionBuilder
             ];
         }
 
-        if ($target !== '') {
+        if ($onCloudflare === true) {
             $steps[] = [
-                'title' => 'Turn off proxying if you use Cloudflare DNS',
-                'detail' => 'If '.DomainName::registrableRoot($hostname).' is on Cloudflare, set the routing record to "DNS only" (grey cloud). Proxying it there would send traffic through Cloudflare twice and the certificate will not issue.',
+                'title' => 'Leave the record proxied',
+                'detail' => 'Keep the CNAME on "Proxied" (the orange cloud), and do not add A or AAAA records for this domain. Our edge runs on Cloudflare, so address records here would point a Cloudflare zone at Cloudflare addresses, which is refused with "Error 1000: DNS points to prohibited IP".',
+            ];
+        } elseif ($onCloudflare === null && $target !== '') {
+            $steps[] = [
+                'title' => 'If this domain is on Cloudflare DNS',
+                'detail' => 'Create a single CNAME at '.DomainName::recordName($hostname).' pointing to '.$target.' and leave it Proxied (the orange cloud). Do not use the address records, and do not set it to "DNS only" - either one gives "Error 1000: DNS points to prohibited IP", because our edge is Cloudflare too.',
             ];
         }
 
@@ -234,7 +259,7 @@ class DnsInstructionBuilder
     /**
      * @return list<string>
      */
-    private function notes(string $hostname, bool $isApex, string $target, array $addresses): array
+    private function notes(string $hostname, bool $isApex, string $target, array $addresses, ?bool $onCloudflare): array
     {
         $notes = [];
         $hasAddresses = $addresses['ipv4'] !== [] || $addresses['ipv6'] !== [];
@@ -242,7 +267,10 @@ class DnsInstructionBuilder
         if ($target === '' && ! $hasAddresses) {
             $notes[] = 'No CNAME target is configured on this deployment yet, so the routing record below is incomplete. Set the Cloudflare CNAME target in Admin before asking customers to connect a domain.';
         }
-        if ($isApex && ! $hasAddresses) {
+        if ($onCloudflare === true) {
+            $notes[] = 'This domain is on Cloudflare DNS, so one proxied CNAME is the whole routing setup - Cloudflare flattens it at the root for you.';
+        }
+        if ($isApex && $onCloudflare !== true && ! $hasAddresses) {
             $notes[] = 'This is a root domain. Plain CNAME records are not valid at the zone apex, so your provider must support ALIAS/ANAME/CNAME flattening.';
         }
         if ($isApex && $hasAddresses && ($addresses['source'] ?? null) === 'resolved') {
