@@ -9,15 +9,8 @@
       "autoPort": false
     },
     {
-      "name": "renderer",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "apps/renderer", "run", "dev"],
-      "port": 3100,
-      "autoPort": false
-    },
-    {
       "name": "api",
-      "runtimeExecutable": "C:\\Users\\Eleydo Family\\.config\\herd\\bin\\php84\\php.exe",
+      "runtimeExecutable": "C:\Users\Eleydo Family\.config\herd\bin\php84\php.exe",
       "runtimeArgs": ["artisan", "serve", "--port=8000"],
       "port": 8000,
       "autoPort": false

@@ -2,24 +2,22 @@
 
 Copy the files below and fill secrets before starting services.
 
-## Docker (recommended)
+## Configuration
 
-```bash
-cp .env.docker.example .env.docker
-```
+There is one env file: `apps/api/.env`. Start from `apps/api/.env.example`.
 
-Important variables:
+The hostname settings are the important ones - they are what separates the
+dashboard from customer sites.
 
-| Variable | Local Docker default | Purpose |
+| Variable | Local default | Purpose |
 | --- | --- | --- |
-| `APP_URL` | `http://api.localhost:8088` | Laravel public URL. Preview tokens are signed relatively so they still work if the renderer uses a different `API_URL`. |
-| `FRONTEND_URL` | `http://app.localhost:8088` | Dashboard origin / CORS |
-| `RENDERER_URL` | `http://sites.localhost:8088` | Platform site URL |
+| `APP_URL` | `http://localhost:8000` | Dashboard and API origin |
+| `FRONTEND_URL` | `http://localhost:8000` | Dashboard origin / CORS. Password reset links are built from this, never from the request host |
+| `DASHBOARD_HOSTS` | empty | Extra dashboard hostnames, comma separated. Every hostname that is not listed here or in `APP_URL`/`FRONTEND_URL` is treated as a published customer site |
 | `PLATFORM_DOMAIN` | `sites.localhost` | Subdomain suffix (`studio.sites.localhost`) |
-| `INTERNAL_RENDERER_SECRET` | empty | If set, renderer sends `X-Internal-Secret` |
+| `PREVIEW_DOMAIN` | `preview.localhost` | Hostname that serves the draft preview route |
 | `SANCTUM_EXPIRATION` | `10080` | API token lifetime in minutes (7 days) |
 | `SESSION_SECURE_COOKIE` | empty | Set `true` in production HTTPS |
-| `TRUSTED_HOSTS` | empty | Extra Host header allow-list (comma-separated) |
 | `SEED_DEMO` | `true` | Seeds `admin@uidesired.test` / `password` |
 | `MYSQL_*` | `uidesired` / `secret` | MySQL database and user |
 | `QUEUE_CONNECTION` | `redis` | Horizon |
@@ -43,21 +41,10 @@ Google sign-in is normally configured in the dashboard under **Admin → Google 
 
 Leave `STRIPE_SECRET` blank in local/demo so Pest tests and the dashboard can still change plans without a Stripe account. When it is set, paid upgrades go through Stripe Checkout; Free does not require a card.
 
-Generate `APP_KEY` once (`php artisan key:generate --show`) and put it in `.env.docker` so API, worker, scheduler, and Reverb share the same key.
+Generate `APP_KEY` once with `php artisan key:generate`. The web process, the
+queue worker, the scheduler, and Reverb all read the same `.env`, so they share
+it automatically.
 
-## Renderer (without Docker)
+## Local development
 
-`apps/renderer/env.example`:
-
-```
-API_URL=http://127.0.0.1:8000
-INTERNAL_RENDERER_SECRET=
-```
-
-Copy to `apps/renderer/.env.local`.
-
-When the API runs in Compose, the renderer uses `API_URL=http://laravel-api:8000`.
-
-## API without Docker
-
-`apps/api/.env.example` defaults to SQLite. For Redis features locally, point `REDIS_HOST` at `127.0.0.1` and run Redis yourself, or keep `QUEUE_CONNECTION=sync` and `CACHE_STORE=file` for a minimal loop.
+`apps/api/.env.example` defaults to SQLite, which is enough to run everything. For Redis features locally, point `REDIS_HOST` at `127.0.0.1` and run Redis yourself, or keep `QUEUE_CONNECTION=sync` and `CACHE_STORE=file` for a minimal loop.

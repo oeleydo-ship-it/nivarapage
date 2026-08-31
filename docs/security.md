@@ -4,27 +4,33 @@
 
 - Dashboard routes require Sanctum plus `X-Workspace-Id`. Membership is checked in middleware; route bindings only load rows in that workspace.
 - Public routes never return another tenant’s IDs on a miss. Unknown or invalid hosts are `{ message: "Not found." }`.
-- The renderer shows a generic “Website Not Found” page and does not print site IDs, workspace names, or debug stacks to visitors.
+- An unrecognised hostname gets a generic “Website Not Found” page. It prints no site IDs, workspace names, or debug stacks.
 - Disabled sites render an unavailable page instead of leaking draft content.
 
 ## Hosts and domains
 
 - Public resolve/page/theme/navigation only run when `host` is a valid hostname (no schemes, paths, or userinfo) **and** that hostname is an **active** domain.
 - Custom domains must look like `www.example.com`. Invalid values return 422.
-- The renderer prefers the `Host` header. `X-Forwarded-Host` is used only when `Host` matches the Cloudflare fallback origin (`CLOUDFLARE_FALLBACK_ORIGIN`).
-- Laravel `TrustHosts` is armed in staging/production (not local/tests) from `APP_URL`, `FRONTEND_URL`, `localhost`, and `TRUSTED_HOSTS`.
+- Hostnames are resolved from the request `Host` (lowercased, port and trailing dot stripped) against the `domains` table.
+- Laravel `TrustHosts` is deliberately **not** armed. Valid hostnames are a
+  database table (every customer's custom domain), not a config list, so an
+  allow-list would reject every published site. What it normally protects is
+  covered another way: password reset and verification links are built from
+  `config('uidesired.frontend_url')` rather than the request host, published
+  HTML is rendered at publish time so it contains no host-derived URLs, and a
+  hostname with no active `domains` row gets a 404.
 - Proxies are trusted so Cloudflare `X-Forwarded-*` and HTTPS detection work. Terminate TLS at the edge.
 
 ## Renderer ↔ API
 
-- If `INTERNAL_RENDERER_SECRET` is empty, public resolve/page/theme/navigation/sitemap are open (local default). Set the secret in production.
+- The public resolve/page/theme/navigation endpoints are readable by anyone; they only return content that is already published.
 - If the secret is set, the API requires header `X-Internal-Secret` (constant-time compare).
-- Form posts from the browser go through the renderer (`/api/forms/{id}/submit`) so the Docker-internal API URL is not exposed. The honeypot field is `website` and must stay empty.
+- Published pages post forms to `/api/v1/public/forms/{id}/submit` on their own hostname, which is the same application. The honeypot field is `website` and must stay empty.
 
 ## Preview
 
-- Preview is a **relative** signed Laravel URL (`POST /api/v1/public/preview?...`, 30 minutes). The host is not part of the signature, so the renderer can call `API_URL` even when it differs from `APP_URL`. Unsigned requests are forbidden.
-- The renderer `/preview` route forwards `expires`, `site`, and `signature`, does not resolve the public hostname, does not cache, and sends `X-Frame-Options: DENY`.
+- Preview is a **relative** signed Laravel URL (`POST /api/v1/public/preview?...`, 30 minutes). The host is not part of the signature. Unsigned requests are forbidden.
+- The `/preview` route lives in the dashboard bundle, replays the signed query to fetch the draft, is marked `noindex`, and is never cached or stored.
 
 ## Authentication
 
@@ -43,7 +49,10 @@
 
 ## HTML and execution
 
-- Published pages are block JSON, not customer PHP or arbitrary React. The renderer never `eval`s user input.
+- Published pages are block JSON, not customer PHP or arbitrary React. Nothing
+  `eval`s user input. The HTML is rendered by React, which escapes text, and
+  the hydration payload embedded in each page escapes `<` so page content
+  cannot close the script tag.
 - Rich text is sanitized in `@uidesired/blocks` (no script/iframe/event handlers/`javascript:` URLs).
 
 ## Headers and cookies
@@ -54,6 +63,6 @@
 ## Platform
 
 - Sanctum authenticates the dashboard. Never trust a client-supplied `workspace_id` in the body.
-- Do not commit `.env` or `.env.docker`. Rotate `APP_KEY`, DB passwords, renderer secret, and Cloudflare tokens on production.
+- Do not commit `.env`. Rotate `APP_KEY`, DB passwords, and Cloudflare tokens on production.
 - Super-admin routes sit under `/api/v1/admin` and require `is_super_admin`.
 - Cloudflare API tokens stay on Laravel only.

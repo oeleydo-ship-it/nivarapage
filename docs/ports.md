@@ -1,30 +1,19 @@
 # Ports
 
-UiDesired avoids default ports that are already in use on this machine (AMPPS Apache/MySQL, another Vite app, Redis, Laravel Herd).
+In production there is **one** port: the web server in front of Laravel. The
+application no longer runs a renderer, a proxy, or a container stack.
 
-Rescanned 18 Aug 2026:
+Locally, UiDesired avoids default ports that are commonly already taken on a
+development machine (AMPPS Apache/MySQL, another Vite app, Redis, Herd).
 
-| Host port | Status |
-| --- | --- |
-| 80 / 443 | Busy — AMPPS `httpd` |
-| 3306 | Busy — AMPPS `mysqld` |
-| 5173 | Busy — another Node/Vite process |
-| 8080 | Busy — reserved/Herd |
-| 6379 | Busy — `redis-server` |
-| 3000 | Currently free, but other Next apps often take it |
-| 5174, 8000, 3100, 8088, 8090, 8443 | Free |
-
-Chosen mapping:
-
-| Service | Host port | Notes |
+| Service | Port | Notes |
 | --- | --- | --- |
-| Dashboard (Vite) | **5174** | 5173 is taken by another Node process |
-| Laravel API | **8000** | Free; kept |
-| Next.js renderer | **3100** | Keep off 3000 so a second Next app can run |
-| Caddy (Docker HTTP) | **8088** | 80/443 taken by AMPPS Apache |
-| Caddy (Docker HTTPS) | **8443** | Production compose only |
-| Reverb | **8090** | 8080 is occupied |
-| MySQL | not published | AMPPS already owns 3306 |
-| Redis | not published | A Redis server already owns 6379 |
+| Laravel (`artisan serve`) | **8000** | Serves the dashboard, the API, and published sites |
+| Dashboard Vite dev server | **5174** | Optional, for iterating on the UI. 5173 is usually taken |
+| Reverb | **8090** | 8080 is often occupied |
+| MySQL | 3306 | Local install |
+| Redis | 6379 | Optional |
 
-Internal Docker ports stay standard (`mysql:3306`, `redis:6379`, `caddy:80`, `reverb:8080`, dashboard `5173`, renderer `3000`).
+Published sites are reached on port 8000 during development, for example
+`http://acme.sites.localhost:8000`. `*.localhost` resolves to 127.0.0.1 on
+current browsers, so no hosts-file entry is needed.

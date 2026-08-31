@@ -50,8 +50,8 @@ jobs:
         continue-on-error: true
         run: pnpm --filter dashboard exec tsc -b --pretty false
 
-  renderer:
-    name: Renderer tests
+  build:
+    name: Production build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -62,11 +62,12 @@ jobs:
         with:
           node-version: "22"
       - run: pnpm install --no-frozen-lockfile
-      - name: Renderer typecheck
-        run: pnpm --filter renderer typecheck
-      - name: Renderer unit tests
-        run: pnpm --filter renderer test
-      - name: Install Playwright Chromium
-        run: pnpm --filter renderer exec playwright install --with-deps chromium
-      - name: Renderer Playwright
-        run: pnpm --filter renderer test:e2e
+      # Published pages are rendered by this code at publish time, so a build
+      # failure here means sites cannot be published - worth its own job.
+      - name: Build dashboard and site runtime
+        run: pnpm build
+      - name: Assets land where Laravel serves them
+        run: |
+          test -f apps/api/public/dashboard/index.html
+          test -f apps/api/public/site/site.js
+          test -f apps/api/public/site/site.css
