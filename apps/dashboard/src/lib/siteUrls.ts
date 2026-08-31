@@ -57,6 +57,22 @@ export function previewUrl(_site: Site | null | undefined, tokenUrl: string, pat
   return `${window.location.origin}/preview?${params.toString()}`
 }
 
+/**
+ * The other half of `previewUrl`: turns the preview page's own query string
+ * back into the signed API URL the token was minted from.
+ *
+ * Laravel signs the query in the exact order it generated it and validates the
+ * raw query string, so the parameters are replayed untouched - re-sorting them
+ * is a 403. Only `path` is dropped, because the dashboard added that itself for
+ * its own routing and it was never part of the signature.
+ */
+export function previewTokenUrl(search: string, base = '/api/v1'): string | null {
+  const params = new URLSearchParams(search)
+  params.delete('path')
+  if (!params.get('signature') || !params.get('expires') || !params.get('site')) return null
+  return `${base.replace(/\/$/, '')}/public/preview?${params.toString()}`
+}
+
 export function pagePath(page?: { slug?: string; is_homepage?: boolean } | null): string {
   if (!page) return '/'
   if (page.is_homepage) return '/'

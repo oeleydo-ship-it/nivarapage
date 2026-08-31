@@ -22,7 +22,7 @@ export class ApiError extends Error {
   }
 }
 
-function baseUrl(): string {
+export function apiBaseUrl(): string {
   return import.meta.env.VITE_API_URL || '/api/v1'
 }
 
@@ -116,7 +116,7 @@ export async function api<T>(
     body = init.formData
   }
 
-  const res = await fetch(`${baseUrl()}${path}`, { ...init, headers, body })
+  const res = await fetch(`${apiBaseUrl()}${path}`, { ...init, headers, body })
   const text = await res.text()
   const json = parseBody(text)
   if (!res.ok) {
@@ -146,7 +146,7 @@ export async function apiNdjson<T extends Record<string, unknown>>(
   headers.set('Accept', 'application/x-ndjson, application/json')
   headers.set('Content-Type', 'application/json')
 
-  const res = await fetch(`${baseUrl()}${path}`, { method: 'POST', headers, body: JSON.stringify(json), signal })
+  const res = await fetch(`${apiBaseUrl()}${path}`, { method: 'POST', headers, body: JSON.stringify(json), signal })
   if (!res.ok) {
     const parsed = parseBody(await res.text())
     notifyPlanLimit(res.status, parsed)
@@ -196,7 +196,7 @@ export async function apiPaginated<T>(path: string): Promise<{ data: T[]; meta?:
   if (token) headers.set('Authorization', `Bearer ${token}`)
   if (workspaceId) headers.set('X-Workspace-Id', workspaceId)
   headers.set('Accept', 'application/json')
-  const res = await fetch(`${baseUrl()}${path}`, { headers })
+  const res = await fetch(`${apiBaseUrl()}${path}`, { headers })
   const json = parseBody(await res.text()) as { data: T[]; meta?: unknown; links?: unknown; message?: string }
   if (!res.ok) {
     notifyPlanLimit(res.status, json)

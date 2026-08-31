@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PublishedPage } from '@uidesired/site-render'
 import type { Menu, PublicPage, ResolvedSite } from '@uidesired/site-render'
+import { apiBaseUrl } from '../lib/api'
+import { previewTokenUrl } from '../lib/siteUrls'
 
 type PreviewPayload = {
   site: { id: number; name: string; status: string }
@@ -26,22 +28,25 @@ type PreviewPayload = {
  */
 export default function SitePreviewPage() {
   const [params] = useSearchParams()
-  const token = params.get('token')
   const wanted = params.get('path') || '/'
+  // `previewUrl` forwards the minted token's signed query on this origin rather
+  // than a single `token` parameter, so the signed API URL is rebuilt from it.
+  const search = params.toString()
+  const tokenUrl = useMemo(() => previewTokenUrl(search, apiBaseUrl()), [search])
 
   const [payload, setPayload] = useState<PreviewPayload | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!token) {
+    if (!tokenUrl) {
       setError('This preview link is missing its token.')
       return
     }
 
     let cancelled = false
-    // The token is a relative signed URL minted by the API; posting to it is
-    // what proves the link is genuine and unexpired.
-    fetch(token, { method: 'POST', headers: { Accept: 'application/json' } })
+    setError(null)
+    // Posting to the signed URL is what proves the link is genuine and unexpired.
+    fetch(tokenUrl, { method: 'POST', headers: { Accept: 'application/json' } })
       .then(async (res) => {
         if (!res.ok) throw new Error(res.status === 403 ? 'This preview link has expired.' : `Preview unavailable (${res.status}).`)
         return res.json()
@@ -56,7 +61,7 @@ export default function SitePreviewPage() {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [tokenUrl])
 
   const view = useMemo(() => {
     if (!payload) return null
