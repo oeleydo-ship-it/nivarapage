@@ -4,6 +4,7 @@ use App\Contracts\DomainProviderInterface;
 use App\Models\Domain;
 use App\Services\Cloudflare\CloudflareClient;
 use App\Services\Domains\CloudflareDomainProvider;
+use App\Services\Domains\DnsProviderProbe;
 use App\Support\DomainName;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\FakeCloudflareClient;
@@ -285,4 +286,66 @@ it('does not attach DNS instructions to the platform subdomain', function () {
     $platform = collect($rows)->firstWhere('type', 'subdomain');
     expect($platform)->not->toBeNull();
     expect($platform)->not->toHaveKey('dns');
+});
+
+describe('hostnames inside the platform zone', function () {
+    it('routes them directly instead of registering a custom hostname', function () {
+        $fx = domainFixture();
+
+        // Our edge lives at edge.uidesired.test, so uidesired.test is our own
+        // zone. Cloudflare refuses a custom hostname that matches the zone name.
+        app()->instance(DnsProviderProbe::class, new class extends DnsProviderProbe
+        {
+            public function resolves(string $hostname): bool
+            {
+                return true;
+            }
+        });
+
+        test()->withHeaders($fx['headers'])
+            ->postJson('/api/v1/sites/'.$fx['site'].'/domains', ['hostname' => 'uidesired.test'])
+            ->assertCreated();
+
+        $domain = Domain::query()->where('hostname', 'uidesired.test')->firstOrFail();
+
+        expect($domain->provider)->toBe('platform')
+            ->and($domain->status)->toBe('active')
+            // Cloudflare was never asked to create anything.
+            ->and($fx['cf']->hostnames)->toBe([]);
+    });
+
+    it('waits for the record when nothing resolves yet', function () {
+        $fx = domainFixture();
+
+        app()->instance(DnsProviderProbe::class, new class extends DnsProviderProbe
+        {
+            public function resolves(string $hostname): bool
+            {
+                return false;
+            }
+        });
+
+        test()->withHeaders($fx['headers'])
+            ->postJson('/api/v1/sites/'.$fx['site'].'/domains', ['hostname' => 'www.uidesired.test'])
+            ->assertCreated();
+
+        $domain = Domain::query()->where('hostname', 'www.uidesired.test')->firstOrFail();
+
+        expect($domain->provider)->toBe('platform')
+            ->and($domain->status)->toBe('verifying')
+            ->and($fx['cf']->hostnames)->toBe([]);
+    });
+
+    it('still uses Cloudflare for a domain outside the zone', function () {
+        $fx = domainFixture();
+
+        test()->withHeaders($fx['headers'])
+            ->postJson('/api/v1/sites/'.$fx['site'].'/domains', ['hostname' => 'acme.test'])
+            ->assertCreated();
+
+        $domain = Domain::query()->where('hostname', 'acme.test')->firstOrFail();
+
+        expect($domain->provider)->toBe('cloudflare')
+            ->and($fx['cf']->hostnames)->not->toBe([]);
+    });
 });

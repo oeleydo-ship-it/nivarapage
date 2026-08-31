@@ -8,12 +8,20 @@ use App\Jobs\DeleteCustomHostname;
 use App\Jobs\RetryFailedCustomHostname;
 use App\Models\Domain;
 use App\Models\Site;
+use App\Services\Domains\DnsProviderProbe;
 use App\Support\CurrentWorkspace;
+use App\Support\DomainName;
 use App\Support\Hostname;
 use InvalidArgumentException;
 
 class DomainService
 {
+    /**
+     * Marks a domain that lives inside our own Cloudflare zone, so it is routed
+     * by DNS we control rather than through Cloudflare for SaaS.
+     */
+    public const PLATFORM_PROVIDER = 'platform';
+
     public function __construct(
         private readonly PlanLimitService $limits,
         private readonly CurrentWorkspace $currentWorkspace,
@@ -21,6 +29,7 @@ class DomainService
         private readonly TenantCacheService $cache,
         private readonly AuditService $audit,
         private readonly PublicSiteResolver $resolver,
+        private readonly DnsProviderProbe $dns,
     ) {}
 
     public function addCustom(Site $site, string $hostname): Domain
@@ -47,9 +56,19 @@ class DomainService
             'provider' => config('uidesired.domain_provider', 'fake'),
         ]);
 
-        // Registered synchronously so the customer gets their DNS records on the
-        // same request. Queueing it as well would create the hostname twice.
-        $this->provider->createCustomHostname($domain);
+        // A hostname inside our own Cloudflare zone is not a custom hostname and
+        // cannot be registered as one - Cloudflare refuses outright when it
+        // matches the zone name ("the custom hostname cannot match the parent
+        // zone name"). It does not need to be: the DNS is ours, and the zone's
+        // own certificate already covers it. Route it directly instead.
+        if ($this->isInPlatformZone($hostname)) {
+            $domain->update(['provider' => self::PLATFORM_PROVIDER]);
+            $this->verifyPlatformZone($domain);
+        } else {
+            // Registered synchronously so the customer gets their DNS records on
+            // the same request. Queueing it as well would create the hostname twice.
+            $this->provider->createCustomHostname($domain);
+        }
 
         $this->cache->invalidateDomain($domain->fresh('site'));
         $this->audit->log('domain.created', $domain, ['site_id' => $site->id], $workspace);
@@ -66,6 +85,10 @@ class DomainService
      */
     public function verify(Domain $domain): Domain
     {
+        if ($domain->provider === self::PLATFORM_PROVIDER) {
+            return $this->verifyPlatformZone($domain);
+        }
+
         $status = $this->provider->getStatus($domain);
         $attributes = $this->provider->attributesFrom($status);
 
@@ -103,6 +126,10 @@ class DomainService
 
     public function retry(Domain $domain): Domain
     {
+        if ($domain->provider === self::PLATFORM_PROVIDER) {
+            return $this->verifyPlatformZone($domain);
+        }
+
         $domain->update(['status' => 'pending']);
         RetryFailedCustomHostname::dispatch($domain->id)->onQueue('domains');
 
@@ -140,6 +167,58 @@ class DomainService
                 );
             }
         }
+    }
+
+    /**
+     * The zone our own edge records live in, e.g. example.com.
+     *
+     * Derived from the CNAME target rather than stored: the fallback origin is
+     * by definition inside that zone, so its registrable root is the zone name.
+     */
+    private function platformZone(): string
+    {
+        $source = (string) (config('uidesired.cloudflare.cname_target')
+            ?: config('uidesired.cloudflare.fallback_origin')
+            ?: parse_url((string) config('app.url'), PHP_URL_HOST)
+            ?: '');
+
+        return $source === '' ? '' : DomainName::registrableRoot(Hostname::normalize($source));
+    }
+
+    private function isInPlatformZone(string $hostname): bool
+    {
+        $zone = $this->platformZone();
+
+        return $zone !== '' && ($hostname === $zone || str_ends_with($hostname, '.'.$zone));
+    }
+
+    /**
+     * A domain in our own zone is live as soon as its DNS resolves.
+     *
+     * There is no custom hostname to poll and no separate certificate to wait
+     * for - the zone's own certificate already covers it - so resolution is the
+     * only thing that can still be missing.
+     */
+    private function verifyPlatformZone(Domain $domain): Domain
+    {
+        $resolves = $this->dns->resolves($domain->hostname);
+
+        $domain->update([
+            'status' => $resolves ? 'active' : 'verifying',
+            'verification_status' => $resolves ? 'verified' : 'pending',
+            'ssl_status' => $resolves ? 'active' : 'pending',
+            'verified_at' => $resolves ? ($domain->verified_at ?? now()) : null,
+            'activated_at' => $resolves ? ($domain->activated_at ?? now()) : null,
+            'last_checked_at' => now(),
+            'verification_data' => [
+                'platform_zone' => true,
+                'errors' => $resolves ? [] : ['This hostname is inside the platform zone, so it only needs a DNS record here. None is resolving yet.'],
+            ],
+        ]);
+
+        $this->cache->invalidateDomain($domain->fresh('site'));
+
+        return $domain->fresh();
     }
 
     /**

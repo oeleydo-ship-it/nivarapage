@@ -2,6 +2,7 @@
 
 namespace App\Services\Domains;
 
+use App\Support\Hostname;
 use Illuminate\Support\Facades\Cache;
 use Throwable;
 
@@ -57,6 +58,28 @@ class DnsProviderProbe
         }
 
         return false;
+    }
+
+    /**
+     * Whether a hostname resolves to anything at all.
+     *
+     * Used for domains inside our own zone, where there is no custom hostname
+     * to poll: the record is either there or it is not.
+     */
+    public function resolves(string $hostname): bool
+    {
+        $hostname = Hostname::normalize($hostname);
+        if ($hostname === '') {
+            return false;
+        }
+
+        try {
+            $records = @dns_get_record($hostname, DNS_A | DNS_AAAA | DNS_CNAME);
+        } catch (Throwable) {
+            return false;
+        }
+
+        return is_array($records) && $records !== [];
     }
 
     /**
