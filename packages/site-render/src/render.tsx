@@ -1,6 +1,7 @@
 import { renderToString } from "react-dom/server";
 import { fontStacksFromContent, googleFontHref, themeTokensToStyle } from "@uidesired/blocks/theme";
 import { PublishedPage } from "./document";
+import type { SiteChromeContent } from "./document";
 import { attr, pageSeoTags, text } from "./seo";
 import type { Menu, PublicPage, ResolvedSite } from "./types";
 
@@ -14,6 +15,8 @@ export type RenderSiteInput = {
   host: string;
   /** Where the published-site runtime (hydration + styles) is served from. */
   runtimeBase?: string;
+  /** The site-wide header and footer this page is wrapped in. */
+  chrome?: SiteChromeContent;
 };
 
 /** Turns a style object into an inline style attribute value. */
@@ -35,22 +38,26 @@ function styleAttribute(style: Record<string, unknown>): string {
  * browser by the site runtime, so interactive blocks keep working.
  */
 export function renderSiteDocument(input: RenderSiteInput): string {
-  const { site, page, menus, path, host, runtimeBase = "/site" } = input;
+  const { site, page, menus, path, host, runtimeBase = "/site", chrome } = input;
   const tokens = (site.theme ?? {}) as Record<string, unknown>;
   const { title, tags } = pageSeoTags(site, page, path, host);
 
   // Fonts come from two places: the site theme, and any block that overrides
   // the font for its own section. Both must be requested or the published page
   // falls back to a system font.
+  // The header and footer are part of the document, so a font one of them uses
+  // has to be requested as well or it falls back to a system face.
   const fontHref = googleFontHref(
     ...(fontStacksFromContent(page.content) as string[]),
+    ...(fontStacksFromContent(chrome?.header as Parameters<typeof fontStacksFromContent>[0]) as string[]),
+    ...(fontStacksFromContent(chrome?.footer as Parameters<typeof fontStacksFromContent>[0]) as string[]),
     typeof tokens.headingFont === "string" ? tokens.headingFont : "Inter",
     typeof tokens.bodyFont === "string" ? tokens.bodyFont : "Inter",
     typeof tokens.monoFont === "string" ? tokens.monoFont : null,
     typeof tokens.serifFont === "string" ? tokens.serifFont : null,
   );
 
-  const body = renderToString(<PublishedPage site={site} page={page} menus={menus} />);
+  const body = renderToString(<PublishedPage site={site} page={page} menus={menus} chrome={chrome} />);
   const themeStyle = styleAttribute(themeTokensToStyle(tokens) as Record<string, unknown>);
 
   // The data the client needs to hydrate the identical tree. Serialised with
@@ -59,7 +66,8 @@ export function renderSiteDocument(input: RenderSiteInput): string {
   // must be the six characters that spell a JSON unicode escape, and a
   // literal "<" in this file would be the "<" character itself.
   const BS = String.fromCharCode(92);
-  const hydrationData = JSON.stringify({ site, page, menus })
+  // chrome travels with the rest: hydration must build the identical tree.
+  const hydrationData = JSON.stringify({ site, page, menus, chrome })
     .split("<")
     .join(BS + "u003c")
     .split(String.fromCharCode(0x2028))

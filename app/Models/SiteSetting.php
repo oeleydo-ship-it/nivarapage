@@ -16,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'timezone',
     'redirect_secondary_to_primary',
     'branding',
+    'header_json',
+    'footer_json',
     'extras',
 ])]
 class SiteSetting extends Model
@@ -28,6 +30,8 @@ class SiteSetting extends Model
         return [
             'redirect_secondary_to_primary' => 'boolean',
             'branding' => 'array',
+            'header_json' => 'array',
+            'footer_json' => 'array',
             'extras' => 'array',
         ];
     }

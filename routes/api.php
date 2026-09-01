@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\V1\PublicBrandingController;
 use App\Http\Controllers\Api\V1\PublicFunnelController;
 use App\Http\Controllers\Api\V1\PublicLivechatController;
 use App\Http\Controllers\Api\V1\PublicSiteController;
+use App\Http\Controllers\Api\V1\SiteChromeController;
 use App\Http\Controllers\Api\V1\SiteController;
 use App\Http\Controllers\Api\V1\FunnelRenderController;
 use App\Http\Controllers\Api\V1\SiteRenderController;
@@ -150,6 +151,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/sites/{site}/restore', [SiteController::class, 'restore']);
             Route::get('/sites/{site}/settings', [SiteController::class, 'settings']);
             Route::put('/sites/{site}/settings', [SiteController::class, 'updateSettings']);
+            Route::get('/sites/{site}/chrome', [SiteChromeController::class, 'show']);
+            Route::put('/sites/{site}/chrome', [SiteChromeController::class, 'update']);
             Route::get('/sites/{site}/theme', [SiteController::class, 'theme']);
             Route::put('/sites/{site}/theme', [SiteController::class, 'updateTheme']);
             Route::post('/sites/{site}/publish', [SiteController::class, 'publish']);

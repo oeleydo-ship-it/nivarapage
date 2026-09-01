@@ -1,4 +1,5 @@
 export { PublishedPage } from "./document";
+export type { SiteChromeContent } from "./document";
 export { SiteChrome, menusToNavItems } from "./site-chrome";
 export { pageSeoTags, canonicalHost, publicOrigin, attr, text } from "./seo";
 export type { SeoTags } from "./seo";

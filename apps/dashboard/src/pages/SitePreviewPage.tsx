@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { MouseEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PublishedPage } from '@uidesired/site-render'
-import type { Menu, PublicPage, ResolvedSite } from '@uidesired/site-render'
+import type { Menu, PublicPage, ResolvedSite, SiteChromeContent } from '@uidesired/site-render'
 import { apiBaseUrl } from '../lib/api'
 import { previewTokenUrl } from '../lib/siteUrls'
 
@@ -17,6 +17,7 @@ type PreviewPayload = {
   }>
   theme: Record<string, unknown>
   menus: Menu[]
+  chrome?: SiteChromeContent
 }
 
 /**
@@ -153,7 +154,7 @@ export default function SitePreviewPage() {
       content: page.draft_revision?.content_json ?? { sections: [] },
     } as unknown as PublicPage
 
-    return <PublishedPage site={site} page={publicPage} menus={payload.menus ?? []} />
+    return <PublishedPage site={site} page={publicPage} menus={payload.menus ?? []} chrome={payload.chrome} />
   }, [payload, page])
 
   useEffect(() => {

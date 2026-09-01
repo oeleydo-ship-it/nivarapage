@@ -7,6 +7,7 @@ use App\Models\Page;
 use App\Models\Site;
 use App\Services\NavigationService;
 use App\Services\Rendering\SiteRenderService;
+use App\Services\SiteChromeService;
 use App\Services\SeoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -87,7 +88,7 @@ class SiteRenderController extends Controller
      * separate public endpoints would risk pages being rendered against
      * different versions of the theme or navigation.
      */
-    public function payload(Site $site, SeoService $seo, NavigationService $navigation): JsonResponse
+    public function payload(Site $site, SeoService $seo, NavigationService $navigation, SiteChromeService $chrome): JsonResponse
     {
         Gate::authorize('view', $site);
 
@@ -126,6 +127,10 @@ class SiteRenderController extends Controller
                     'theme' => $site->theme?->tokens ?? [],
                 ],
                 'menus' => $navigation->tree($site),
+                // The header and footer every page is wrapped in. Sent once and
+                // composed into each page as it renders, so one edit reaches all
+                // of them and no page can be left holding an older copy.
+                'chrome' => $chrome->get($site),
                 'pages' => $pages,
             ],
         ]);

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Site;
+use App\Services\SiteChromeService;
 use App\Services\BlogService;
 use App\Services\NavigationService;
 use App\Services\PublicSiteResolver;
@@ -175,16 +176,18 @@ class PublicSiteController extends Controller
         return $this->publicJson($payload);
     }
 
-    public function preview(Request $request): JsonResponse
+    public function preview(Request $request, SiteChromeService $chrome): JsonResponse
     {
         $site = Site::query()->findOrFail($request->query('site'));
-        $site->load(['pages.draftRevision', 'theme', 'menus.items']);
+        $site->load(['pages.draftRevision', 'theme', 'menus.items', 'settings']);
 
         return $this->privateJson([
             'site' => $site->only(['id', 'name', 'status']),
             'pages' => $site->pages,
             'theme' => $site->theme?->tokens ?? [],
             'menus' => $site->menus,
+            // Preview has to show what publishing will produce, chrome included.
+            'chrome' => $chrome->get($site),
         ]);
     }
 

@@ -87,3 +87,53 @@ describe('renderSiteDocument', () => {
     expect(render({ site: removed })).not.toContain('Made with UiDesired')
   })
 })
+
+describe('site header and footer', () => {
+  const chrome = {
+    header: { schemaVersion: 1, sections: [{ id: 'h1', type: 'navbar.simple', version: 1, props: { logo: 'AcmeNav' } }] },
+    footer: { schemaVersion: 1, sections: [{ id: 'f1', type: 'footer.simple', version: 1, props: { brand: 'AcmeFoot' } }] },
+  } as never
+
+  /** The sections actually rendered into the markup, in document order. */
+  function renderedSectionIds(html: string): string[] {
+    const body = html.slice(0, html.indexOf('id="site-data"'))
+    return [...body.matchAll(/data-section-id="([^"]*)"/g)].map((match) => match[1])
+  }
+
+  it('wraps a page in the site header and footer, in that order', () => {
+    expect(renderedSectionIds(render({ chrome }))).toEqual(['h1', 's1', 'f1'])
+  })
+
+  it('leaves a page alone when the site has no chrome', () => {
+    // The feature has to be invisible until a site actually defines a header.
+    expect(renderedSectionIds(render())).toEqual(['s1'])
+  })
+
+  it('does not add a second navbar to a page that already has one', () => {
+    // Sites built before this existed carry a navbar on every page. Adding the
+    // shared one above it would render two. The footer is a separate slot and
+    // still applies.
+    const withOwnNav = {
+      ...(page as Record<string, unknown>),
+      content: {
+        schemaVersion: 1,
+        sections: [
+          { id: 'own', type: 'navbar.simple', version: 1, props: { logo: 'PageOwnNav' } },
+          { id: 's1', type: 'heroes.centered', version: 1, props: { heading: 'Welcome to Acme' } },
+        ],
+      },
+    } as never
+
+    expect(renderedSectionIds(render({ page: withOwnNav, chrome }))).toEqual(['own', 's1', 'f1'])
+  })
+
+  it('ships the chrome in the hydration payload so the client builds the same tree', () => {
+    // A mismatch between the rendered markup and the hydrated tree is a
+    // hydration error on every published page.
+    const html = render({ chrome })
+    const payload = html.slice(html.indexOf('id="site-data"'))
+
+    expect(payload).toContain('navbar.simple')
+    expect(payload).toContain('footer.simple')
+  })
+})

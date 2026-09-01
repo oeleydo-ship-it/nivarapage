@@ -1,12 +1,13 @@
 import { hydrateRoot } from "react-dom/client";
 import { PublishedPage } from "@uidesired/site-render";
-import type { Menu, PublicPage, ResolvedSite } from "@uidesired/site-render";
+import type { Menu, PublicPage, ResolvedSite, SiteChromeContent } from "@uidesired/site-render";
 import "./site.css";
 
 type SiteData = {
   site: ResolvedSite;
   page: PublicPage;
   menus: Menu[];
+  chrome?: SiteChromeContent;
 };
 
 /**
@@ -33,7 +34,7 @@ function start() {
     return;
   }
 
-  hydrateRoot(root, <PublishedPage site={data.site} page={data.page} menus={data.menus} />);
+  hydrateRoot(root, <PublishedPage site={data.site} page={data.page} menus={data.menus} chrome={data.chrome} />);
 }
 
 start();

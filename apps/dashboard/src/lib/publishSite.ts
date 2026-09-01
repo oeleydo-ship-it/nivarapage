@@ -1,4 +1,5 @@
 import { renderSiteDocument } from '@uidesired/site-render'
+import type { SiteChromeContent } from '@uidesired/site-render'
 import type { Menu, PublicPage, ResolvedSite } from '@uidesired/site-render'
 import { http } from './api'
 import { funnelsApi, sitesApi } from './endpoints'
@@ -7,6 +8,7 @@ type RenderPayload = {
   site: ResolvedSite
   menus: Menu[]
   pages: Array<{ page_id: number; revision_id: number | null; path: string; page: PublicPage }>
+  chrome?: SiteChromeContent
 }
 
 export type PublishResult = {
@@ -33,7 +35,7 @@ export async function publishSiteWithRenders(siteId: string | number): Promise<P
 
   try {
     // http.get already unwraps the API's { data: ... } envelope.
-    const { site, menus, pages } = await http.get<RenderPayload>(`/sites/${siteId}/render-payload`)
+    const { site, menus, pages, chrome } = await http.get<RenderPayload>(`/sites/${siteId}/render-payload`)
 
     if (!pages.length) return { rendered: 0 }
 
@@ -47,6 +49,9 @@ export async function publishSiteWithRenders(siteId: string | number): Promise<P
         menus,
         path: entry.path,
         host: site.primary_hostname || site.host,
+        // Every page is rendered with the same header and footer, which is what
+        // makes one edit reach all of them.
+        chrome,
       }),
     }))
 
