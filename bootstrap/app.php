@@ -32,7 +32,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'request.id' => RequestId::class,
             'never.cache' => NeverCache::class,
             'security.headers' => SecurityHeaders::class,
-            'livechat.cors' => \App\Http\Middleware\AllowPublicLivechatCors::class,
             'feature' => EnsureFeatureEnabled::class,
         ]);
 
@@ -40,6 +39,14 @@ return Application::configure(basePath: dirname(__DIR__))
             RequestId::class,
             SecurityHeaders::class,
         ]);
+
+        // Ahead of Laravel's own HandleCors, which sits in the true global
+        // stack (before any route-group middleware even runs): the public
+        // embed endpoints (livechat, forms, funnel tracking) are called from
+        // customer domains that can never be enumerated in config/cors.php,
+        // so this answers their CORS itself before that allow-list gets a
+        // chance to reject the origin and swallow the preflight.
+        $middleware->prepend(\App\Http\Middleware\AllowPublicEmbedCors::class);
 
         // TrustHosts is deliberately not armed. This application answers on
         // every customer's custom domain, so the set of valid Host headers is

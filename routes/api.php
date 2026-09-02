@@ -84,7 +84,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/public/forms/{publicForm}/submit', [FormController::class, 'submit'])
         ->middleware('throttle:public-forms');
 
-    Route::middleware(['livechat.cors', 'throttle:public-livechat'])->group(function () {
+    Route::middleware(['throttle:public-livechat'])->group(function () {
         Route::match(['GET', 'OPTIONS'], '/public/livechat/{publicKey}', [PublicLivechatController::class, 'show']);
         Route::match(['GET', 'OPTIONS'], '/public/livechat/{publicKey}/widget.js', [PublicLivechatController::class, 'widgetScript']);
         Route::match(['POST', 'OPTIONS'], '/public/livechat/{publicKey}/conversations', [PublicLivechatController::class, 'start']);
