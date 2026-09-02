@@ -89,6 +89,66 @@ class AiPromptBuilder
         ]);
     }
 
+    /**
+     * Art direction: the pass that happens before a blank site is built.
+     *
+     * Generation used to be locked to the generated.* blocks whenever a site had
+     * no kit yet, which is every new site - so a brief for a law firm and a brief
+     * for a skate shop came out of the same dozen generic sections. The designed
+     * kits were sitting there unused. This asks for the decisions a designer
+     * makes first: which kit suits the business, what it should look like, and
+     * how much it should move.
+     */
+    public function artDirectionSystemPrompt(): string
+    {
+        return implode("\n", [
+            'You are the art director for a website builder. You choose the design a new site is built from.',
+            'You return ONLY JSON. No markdown, no code fences, no commentary.',
+            'Shape: {"kit":"<key>","theme":{...},"motion":{...},"reason":"<one sentence>"}',
+            '- kit: the key of the block kit that best fits this business. Choose from the list below and copy the key exactly.',
+            '  Judge it on the sections the business needs: a kit with no pricing blocks is wrong for a business that sells plans.',
+            '- theme: the palette and type. Keys: primary, secondary, accent, background, surface, text, muted, headingFont, bodyFont, headingWeight, bodyWeight, buttonRadius, cardRadius, containerWidth, sectionSpacing.',
+            '  Colours are hex. Pick them for this business rather than reaching for the same blue every time, and let the brief lead:',
+            '  a law firm is not a nail bar, a night club is not a nursery. Keep body text and background far enough apart to read comfortably.',
+            '- motion: how the page animates. Keys: animation (none|fade|fade-up|fade-down|fade-left|fade-right|zoom-in|slide-up),',
+            '  animationTrigger (scroll|load), animationDuration (240-900 ms), contentWidth (narrow|default|wide|full).',
+            '  Motion should suit the business: restrained for a clinic or a law firm, livelier for a studio or a festival.',
+            '- reason: one sentence, for the activity log.',
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @param  list<array{key: string, label: string, blocks: int, purposes: list<string>}>  $kits
+     */
+    public function artDirectionPrompt(Site $site, array $input, array $kits): string
+    {
+        $lines = [
+            'Business / website description:',
+            trim((string) ($input['prompt'] ?? '')),
+            '',
+            'Website name: '.$site->name,
+        ];
+
+        if ($site->business_name) {
+            $lines[] = 'Business name: '.$site->business_name;
+        }
+        if ($site->category) {
+            $lines[] = 'Category: '.$site->category;
+        }
+        if (! empty($input['tone'])) {
+            $lines[] = 'Tone of voice: '.$input['tone'];
+        }
+
+        $lines[] = '';
+        $lines[] = 'Kits available (key — sections it can build):';
+        foreach ($kits as $kit) {
+            $lines[] = '- '.$kit['key'].' ('.$kit['blocks'].' blocks) — '.implode(', ', $kit['purposes']);
+        }
+
+        return implode("\n", $lines);
+    }
+
     public function blockSystemPrompt(): string
     {
         return implode("\n", [
@@ -175,8 +235,10 @@ class AiPromptBuilder
 
     /**
      * @param  array<string, mixed>  $input
+     * @param  array{key: string, label: string, types: list<string>, design: array<string, mixed>}|null  $chosenKit
+     *                                                                                                                the kit art direction picked for a new site, when the site has none of its own
      */
-    public function pagePrompt(Site $site, array $input): string
+    public function pagePrompt(Site $site, array $input, ?array $chosenKit = null): string
     {
         $sections = is_array($input['sections'] ?? null)
             ? array_values(array_filter(array_map('strval', $input['sections'])))
@@ -207,12 +269,21 @@ class AiPromptBuilder
 
         $lines[] = 'If this prompt describes a whole business or website, generate a multi-page site (Home plus the inner pages that business needs).';
         $lines[] = 'If it is clearly a single landing page or only the named page above, generate that one page.';
-        $lines[] = 'Every page: start with generated.nav and end with generated.footer. Home needs 7–10 purposeful sections; each inner page needs 4–7 sections.';
-        $lines[] = 'Navbar links.url values must match the page slugs you emit.';
-        $kit = $this->kits->detect($site);
+
+        $kit = $this->kits->detect($site) ?? $chosenKit;
+
         if ($kit === null) {
+            $lines[] = 'Every page: start with generated.nav and end with generated.footer. Home needs 7–10 purposeful sections; each inner page needs 4–7 sections.';
             $lines[] = 'Compose an original layout: vary layout, surface, and density on each generated.* block.';
+        } else {
+            // Naming the kit's own chrome matters: told to "start with
+            // generated.nav" the model opens a designed site with a generic bar
+            // and the whole page reads as a different, cheaper template.
+            $lines[] = 'Every page: start with the kit\'s navbar block and end with its footer block, and use the same two on every page.';
+            $lines[] = 'Home needs 7–10 purposeful sections; each inner page needs 4–7 sections. Vary the kit blocks you use so no two pages read the same.';
         }
+
+        $lines[] = 'Navbar links.url values must match the page slugs you emit.';
         $lines[] = 'Use generated.composition for page-specific sections that do not fit a standard purpose. Set blockName and create 2–6 complete regions; every region remains editable.';
         $lines[] = 'Never put descriptive prose into an image field and never invent an external image URL. With no uploaded image path, leave image empty and use a generated.composition visual.';
         $lines[] = 'Write all visible content now. Every heading, paragraph, CTA, question, answer, plan, and repeater item must be specific to this business request and ready to publish.';

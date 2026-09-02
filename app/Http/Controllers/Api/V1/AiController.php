@@ -36,6 +36,23 @@ class AiController extends Controller
     ) {}
 
     /**
+     * Gives a generation longer than PHP's default 30 seconds.
+     *
+     * Only for a real request. On the CLI the limit is a timer on the whole
+     * process rather than on one request, so setting it here would quietly cap
+     * everything that ran afterwards - a queue worker, or a test run - and kill
+     * it part-way through unrelated work 240 seconds later.
+     */
+    private function allowLongRunning(): void
+    {
+        if (app()->runningInConsole()) {
+            return;
+        }
+
+        @set_time_limit(max(240, (int) config('ai.timeout', 180) + 60));
+    }
+
+    /**
      * Availability for the builder UI: whether AI is on, whether the plan is
      * entitled, and the remaining monthly quota. Never includes the key.
      */
@@ -74,7 +91,7 @@ class AiController extends Controller
         $site = $this->site($data['site_id']);
         $this->authorize('update', $site);
         $this->assertQuota($site);
-        @set_time_limit(max(240, (int) config('ai.timeout', 180) + 60));
+        $this->allowLongRunning();
 
         $result = $generator->generatePage($site, $data);
 
@@ -116,7 +133,7 @@ class AiController extends Controller
         $site = $this->site($data['site_id']);
         $this->authorize('update', $site);
         $this->assertQuota($site);
-        @set_time_limit(max(240, (int) config('ai.timeout', 180) + 60));
+        $this->allowLongRunning();
 
         $site->loadMissing('pages.draftRevision');
         $rewrittenPages = 0;
@@ -197,7 +214,7 @@ class AiController extends Controller
         $site = $this->site($data['site_id']);
         $this->authorize('update', $site);
         $this->assertQuota($site);
-        @set_time_limit(max(240, (int) config('ai.timeout', 180) + 60));
+        $this->allowLongRunning();
 
         $result = $generator->chat($site, $data);
 
@@ -248,7 +265,7 @@ class AiController extends Controller
         $site = $this->site($data['site_id']);
         $this->authorize('update', $site);
         $this->assertQuota($site);
-        @set_time_limit(max(240, (int) config('ai.timeout', 180) + 60));
+        $this->allowLongRunning();
 
         return response()->stream(function () use ($data, $generator, $request, $site): void {
             $emit = static function (string $type, array $payload = []): void {

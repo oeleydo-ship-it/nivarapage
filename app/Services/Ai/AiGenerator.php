@@ -39,22 +39,34 @@ class AiGenerator
      * @param  list<array<string, mixed>>  $sections
      * @return array{pages: list<array<string, mixed>>, sections: list<array<string, mixed>>}
      */
-    private function matchSiteDesign(Site $site, array $pages, array $sections, ?array $live = null): array
+    private function matchSiteDesign(Site $site, array $pages, array $sections, ?array $live = null, ?array $chosenKit = null): array
     {
-        $kit = $this->kits->detect($site, $live);
+        // A site with pages of its own sets the convention. A blank one has no
+        // convention yet, so the kit art direction chose carries the motion.
+        $detected = $this->kits->detect($site, $live);
+        $kit = $detected ?? $chosenKit;
         if ($kit === null || $kit['design'] === []) {
             return ['pages' => $pages, 'sections' => $sections];
         }
 
+        // Art direction is a decision made for this site, so it beats the block
+        // defaults; a convention read off existing pages only fills gaps.
+        $overwrite = $detected === null;
+
         foreach ($pages as $index => $page) {
-            if (is_array($page['sections'] ?? null)) {
-                $pages[$index]['sections'] = $this->kits->applyDesign($page['sections'], $kit['design']);
+            // Assembled pages carry their sections under `content`. Reaching for
+            // `$page['sections']` here quietly matched nothing, so generated
+            // pages never picked up the design they were supposed to.
+            if (is_array($page['content']['sections'] ?? null)) {
+                $pages[$index]['content']['sections'] = $this->kits->applyDesign($page['content']['sections'], $kit['design'], $overwrite);
+            } elseif (is_array($page['sections'] ?? null)) {
+                $pages[$index]['sections'] = $this->kits->applyDesign($page['sections'], $kit['design'], $overwrite);
             }
         }
 
         return [
             'pages' => $pages,
-            'sections' => $this->kits->applyDesign($sections, $kit['design']),
+            'sections' => $this->kits->applyDesign($sections, $kit['design'], $overwrite),
         ];
     }
 
@@ -64,17 +76,110 @@ class AiGenerator
      */
     public function generatePage(Site $site, array $input): array
     {
+        // Every new site starts blank, and a blank site used to mean "no kit",
+        // which meant generation was held to the dozen generated.* blocks. A
+        // law firm and a skate shop came out of the same handful of sections
+        // while fifteen designed kits sat unused. Choose one first.
+        $direction = $this->kits->detect($site) === null ? $this->directArt($site, $input) : null;
+        $chosen = $direction['kit'] ?? null;
+
         $raw = $this->complete(
             $this->prompts->pageSystemPrompt(),
-            $this->prompts->pagePrompt($site, $input),
+            $this->prompts->pagePrompt($site, $input, $chosen),
             ['max_tokens' => (int) config('ai.site_max_tokens', 8000)],
         );
 
         $assembled = $this->assembleSite($raw);
-        $matched = $this->matchSiteDesign($site, $assembled['pages'], []);
+        $matched = $this->matchSiteDesign($site, $assembled['pages'], [], null, $chosen);
         $assembled['pages'] = $matched['pages'];
 
+        // What the model wrote into the site JSON wins; art direction fills the
+        // tokens it did not mention.
+        if ($direction !== null && $direction['theme'] !== []) {
+            $assembled['theme'] = ($assembled['theme'] ?? []) + $direction['theme'];
+        }
+
         return $assembled;
+    }
+
+    /**
+     * Picks the kit, palette and motion for a site that has none yet.
+     *
+     * Returns null when art direction cannot be had - the model is unreachable,
+     * or answers with a kit that does not exist. Generation then runs exactly as
+     * it did before rather than failing, so a site is still produced.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array{kit: array<string, mixed>, theme: array<string, mixed>, reason: string}|null
+     */
+    private function directArt(Site $site, array $input): ?array
+    {
+        $catalogue = $this->kits->catalogue();
+        if ($catalogue === []) {
+            return null;
+        }
+
+        try {
+            $raw = $this->complete(
+                $this->prompts->artDirectionSystemPrompt(),
+                $this->prompts->artDirectionPrompt($site, $input, $catalogue),
+                ['max_tokens' => 800],
+            );
+        } catch (AiException) {
+            return null;
+        }
+
+        $decoded = AiJson::object($raw);
+        if ($decoded === null) {
+            return null;
+        }
+
+        $kit = $this->kits->kit(
+            is_string($decoded['kit'] ?? null) ? $decoded['kit'] : '',
+            self::sanitizeMotion($decoded['motion'] ?? null),
+        );
+        if ($kit === null) {
+            return null;
+        }
+
+        return [
+            'kit' => $kit,
+            'theme' => AiGeneratedSite::sanitizeTheme($decoded['theme'] ?? null),
+            'reason' => mb_substr(trim((string) ($decoded['reason'] ?? '')), 0, 200),
+        ];
+    }
+
+    /**
+     * Keeps motion to values the blocks understand, so an invented easing name
+     * cannot reach a section prop and stop it animating at all.
+     *
+     * @return array<string, mixed>
+     */
+    private static function sanitizeMotion(mixed $raw): array
+    {
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        $allowed = [
+            'animation' => ['none', 'fade', 'fade-up', 'fade-down', 'fade-left', 'fade-right', 'zoom-in', 'slide-up'],
+            'animationTrigger' => ['scroll', 'load'],
+            'contentWidth' => ['narrow', 'default', 'wide', 'full'],
+        ];
+
+        $clean = [];
+        foreach ($allowed as $key => $options) {
+            $value = is_string($raw[$key] ?? null) ? strtolower(trim($raw[$key])) : null;
+            if ($value !== null && in_array($value, $options, true)) {
+                $clean[$key] = $value;
+            }
+        }
+
+        if (is_numeric($raw['animationDuration'] ?? null)) {
+            $clean['animationDuration'] = max(240, min(900, (int) $raw['animationDuration']));
+        }
+
+        return $clean;
     }
 
     /**
@@ -650,6 +755,16 @@ class AiGenerator
      */
     private function allowLongRunning(int $timeoutSeconds): void
     {
+        // Under FPM the limit is per request. On the CLI it is a timer on the
+        // whole process, so raising it here for one generation would instead cap
+        // everything that runs afterwards - a queue worker, or a test suite,
+        // dying part-way through some unrelated job 240 seconds later.
+        if (app()->runningInConsole()) {
+            ignore_user_abort(true);
+
+            return;
+        }
+
         $seconds = max(240, $timeoutSeconds + 60);
         if (function_exists('set_time_limit')) {
             @set_time_limit($seconds);

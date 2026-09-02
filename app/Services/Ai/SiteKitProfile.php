@@ -62,6 +62,64 @@ class SiteKitProfile
     }
 
     /**
+     * Every kit, described well enough for the AI to choose one for a new site.
+     *
+     * The purposes are the part of a type before the dot, so they say what a kit
+     * can actually build - a kit with no pricing block is the wrong home for a
+     * pricing page. Sending this instead of the full catalogue keeps the choice
+     * small: all 368 blocks with their props run to about 75,000 characters,
+     * while one kit's blocks are nearer 5,000.
+     *
+     * @return list<array{key: string, label: string, blocks: int, purposes: list<string>}>
+     */
+    public function catalogue(): array
+    {
+        $out = [];
+
+        foreach ($this->kits() as $key => $types) {
+            $purposes = [];
+            foreach ($types as $type) {
+                $purposes[explode('.', $type, 2)[0]] = true;
+            }
+            ksort($purposes);
+
+            $out[] = [
+                'key' => $key,
+                'label' => ucfirst($key),
+                'blocks' => count($types),
+                'purposes' => array_keys($purposes),
+            ];
+        }
+
+        usort($out, fn (array $a, array $b) => $b['blocks'] <=> $a['blocks']);
+
+        return $out;
+    }
+
+    /**
+     * One kit by key, shaped like detect() so callers cannot tell the two apart.
+     *
+     * @param  array<string, mixed>  $design
+     * @return array{key: string, label: string, types: list<string>, design: array<string, mixed>}|null
+     */
+    public function kit(string $key, array $design = []): ?array
+    {
+        $kits = $this->kits();
+        $key = strtolower(trim($key));
+
+        if (! isset($kits[$key])) {
+            return null;
+        }
+
+        return [
+            'key' => $key,
+            'label' => ucfirst($key),
+            'types' => $kits[$key],
+            'design' => $design,
+        ];
+    }
+
+    /**
      * The kit this site is built from, or null when it is not using one.
      *
      * @param  list<array<string, mixed>>|null  $sections  live editor content, preferred over the saved pages
@@ -160,7 +218,7 @@ class SiteKitProfile
      * @param  array<string, mixed>  $design
      * @return list<array<string, mixed>>
      */
-    public function applyDesign(array $sections, array $design): array
+    public function applyDesign(array $sections, array $design, bool $overwrite = false): array
     {
         if ($design === []) {
             return $sections;
@@ -172,7 +230,12 @@ class SiteKitProfile
             }
             $props = is_array($section['props'] ?? null) ? $section['props'] : [];
             foreach ($design as $prop => $value) {
-                if (! array_key_exists($prop, $props) || $props[$prop] === '' || $props[$prop] === null) {
+                // Matching an existing page fills gaps only, so a section that
+                // was styled deliberately keeps its styling. Art direction for a
+                // new site is the deliberate choice, and has to beat the block
+                // defaults it is being merged onto.
+                $missing = ! array_key_exists($prop, $props) || $props[$prop] === '' || $props[$prop] === null;
+                if ($overwrite || $missing) {
                     $props[$prop] = $value;
                 }
             }

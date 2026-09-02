@@ -3,8 +3,11 @@
 use App\Models\Activity;
 use App\Models\AiSetting;
 use App\Models\Plan;
+use App\Services\Ai\AiChatPayload;
+use App\Services\Ai\AiConfig;
 use App\Services\Ai\FakeAiProvider;
 use App\Support\BlockCatalog;
+use App\Support\BlockRegistry;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 
@@ -58,9 +61,17 @@ it('generates a page whose sections all exist in the block catalog', function ()
     expect($hero['props']['heading'])->toBe('We build Dubai');
     expect($hero['props'])->toHaveKey('description');
 
-    // The prompt is built from original generated compositions, not catalog kits.
-    expect(FakeAiProvider::calls()[0]['prompt'])->toContain('generated.hero');
-    expect(FakeAiProvider::calls()[0]['prompt'])->not->toContain('hero.centered');
+    // A blank site is art-directed first: the kits are offered, one is chosen,
+    // and the page prompt is then built from that kit's real blocks rather than
+    // the dozen generic ones every business used to share.
+    $calls = FakeAiProvider::calls();
+    expect($calls[0]['system'])->toContain('You are the art director');
+    expect($calls[0]['prompt'])->toContain('Kits available');
+
+    expect($calls[1]['prompt'])->toContain('hero.voltera');
+    expect($calls[1]['prompt'])->toContain('DESIGN SYSTEM');
+    // generated.* stays available, but as the fallback rather than the whole menu.
+    expect($calls[1]['prompt'])->toContain('only when the kit has nothing suitable');
 });
 
 it('never leaks sample defaults or placeholder text into AI-native blocks', function () {
@@ -511,7 +522,7 @@ it('exposes a block catalog that matches the shipped registry', function () {
     expect(BlockCatalog::resolveType('nav.simple'))->toBe('navbar.simple');
     expect(BlockCatalog::resolveType('totally.made.up'))->toBeNull();
     expect(BlockCatalog::generatedTypes())->toContain('generated.hero', 'generated.nav', 'generated.form');
-    expect(App\Support\BlockRegistry::types())->toBe(BlockCatalog::types());
+    expect(BlockRegistry::types())->toBe(BlockCatalog::types());
 });
 
 it('shares generated nav and footer chrome across AI pages', function () {
@@ -691,27 +702,27 @@ it('lists gpt-5.6, opus 5 and kimi k2.5 as selectable models', function () {
 });
 
 it('builds chat payloads that newer models will accept', function () {
-    $openai = new App\Services\Ai\AiConfig(true, 'openai', 'gpt-5.6', 'https://api.openai.com/v1', 'sk-test', 4000, 0.7, 30);
-    $gpt = App\Services\Ai\AiChatPayload::openaiCompatible($openai, 'sys', 'user', ['json' => true, 'max_tokens' => 8000]);
+    $openai = new AiConfig(true, 'openai', 'gpt-5.6', 'https://api.openai.com/v1', 'sk-test', 4000, 0.7, 30);
+    $gpt = AiChatPayload::openaiCompatible($openai, 'sys', 'user', ['json' => true, 'max_tokens' => 8000]);
     expect($gpt)->toHaveKey('max_completion_tokens', 8000)
         ->not->toHaveKey('max_tokens')
         ->not->toHaveKey('temperature')
         ->and($gpt['response_format']['type'])->toBe('json_object');
 
-    $kimi = new App\Services\Ai\AiConfig(true, 'kimi', 'kimi-k2.5', 'https://api.moonshot.ai/v1', 'sk-test', 4000, 0.7, 30);
-    $k25 = App\Services\Ai\AiChatPayload::openaiCompatible($kimi, 'sys', 'user', ['json' => true]);
+    $kimi = new AiConfig(true, 'kimi', 'kimi-k2.5', 'https://api.moonshot.ai/v1', 'sk-test', 4000, 0.7, 30);
+    $k25 = AiChatPayload::openaiCompatible($kimi, 'sys', 'user', ['json' => true]);
     expect($k25['thinking']['type'])->toBe('disabled')
         ->and($k25)->toHaveKey('max_tokens')
         ->and($k25)->toHaveKey('temperature');
 
-    $k3cfg = new App\Services\Ai\AiConfig(true, 'kimi', 'kimi-k3', 'https://api.moonshot.ai/v1', 'sk-test', 4000, 0.7, 30);
-    $k3 = App\Services\Ai\AiChatPayload::openaiCompatible($k3cfg, 'sys', 'user', ['max_tokens' => 8000]);
+    $k3cfg = new AiConfig(true, 'kimi', 'kimi-k3', 'https://api.moonshot.ai/v1', 'sk-test', 4000, 0.7, 30);
+    $k3 = AiChatPayload::openaiCompatible($k3cfg, 'sys', 'user', ['max_tokens' => 8000]);
     expect($k3)->toHaveKey('max_completion_tokens', 8000)
         ->not->toHaveKey('temperature')
         ->and($k3['reasoning_effort'])->toBe('high');
 
-    $opus = new App\Services\Ai\AiConfig(true, 'anthropic', 'claude-opus-5', 'https://api.anthropic.com', 'sk-test', 4000, 0.7, 30);
-    $body = App\Services\Ai\AiChatPayload::anthropic($opus, 'sys', 'user', ['max_tokens' => 4000]);
+    $opus = new AiConfig(true, 'anthropic', 'claude-opus-5', 'https://api.anthropic.com', 'sk-test', 4000, 0.7, 30);
+    $body = AiChatPayload::anthropic($opus, 'sys', 'user', ['max_tokens' => 4000]);
     expect($body['max_tokens'])->toBeGreaterThanOrEqual(16000)
         ->and($body)->not->toHaveKey('temperature');
 });

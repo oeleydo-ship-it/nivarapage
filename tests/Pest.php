@@ -3,6 +3,8 @@
 use App\Models\AiSetting;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Models\WorkspaceUser;
+use App\Services\Ai\FakeAiProvider;
 use App\Services\Domains\ApexAddressResolver;
 use App\Services\Domains\FakeDomainProvider;
 use App\Services\WorkspaceService;
@@ -59,7 +61,7 @@ function authHeaders(User $user, Workspace $workspace): array
 function member(int $workspaceId, string $role = 'editor'): User
 {
     $user = User::factory()->create();
-    \App\Models\WorkspaceUser::query()->create([
+    WorkspaceUser::query()->create([
         'workspace_id' => $workspaceId,
         'user_id' => $user->id,
         'role' => $role,
@@ -105,6 +107,20 @@ function allowAi(Workspace $workspace, int $limit = 25): void
 {
     $plan = $workspace->load('subscription.plan')->subscription->plan;
     $plan->update(['limits' => array_merge($plan->limits ?? [], ['ai_generations' => $limit])]);
+}
+
+/**
+ * Queues the art-direction answer that generating a blank site now asks for
+ * first. Push it before the site JSON, in the order the generator calls.
+ *
+ * Passing null queues a reply the generator cannot use, which is how a test
+ * exercises the fallback to the old generated.* behaviour.
+ */
+function pushArtDirection(?string $kit = 'voltera', array $theme = ['primary' => '#1d4ed8'], array $motion = ['animation' => 'fade-up']): void
+{
+    FakeAiProvider::pushArt((string) json_encode($kit === null
+        ? ['reason' => 'no kit chosen']
+        : ['kit' => $kit, 'theme' => $theme, 'motion' => $motion, 'reason' => 'Fits the brief.']));
 }
 
 function aiSite(array $headers): int
