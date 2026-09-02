@@ -97,7 +97,24 @@ class PageController extends Controller
     {
         $this->authorize('view', $page);
 
-        return PageRevisionResource::collection($page->revisions()->orderByDesc('version_number')->get());
+        // Content is deliberately left out: a page's whole section tree per
+        // revision would make the history list enormous.
+        $rows = PageRevisionResource::collection(
+            $page->revisions()->with('user:id,name')->orderByDesc('version_number')->get()
+        );
+        // Mutate in place: mapping the collection would drop the `data` wrapper.
+        $rows->collection->each(fn (PageRevisionResource $row) => $row->withoutContent());
+
+        return $rows;
+    }
+
+    /** One revision including its content, for previewing before a restore. */
+    public function revision(Page $page, PageRevision $revision)
+    {
+        $this->authorize('view', $page);
+        abort_if($revision->page_id !== $page->id, 404);
+
+        return new PageRevisionResource($revision->load('user:id,name'));
     }
 
     public function restore(Request $request, Page $page, PageRevision $revision, RevisionService $revisions)

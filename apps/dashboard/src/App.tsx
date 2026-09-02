@@ -21,6 +21,7 @@ import { ClientDetailPage, ClientsPage } from './pages/ClientsPages'
 import { LivechatInboxPage } from './pages/LivechatPages'
 import { LivechatSettingsPage } from './pages/LivechatSettingsPage'
 import { SiteLivechatPage } from './pages/SiteLivechatPage'
+import { SiteBackupsPage } from './pages/SiteBackupsPage'
 import { BlogPage, BlogPostDetailPage } from './pages/BlogPages'
 import { CreateFunnelPage, FunnelAnalyticsPage, FunnelBuilderPage, FunnelLeadsPage, FunnelsPage, FunnelSettingsPage, FunnelTemplatesPage } from './pages/FunnelPages'
 import { FunnelStepEditorPage } from './pages/FunnelStepEditorPage'
@@ -106,6 +107,7 @@ export default function App() {
         <Route path="/forms" element={<FormsInboxPage />} />
         <Route path="/sites/:id/forms" element={<SiteFormsPage />} />
         <Route path="/sites/:id/livechat" element={<SiteLivechatPage />} />
+        <Route path="/sites/:id/backups" element={<SiteBackupsPage />} />
         <Route path="/blog" element={<BlogPage />} />
         <Route path="/blog/:id" element={<BlogPostDetailPage />} />
         <Route path="/funnels" element={<RequireFunnels><FunnelsPage /></RequireFunnels>} />

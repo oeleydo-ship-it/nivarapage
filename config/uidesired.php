@@ -33,6 +33,11 @@ return [
         ],
         array_filter(array_map('trim', explode(',', (string) env('TRUSTED_HOSTS', '')))),
     )))),
+    'revisions' => [
+        // Draft autosaves inside this many minutes fold into the same revision.
+        // Larger keeps the history shorter; 0 disables checkpointing entirely.
+        'checkpoint_minutes' => (int) env('REVISION_CHECKPOINT_MINUTES', 10),
+    ],
     'cache' => [
         // Use CACHE_STORE=redis in production. Tests keep CACHE_STORE=array.
         'ttl' => (int) env('PUBLIC_CACHE_TTL', 86400),

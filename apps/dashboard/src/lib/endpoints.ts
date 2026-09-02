@@ -201,7 +201,9 @@ export const pagesApi = {
   remove: (id: string | number) => http.delete<{ ok: boolean }>(`/pages/${id}`),
   saveDraft: (id: string | number, content: unknown) => http.put(`/pages/${id}/draft`, { content }),
   publish: (id: string | number) => http.post<Page>(`/pages/${id}/publish`),
-  revisions: (id: string | number) => http.get<unknown[]>(`/pages/${id}/revisions`),
+  revisions: (id: string | number) => http.get<PageRevision[]>(`/pages/${id}/revisions`),
+  revision: (pageId: string | number, revisionId: string | number) =>
+    http.get<PageRevision>(`/pages/${pageId}/revisions/${revisionId}`),
   restore: (pageId: string | number, revisionId: string | number) =>
     http.post(`/pages/${pageId}/revisions/${revisionId}/restore`),
 }
@@ -213,6 +215,43 @@ export const domainsApi = {
   primary: (id: number) => http.post<Domain>(`/domains/${id}/primary`),
   retry: (id: number) => http.post<Domain>(`/domains/${id}/retry`),
   remove: (id: number) => http.delete(`/domains/${id}`),
+}
+
+export type PageRevision = {
+  id: number
+  page_id: number
+  version_number: number
+  /** created | draft | published | restore */
+  reason?: string | null
+  section_count?: number
+  author?: string | null
+  created_at?: string | null
+  /** Only present when a single revision is fetched. */
+  content?: { schemaVersion?: number; sections?: unknown[] } | null
+}
+
+export type SiteBackup = {
+  id: number
+  site_id: number
+  label: string
+  /** manual | pre_restore */
+  kind: string
+  page_count: number
+  bytes: number
+  author?: string | null
+  created_at?: string | null
+}
+
+export const backupsApi = {
+  list: (siteId: string | number) => http.get<SiteBackup[]>(`/sites/${siteId}/backups`),
+  create: (siteId: string | number, label?: string) =>
+    http.post<SiteBackup>(`/sites/${siteId}/backups`, { label: label || '' }),
+  restore: (siteId: string | number, backupId: number) =>
+    http.post<{ restored_from: SiteBackup; undo_backup: SiteBackup }>(
+      `/sites/${siteId}/backups/${backupId}/restore`,
+    ),
+  remove: (siteId: string | number, backupId: number) =>
+    http.delete<{ ok: boolean }>(`/sites/${siteId}/backups/${backupId}`),
 }
 
 export const templatesApi = {

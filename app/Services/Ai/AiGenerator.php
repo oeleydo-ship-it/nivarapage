@@ -25,7 +25,38 @@ class AiGenerator
         private readonly AiPromptBuilder $prompts,
         private readonly AiSectionRepair $repair,
         private readonly PageSchemaValidator $validator,
+        private readonly SiteKitProfile $kits,
     ) {}
+
+    /**
+     * Stamps the site's own design conventions onto anything the model wrote.
+     *
+     * The prompt asks for these, but a section that arrives without them would
+     * render with block defaults and look foreign next to the rest of the page,
+     * so they are applied here rather than left to chance.
+     *
+     * @param  list<array<string, mixed>>  $pages
+     * @param  list<array<string, mixed>>  $sections
+     * @return array{pages: list<array<string, mixed>>, sections: list<array<string, mixed>>}
+     */
+    private function matchSiteDesign(Site $site, array $pages, array $sections, ?array $live = null): array
+    {
+        $kit = $this->kits->detect($site, $live);
+        if ($kit === null || $kit['design'] === []) {
+            return ['pages' => $pages, 'sections' => $sections];
+        }
+
+        foreach ($pages as $index => $page) {
+            if (is_array($page['sections'] ?? null)) {
+                $pages[$index]['sections'] = $this->kits->applyDesign($page['sections'], $kit['design']);
+            }
+        }
+
+        return [
+            'pages' => $pages,
+            'sections' => $this->kits->applyDesign($sections, $kit['design']),
+        ];
+    }
 
     /**
      * @param  array<string, mixed>  $input
@@ -39,7 +70,11 @@ class AiGenerator
             ['max_tokens' => (int) config('ai.site_max_tokens', 8000)],
         );
 
-        return $this->assembleSite($raw);
+        $assembled = $this->assembleSite($raw);
+        $matched = $this->matchSiteDesign($site, $assembled['pages'], []);
+        $assembled['pages'] = $matched['pages'];
+
+        return $assembled;
     }
 
     /**
@@ -257,6 +292,13 @@ class AiGenerator
         if ($theme !== [] && $pages === [] && $sections === [] && $action === 'reply') {
             $action = 'update_theme';
         }
+
+        $liveSections = is_array($input['current_content']['sections'] ?? null)
+            ? $input['current_content']['sections']
+            : null;
+        $matched = $this->matchSiteDesign($site, $pages, $sections, $liveSections);
+        $pages = $matched['pages'];
+        $sections = $matched['sections'];
 
         $result = [
             'action' => $action,

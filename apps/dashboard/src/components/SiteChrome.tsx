@@ -9,6 +9,7 @@ const TABS = [
   { suffix: 'domains', label: 'Domains' },
   { suffix: 'forms', label: 'Forms' },
   { suffix: 'livechat', label: 'Livechat' },
+  { suffix: 'backups', label: 'Backups' },
 ] as const
 
 export function SiteSubnav({ siteId }: { siteId?: string }) {

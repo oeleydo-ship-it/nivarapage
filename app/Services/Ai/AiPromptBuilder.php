@@ -11,6 +11,51 @@ use App\Support\BlockCatalog;
  */
 class AiPromptBuilder
 {
+    public function __construct(private readonly SiteKitProfile $kits) {}
+
+    /**
+     * Instructions and catalog for a site that is already built from a kit.
+     *
+     * Without this the model only sees the `generated.*` blocks, so anything it
+     * adds to a Cinder or Voltera site arrives in a different visual language
+     * than the page it is joining.
+     *
+     * @param  array{key: string, label: string, types: list<string>, design: array<string, mixed>}|null  $kit
+     * @return list<string>
+     */
+    private function kitLines(?array $kit): array
+    {
+        if ($kit === null) {
+            return [
+                '',
+                'This site is not using a template kit, so compose original layouts with the generated.* blocks below.',
+                'Available blocks (type — label — allowed props). Use ONLY these types:',
+                $this->generationCatalogText(),
+            ];
+        }
+
+        $lines = [
+            '',
+            'DESIGN SYSTEM: this site is built from the "'.$kit['label'].'" kit.',
+            'Prefer its blocks so anything you add matches the pages already here. They share the kit\'s type scale, spacing and colour treatment.',
+            'Use a generated.* block only when no kit block fits the purpose, and keep it to a minimum.',
+        ];
+
+        if ($kit['design'] !== []) {
+            $lines[] = 'Set these props on every section you emit so the motion and measure match the rest of the site: '
+                .(json_encode($kit['design'], JSON_UNESCAPED_SLASHES) ?: '{}');
+        }
+
+        $lines[] = '';
+        $lines[] = 'Kit blocks — prefer these (type — label — allowed props):';
+        $lines[] = $this->catalogText($kit['types']);
+        $lines[] = '';
+        $lines[] = 'Fallback original blocks, only when the kit has nothing suitable:';
+        $lines[] = $this->generationCatalogText();
+
+        return $lines;
+    }
+
     public function pageSystemPrompt(): string
     {
         $maxPages = max(1, (int) config('ai.max_pages', 5));
@@ -164,14 +209,17 @@ class AiPromptBuilder
         $lines[] = 'If it is clearly a single landing page or only the named page above, generate that one page.';
         $lines[] = 'Every page: start with generated.nav and end with generated.footer. Home needs 7–10 purposeful sections; each inner page needs 4–7 sections.';
         $lines[] = 'Navbar links.url values must match the page slugs you emit.';
-        $lines[] = 'Compose an original layout: vary layout, surface, and density on each generated.* block. Do not reuse catalog kits.';
+        $kit = $this->kits->detect($site);
+        if ($kit === null) {
+            $lines[] = 'Compose an original layout: vary layout, surface, and density on each generated.* block.';
+        }
         $lines[] = 'Use generated.composition for page-specific sections that do not fit a standard purpose. Set blockName and create 2–6 complete regions; every region remains editable.';
         $lines[] = 'Never put descriptive prose into an image field and never invent an external image URL. With no uploaded image path, leave image empty and use a generated.composition visual.';
         $lines[] = 'Write all visible content now. Every heading, paragraph, CTA, question, answer, plan, and repeater item must be specific to this business request and ready to publish.';
         $lines[] = 'Do not use default/sample phrases from the catalog. Do not invent claims or people. When details are missing, use accurate process and benefit language rather than placeholders.';
-        $lines[] = '';
-        $lines[] = 'Available blocks (type — label — allowed props). Use ONLY these types:';
-        $lines[] = $this->generationCatalogText();
+        foreach ($this->kitLines($kit) as $line) {
+            $lines[] = $line;
+        }
 
         return implode("\n", $lines);
     }
@@ -417,9 +465,16 @@ class AiPromptBuilder
             $lines[] = $role.': '.mb_substr($text, 0, $role === 'User' ? 2000 : 400);
         }
 
+        // The live editor content is a better signal than the saved pages: it is
+        // what the person is looking at while they type the request.
+        $liveSections = is_array($content['sections'] ?? null) ? $content['sections'] : null;
+        $kit = $this->kits->detect($site, $liveSections);
+
         $lines[] = '';
-        $lines[] = 'Available blocks (type — label — allowed props). Use only these generated types. Populate their content props fully:';
-        $lines[] = $this->generationCatalogText();
+        $lines[] = 'Populate every content prop fully — no placeholder text.';
+        foreach ($this->kitLines($kit) as $line) {
+            $lines[] = $line;
+        }
 
         return implode("\n", $lines);
     }

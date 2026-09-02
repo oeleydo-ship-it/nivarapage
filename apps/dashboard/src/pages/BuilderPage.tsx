@@ -53,6 +53,7 @@ import {
   Tablet,
   Trash2,
   Undo2,
+  History,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
@@ -65,6 +66,7 @@ import { FieldControl, fieldVisible } from '../components/FieldControls'
 import { GoogleFonts } from '../components/GoogleFonts'
 import { MediaPicker } from '../components/MediaLibrary'
 import { PageMenu } from '../components/PageMenu'
+import { HistoryPanel } from '../components/HistoryPanel'
 import { ThemePanel } from '../components/ThemePanel'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { PageSeoFields } from './SeoPages'
@@ -344,6 +346,10 @@ export function BuilderPage() {
   const [params, setParams] = useSearchParams()
   const [tab, setTab] = useState<BlockFieldGroup>('content')
   const [themeOpen, setThemeOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  // Content held aside while an older version is shown on the canvas, so
+  // cancelling a preview puts the editor back exactly as it was.
+  const [preHistorySections, setPreHistorySections] = useState<PageSection[] | null>(null)
   const [aiOpen, setAiOpen] = useState(false)
   const [leftOpen, setLeftOpen] = useState(() => {
     if (typeof window === 'undefined') return true
@@ -374,6 +380,8 @@ export function BuilderPage() {
   const updateSection = useEditorStore((s) => s.updateSection)
   const updateProps = useEditorStore((s) => s.updateProps)
   const saveStatus = useEditorStore((s) => s.saveStatus)
+  const setSections = useEditorStore((s) => s.setSections)
+  const storePageId = useEditorStore((s) => s.pageId)
   const setSaveStatus = useEditorStore((s) => s.setSaveStatus)
   const dirty = useEditorStore((s) => s.dirty)
   const setContext = useEditorStore((s) => s.setContext)
@@ -990,6 +998,10 @@ export function BuilderPage() {
             <Button variant="ghost" onClick={() => setThemeOpen(true)}>
               Theme
             </Button>
+            <Button variant="ghost" onClick={() => setHistoryOpen(true)}>
+              <History size={15} />
+              History
+            </Button>
             <Button variant="outline" disabled={previewing} onClick={openPreview}>
               {previewing ? 'Opening…' : 'Preview'}
             </Button>
@@ -1275,6 +1287,32 @@ export function BuilderPage() {
             onApplied={() => {
               void qc.invalidateQueries({ queryKey: ['pages', id] })
               void qc.invalidateQueries({ queryKey: ['theme', id] })
+            }}
+          />
+        ) : null}
+
+        {historyOpen && storePageId ? (
+          <HistoryPanel
+            pageId={storePageId}
+            onPreview={(older) => {
+              // Remember the working copy the first time only, so stepping
+              // through several versions still returns to the real draft.
+              setPreHistorySections((current) => current ?? sections)
+              setSections(older)
+            }}
+            onCancelPreview={() => {
+              if (preHistorySections) setSections(preHistorySections)
+              setPreHistorySections(null)
+            }}
+            onRestored={(restored) => {
+              setPreHistorySections(null)
+              setSections(restored)
+              setToast('Version restored')
+            }}
+            onClose={() => {
+              if (preHistorySections) setSections(preHistorySections)
+              setPreHistorySections(null)
+              setHistoryOpen(false)
             }}
           />
         ) : null}

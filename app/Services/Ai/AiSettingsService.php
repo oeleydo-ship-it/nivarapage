@@ -3,6 +3,7 @@
 namespace App\Services\Ai;
 
 use App\Models\AiSetting;
+use App\Support\BlockCatalog;
 use App\Support\EncryptedSettings;
 
 /**
@@ -79,7 +80,7 @@ class AiSettingsService
             'key_source' => $config->keySource,
             'key_hint' => $config->keyHint(),
             'env_key_present' => $config->keySource === 'env',
-            'catalog_blocks' => count(\App\Support\BlockCatalog::types()),
+            'catalog_blocks' => count(BlockCatalog::types()),
             'last_tested_at' => $row->last_tested_at?->toIso8601String(),
             'last_test_status' => $row->last_test_status,
             'last_test_message' => $row->last_test_message,

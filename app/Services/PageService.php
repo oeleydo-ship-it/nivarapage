@@ -86,7 +86,10 @@ class PageService
         $validated = $this->forms->bindContent($page->site, $this->validator->validate($content));
 
         $draft = $page->draftRevision;
-        if ($draft && $page->published_revision_id !== $draft->id) {
+        if ($draft && $page->published_revision_id !== $draft->id && $this->withinCheckpoint($draft)) {
+            // Still inside the current checkpoint window, so fold this save into
+            // the open revision. Without this the editor's autosave would write
+            // a row per keystroke.
             $draft->update([
                 'content_json' => $validated,
                 'user_id' => $user->id,
@@ -121,6 +124,7 @@ class PageService
                     $updates['is_homepage'] = true;
                 }
                 $page->update($updates);
+
                 continue;
             }
 
@@ -143,6 +147,26 @@ class PageService
     /**
      * @param  array<string, mixed>  $content
      */
+    /**
+     * Whether a draft revision is still the "current" one to write into.
+     *
+     * Draft saves coalesce for a while so autosave does not create a row per
+     * keystroke, but once the window passes the next save opens a new revision.
+     * That is what turns the table into a history someone can actually revert
+     * through, rather than a single row that is overwritten forever.
+     */
+    private function withinCheckpoint(PageRevision $draft): bool
+    {
+        $minutes = (int) config('uidesired.revisions.checkpoint_minutes', 10);
+        if ($minutes <= 0) {
+            return true;
+        }
+
+        $stamp = $draft->updated_at ?? $draft->created_at;
+
+        return $stamp !== null && $stamp->gt(now()->subMinutes($minutes));
+    }
+
     public function createRevision(Page $page, ?User $user, array $content, ?string $reason = null): PageRevision
     {
         $version = (int) $page->revisions()->max('version_number') + 1;
