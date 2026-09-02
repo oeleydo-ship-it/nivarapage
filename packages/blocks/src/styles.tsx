@@ -3735,7 +3735,9 @@ export const blockCss = `
 .ud-md-logos__viewport.is-scrolling{overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
 .ud-md-logos__rail{display:flex;align-items:center;gap:46px;padding-inline:23px;flex:none}
 .ud-md-logos__viewport:not(.is-scrolling) .ud-md-logos__rail{padding-inline:clamp(20px,4cqi,40px)}
-.ud-md-logos__viewport.is-scrolling .ud-md-logos__rail{animation:ud-md-marquee var(--md-marquee,34s) linear infinite}
+/* Each track must span at least the viewport: translating one track-width only hides the seam when that width covers the visible strip. */
+.ud-md-logos__viewport.is-scrolling .ud-md-logos__rail{min-width:100%;justify-content:space-around;animation:ud-md-marquee var(--md-marquee,34s) linear infinite}
+.ud-md-logos__ghost{display:inline-flex;align-items:center}
 .ud-md-logos__viewport.is-scrolling:hover .ud-md-logos__rail{animation-play-state:paused}
 @keyframes ud-md-marquee{from{transform:translateX(0)}to{transform:translateX(-100%)}}
 @media (prefers-reduced-motion:reduce){.ud-md-logos__viewport.is-scrolling .ud-md-logos__rail{animation:none}.ud-md-logos__viewport.is-scrolling{overflow-x:auto;mask-image:none}}

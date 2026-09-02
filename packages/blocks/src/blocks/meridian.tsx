@@ -455,27 +455,51 @@ export const logosMeridian = defineBlock({
     const scrolling = bool(props.scroll, true) && !edit
     const seconds = Math.min(Math.max(num(props.speed, 34), 10), 90)
 
-    const logo = (item: Props, index: number, clone = false) =>
+    const logo = (item: Props, index: number, keyPrefix: string) =>
       str(item.image) ? (
         <Media
-          key={(clone ? 'c' : '') + String(index)}
+          key={keyPrefix + String(index)}
           src={item.image}
-          alt={clone ? '' : str(item.label)}
+          alt={str(item.label)}
           ratio="wide"
           className="ud-md-logos__img"
-          edit={clone ? undefined : edit}
+          edit={edit}
           path={['items', index, 'image']}
         />
       ) : (
         <EditableText
-          key={(clone ? 'c' : '') + String(index)}
-          edit={clone ? undefined : edit}
+          key={keyPrefix + String(index)}
+          edit={edit}
           path={['items', index, 'label']}
           value={str(item.label)}
           as="span"
           className="ud-md-logos__word"
           placeholder="Brand"
         />
+      )
+
+    /** A decorative repeat: no edit binding, and not announced. */
+    const ghost = (item: Props, index: number, keyPrefix: string) => (
+      <span key={keyPrefix + String(index)} aria-hidden className="ud-md-logos__ghost">
+        {str(item.image) ? (
+          <Media src={item.image} alt="" ratio="wide" className="ud-md-logos__img" />
+        ) : (
+          <span className="ud-md-logos__word">{str(item.label)}</span>
+        )}
+      </span>
+    )
+
+    // A short list leaves the track narrower than the viewport, and a track
+    // that does not span the viewport shows a gap the moment it slides. The
+    // list is repeated so the strip stays continuous with only a few logos.
+    const passes = rows.length ? Math.max(1, Math.ceil(10 / rows.length)) : 1
+    const track = (prefix: string, decorative: boolean) =>
+      Array.from({ length: passes }).flatMap((_, pass) =>
+        rows.map((item, index) =>
+          decorative || pass > 0
+            ? ghost(item, index, prefix + 'p' + String(pass) + '-')
+            : logo(item, index, prefix + 'p' + String(pass) + '-'),
+        ),
       )
 
     return (
@@ -490,13 +514,13 @@ export const logosMeridian = defineBlock({
             className="ud-md-logos__rail"
             style={scrolling ? ({ ['--md-marquee' as string]: String(seconds) + 's' } as CSSProperties) : undefined}
           >
-            {rows.map((item, index) => logo(item, index))}
+            {scrolling ? track('a-', false) : rows.map((item, index) => logo(item, index, 'x-'))}
           </div>
           {scrolling ? (
-            // A second copy makes the loop seamless; it is hidden from
+            // A second track makes the loop seamless; it is hidden from
             // assistive tech so the names are not announced twice.
             <div className="ud-md-logos__rail" aria-hidden style={{ ['--md-marquee' as string]: String(seconds) + 's' } as CSSProperties}>
-              {rows.map((item, index) => logo(item, index, true))}
+              {track('b-', true)}
             </div>
           ) : null}
         </div>
