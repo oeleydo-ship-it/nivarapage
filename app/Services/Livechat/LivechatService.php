@@ -11,6 +11,7 @@ use App\Models\LivechatConversation;
 use App\Models\LivechatKnowledge;
 use App\Models\LivechatMessage;
 use App\Models\LivechatWidget;
+use App\Models\PageRender;
 use App\Models\Site;
 use App\Models\User;
 use App\Support\BrowserDetector;
@@ -20,6 +21,28 @@ use Illuminate\Support\Str;
 
 class LivechatService
 {
+    /**
+     * True when the site's live pages actually carry this widget.
+     *
+     * The widget tag is written into a page when the page is published, so
+     * switching the widget on and looking at the live site are two different
+     * questions. Without this the dashboard can only report what was saved,
+     * and an owner staring at a site with no bubble has nothing to go on.
+     */
+    public function isLiveOnSite(LivechatWidget $widget): bool
+    {
+        if (! $widget->enabled || ! $widget->public_key) {
+            return false;
+        }
+
+        $html = PageRender::query()
+            ->where('site_id', $widget->site_id)
+            ->orderByRaw("CASE WHEN path = '/' THEN 0 ELSE 1 END")
+            ->value('html');
+
+        return is_string($html) && str_contains($html, '/livechat/'.$widget->public_key.'/widget.js');
+    }
+
     public function widgetForSite(Site $site): LivechatWidget
     {
         return LivechatWidget::query()->firstOrCreate(

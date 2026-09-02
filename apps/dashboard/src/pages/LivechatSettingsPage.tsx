@@ -1,21 +1,46 @@
 import type { LivechatWidget } from '@uidesired/types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Settings2 } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { LivechatNav } from '../components/LivechatNav'
 import { livechatApi } from '../lib/endpoints'
+import { renderSiteHtml } from '../lib/publishSite'
 import { Badge, Button, Card, EmptyState, PageHeader } from '../ui/primitives'
 
 export function LivechatSettingsPage() {
   const qc = useQueryClient()
+  const [notice, setNotice] = useState<string | null>(null)
   const widgets = useQuery({ queryKey: ['livechat', 'widgets'], queryFn: livechatApi.widgets })
   const toggle = useMutation({
-    mutationFn: ({ siteId, body }: { siteId: number; body: Record<string, unknown> }) =>
-      livechatApi.updateWidget(siteId, body),
-    onSuccess: () => {
+    mutationFn: async ({ siteId, body, published }: { siteId: number; body: Record<string, unknown>; published: boolean }) => {
+      const widget = await livechatApi.updateWidget(siteId, body)
+
+      /**
+       * The widget tag is written into a page when it is published, so a
+       * published site has to be rebuilt or switching this on changes nothing
+       * a visitor can see. This renders from the site's published revisions,
+       * so it never pushes out a half-edited page.
+       */
+      if (!published) {
+        return { widget, notice: 'Saved. The widget appears once this website is published.' }
+      }
+
+      const result = await renderSiteHtml(siteId)
+
+      return {
+        widget,
+        notice: result.renderError
+          ? `Saved, but the live pages could not be rebuilt: ${result.renderError}`
+          : null,
+      }
+    },
+    onSuccess: ({ notice: next }) => {
+      setNotice(next)
       void qc.invalidateQueries({ queryKey: ['livechat', 'widgets'] })
       void qc.invalidateQueries({ queryKey: ['livechat', 'widget'] })
     },
+    onError: (error: Error) => setNotice(error.message),
   })
 
   const rows = widgets.data || []
@@ -27,6 +52,11 @@ export function LivechatSettingsPage() {
         description="Enable the chat widget on each website, turn the AI agent on, then add knowledge."
       />
       <LivechatNav />
+      {toggle.isPending ? (
+        <p className="mb-4 text-sm text-zinc-400">Updating the widget and rebuilding the live pages…</p>
+      ) : notice ? (
+        <p className="mb-4 rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2 text-sm text-amber-300">{notice}</p>
+      ) : null}
       {rows.length === 0 ? (
         <Card>
           <EmptyState
@@ -57,7 +87,9 @@ export function LivechatSettingsPage() {
                   key={widget.id}
                   widget={widget}
                   busy={toggle.isPending}
-                  onToggle={(body) => toggle.mutate({ siteId: widget.site_id, body })}
+                  onToggle={(body) =>
+                    toggle.mutate({ siteId: widget.site_id, body, published: widget.site?.status === 'published' })
+                  }
                 />
               ))}
             </tbody>
@@ -82,6 +114,13 @@ function WidgetRow({
       <td className="px-5 py-4">
         <div className="font-medium text-white">{widget.site?.name || `Site #${widget.site_id}`}</div>
         <div className="mt-0.5 text-xs text-zinc-500">Key {widget.public_key}</div>
+        {!widget.enabled ? null : widget.site?.status !== 'published' ? (
+          <div className="mt-1 text-xs text-amber-500">Website not published, so the widget is not on it yet</div>
+        ) : widget.live_on_site ? (
+          <div className="mt-1 text-xs text-emerald-500">On the live pages</div>
+        ) : (
+          <div className="mt-1 text-xs text-amber-500">Not on the live pages yet — switch it off and on to rebuild</div>
+        )}
       </td>
       <td className="px-5 py-4">
         <label className="inline-flex items-center gap-2 text-zinc-200">

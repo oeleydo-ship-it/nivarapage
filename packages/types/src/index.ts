@@ -558,8 +558,10 @@ export interface LivechatWidget {
   collect_phone: boolean
   require_contact: boolean
   knowledge_count?: number
+  /** Whether the site's published HTML actually carries the widget tag. */
+  live_on_site?: boolean
   embed_script?: string
-  site?: { id: number; name: string } | null
+  site?: { id: number; name: string; status?: string } | null
   updated_at?: string
 }
 

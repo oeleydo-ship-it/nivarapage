@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from
 import { Link, useParams } from 'react-router-dom'
 import { SiteSubnav } from '../components/SiteChrome'
 import { livechatApi } from '../lib/endpoints'
+import { renderSiteHtml } from '../lib/publishSite'
 import { Button, Card, Input, Label, PageHeader, Select } from '../ui/primitives'
 
 export function SiteLivechatPage() {
@@ -20,9 +21,33 @@ export function SiteLivechatPage() {
     queryFn: () => livechatApi.knowledge(id!),
     enabled: Boolean(id),
   })
+  const [notice, setNotice] = useState<string | null>(null)
   const save = useMutation({
-    mutationFn: (body: Record<string, unknown>) => livechatApi.updateWidget(id!, body),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['livechat', 'widget', id] }),
+    mutationFn: async (body: Record<string, unknown>) => {
+      const saved = await livechatApi.updateWidget(id!, body)
+
+      /**
+       * The widget tag and its colours are written into a page when it is
+       * published, so a saved setting that is never rendered changes nothing a
+       * visitor sees. Rebuilt from the site's published revisions, so this
+       * never pushes out a half-edited page.
+       */
+      if (saved.site?.status !== 'published') {
+        return { saved, notice: 'Saved. These settings reach visitors once the website is published.' }
+      }
+
+      const result = await renderSiteHtml(id!)
+
+      return {
+        saved,
+        notice: result.renderError ? `Saved, but the live pages could not be rebuilt: ${result.renderError}` : null,
+      }
+    },
+    onSuccess: ({ notice: next }) => {
+      setNotice(next)
+      void qc.invalidateQueries({ queryKey: ['livechat', 'widget', id] })
+    },
+    onError: (error: Error) => setNotice(error.message),
   })
   const addKnowledge = useMutation({
     mutationFn: (body: { title?: string; content?: string; file?: File }) => livechatApi.addKnowledge(id!, body),
@@ -226,8 +251,13 @@ export function SiteLivechatPage() {
                 </label>
               </div>
               <Button type="submit" disabled={save.isPending}>
-                Save widget
+                {save.isPending ? 'Saving and rebuilding…' : 'Save widget'}
               </Button>
+              {notice ? (
+                <p className="rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2 text-sm text-amber-300">
+                  {notice}
+                </p>
+              ) : null}
             </form>
             <div className="mt-6">
               <Label>Embed snippet</Label>

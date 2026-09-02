@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\LivechatWidget;
+use App\Services\Livechat\LivechatService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -41,7 +42,14 @@ class LivechatWidgetResource extends JsonResource
             'site' => $this->whenLoaded('site', fn () => $this->site ? [
                 'id' => $this->site->id,
                 'name' => $this->site->name,
+                // The widget is written into pages when they are published, so
+                // the dashboard needs to know whether there is a published site
+                // for switching it on to reach.
+                'status' => $this->site->status,
             ] : null),
+            // Whether the live pages carry it, as opposed to whether it is
+            // switched on here. They are different questions.
+            'live_on_site' => app(LivechatService::class)->isLiveOnSite($this->resource),
             'embed_script' => '<script src="'.rtrim((string) config('app.url'), '/').'/api/v1/public/livechat/'.$this->public_key.'/widget.js" async></script>',
             'updated_at' => $this->updated_at,
         ];
