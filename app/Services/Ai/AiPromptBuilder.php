@@ -480,7 +480,10 @@ class AiPromptBuilder
     /**
      * @param  array<string, mixed>  $input
      */
-    public function chatPrompt(Site $site, array $input): string
+    /**
+     * @param  array{key: string, label: string, types: list<string>, design: array<string, mixed>}|null  $chosenKit
+     */
+    public function chatPrompt(Site $site, array $input, ?array $chosenKit = null): string
     {
         $lines = [
             'Website name: '.$site->name,
@@ -557,10 +560,16 @@ class AiPromptBuilder
         // The live editor content is a better signal than the saved pages: it is
         // what the person is looking at while they type the request.
         $liveSections = is_array($content['sections'] ?? null) ? $content['sections'] : null;
-        $kit = $this->kits->detect($site, $liveSections);
+        // Nothing on the canvas means nothing to match, which used to leave the
+        // model with only the generated.* blocks. A kit chosen for the brief
+        // stands in until the site has a design of its own.
+        $kit = $this->kits->detect($site, $liveSections) ?? $chosenKit;
 
         $lines[] = '';
         $lines[] = 'Populate every content prop fully — no placeholder text.';
+        if ($kit !== null) {
+            $lines[] = 'Build every page from the "'.$kit['label'].'" blocks below: open with its navbar, close with its footer, and keep the same two on every page.';
+        }
         foreach ($this->kitLines($kit) as $line) {
             $lines[] = $line;
         }

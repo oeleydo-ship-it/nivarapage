@@ -245,9 +245,10 @@ it('lets a kit site answer in its own blocks instead of banning them', function 
     expect($system)->toContain('Reuse the exact type a section already has');
 });
 
-it('still forbids catalog kits on a site that is not built from one', function () {
+it('art-directs a blank canvas into a kit instead of the generic blocks', function () {
     ['headers' => $headers, 'site' => $siteId] = chatCopyFixture();
 
+    pushArtDirection('halcyon');
     FakeAiProvider::push(json_encode(['action' => 'reply', 'message' => 'Which pages?']));
 
     $this->withHeaders($headers)
@@ -258,7 +259,28 @@ it('still forbids catalog kits on a site that is not built from one', function (
         ])
         ->assertOk();
 
-    expect(FakeAiProvider::calls()[0]['system'])->toContain('Never use catalog kits');
+    $chat = FakeAiProvider::calls()[1];
+    expect($chat['system'])->not->toContain('Never use catalog kits');
+    expect($chat['prompt'])->toContain('hero.halcyon');
+});
+
+it('still forbids catalog kits when no kit could be chosen', function () {
+    ['headers' => $headers, 'site' => $siteId] = chatCopyFixture();
+
+    // Art direction answers with no usable kit, so there is nothing to preserve
+    // and the original rule applies.
+    pushArtDirection(null);
+    FakeAiProvider::push(json_encode(['action' => 'reply', 'message' => 'Which pages?']));
+
+    $this->withHeaders($headers)
+        ->postJson('/api/v1/ai/chat', [
+            'site_id' => $siteId,
+            'current_content' => ['schemaVersion' => 1, 'sections' => []],
+            'messages' => [['role' => 'user', 'content' => 'Build me a site.']],
+        ])
+        ->assertOk();
+
+    expect(FakeAiProvider::calls()[1]['system'])->toContain('Never use catalog kits');
 });
 
 it('explains itself rather than rewriting an empty page', function () {

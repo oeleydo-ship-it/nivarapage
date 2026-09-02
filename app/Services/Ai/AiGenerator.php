@@ -322,16 +322,31 @@ class AiGenerator
             return $this->rewriteCurrentPageCopy($site, $input, $liveSections, $emit);
         }
 
+        // The kit the page is already built from decides whether the model is
+        // allowed to answer in kit blocks. Without it every reply came back as
+        // generated.* and replaced the chosen template.
+        $detected = $this->kits->detect($site, $liveSections);
+
+        // A blank canvas has no kit to detect, which is the whole of a new site.
+        // Art-direct it first so "build me a law firm" is built from a designed
+        // kit rather than the dozen generic blocks.
+        $direction = $detected === null ? $this->directArt($site, $input) : null;
+        $kit = $detected ?? ($direction['kit'] ?? null);
+
+        if ($direction !== null) {
+            $emit('generating', 'Choosing a design and palette for the brief.', [
+                'code' => 'const design = artDirect(brief);',
+                'progress' => 22,
+            ]);
+        }
+
         $emit('generating', 'Planning pages, navigation, theme, and block composition.', [
             'code' => 'const sitemap = await composePages(brief);',
             'progress' => 28,
         ]);
         $raw = $this->complete(
-            // The kit the page is already built from decides whether the model
-            // is allowed to answer in kit blocks. Without it every reply came
-            // back as generated.* and replaced the chosen template.
-            $this->prompts->chatSystemPrompt($this->kits->detect($site, $liveSections)),
-            $this->prompts->chatPrompt($site, $input),
+            $this->prompts->chatSystemPrompt($kit),
+            $this->prompts->chatPrompt($site, $input, $kit),
             ['max_tokens' => (int) config('ai.site_max_tokens', 8000)],
         );
 
@@ -428,9 +443,16 @@ class AiGenerator
             $action = 'update_theme';
         }
 
-        $matched = $this->matchSiteDesign($site, $pages, $sections, $liveSections);
+        $matched = $this->matchSiteDesign($site, $pages, $sections, $liveSections, $direction['kit'] ?? null);
         $pages = $matched['pages'];
         $sections = $matched['sections'];
+
+        // The palette chosen for the brief, where the model did not name one of
+        // its own. A blank site has no theme worth keeping, so this is the first
+        // thing that gives it a look.
+        if ($direction !== null && $direction['theme'] !== []) {
+            $theme = $theme + $direction['theme'];
+        }
 
         $result = [
             'action' => $action,

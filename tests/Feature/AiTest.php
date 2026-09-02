@@ -846,7 +846,8 @@ it('streams live planning, page, and block events for a multi-page website', fun
     expect($events->firstWhere('type', 'result')['data']['pages'])->toHaveCount(2);
     expect($events->last()['progress'])->toBe(100);
 
-    $prompt = FakeAiProvider::calls()[0]['prompt'];
+    // [0] is art direction for the blank canvas; [1] is the build itself.
+    $prompt = FakeAiProvider::calls()[1]['prompt'];
     expect($prompt)->toContain('Generation mode: Full website.');
     expect($prompt)->toContain('Requested sitemap size: 2 pages');
 });

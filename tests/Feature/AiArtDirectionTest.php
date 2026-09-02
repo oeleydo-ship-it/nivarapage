@@ -244,3 +244,58 @@ it('puts the style notes in front of the art director', function () {
     expect($prompt)->toContain('Nivara');
     expect($prompt)->toContain('Cinder & Row');
 });
+
+it('builds a whole website from a kit when the panel is given a blank canvas', function () {
+    $fx = artFixture();
+
+    // What "a boutique law firm please build this" asks of the chat endpoint.
+    pushArtDirection('northbook', ['primary' => '#134e4a']);
+    FakeAiProvider::push((string) json_encode([
+        'action' => 'apply_site',
+        'message' => 'I built the site.',
+        'pages' => [
+            [
+                'name' => 'Home', 'slug' => 'home', 'is_homepage' => true,
+                'sections' => [
+                    ['type' => 'navbar.northbook', 'props' => ['logo' => 'Northwind Legal']],
+                    ['type' => 'hero.northbook', 'props' => ['heading' => 'Counsel for growing companies', 'description' => 'Clear advice, fixed fees.']],
+                    ['type' => 'services.northbook', 'props' => ['heading' => 'How we help']],
+                    ['type' => 'footer.northbook', 'props' => ['copyright' => '© Northwind Legal']],
+                ],
+            ],
+            [
+                'name' => 'About', 'slug' => 'about', 'is_homepage' => false,
+                'sections' => [
+                    ['type' => 'navbar.northbook', 'props' => ['logo' => 'Northwind Legal']],
+                    ['type' => 'team.northbook', 'props' => ['heading' => 'Our people']],
+                    ['type' => 'footer.northbook', 'props' => ['copyright' => '© Northwind Legal']],
+                ],
+            ],
+        ],
+    ]));
+
+    $data = test()->withHeaders($fx['headers'])
+        ->postJson('/api/v1/ai/chat', [
+            'site_id' => $fx['site'],
+            'generation_mode' => 'full_site',
+            'current_content' => ['schemaVersion' => 1, 'sections' => []],
+            'messages' => [['role' => 'user', 'content' => 'a boutique law firm please build this']],
+        ])
+        ->assertOk()
+        ->json('data');
+
+    expect($data['action'])->toBe('apply_site');
+    expect($data['pages'])->toHaveCount(2);
+
+    // A whole site, built from the kit rather than the dozen generic blocks.
+    $types = collect($data['pages'])
+        ->flatMap(fn ($page) => collect($page['content']['sections'])->pluck('type'))
+        ->all();
+    expect($types)->toContain('hero.northbook');
+    expect($types)->not->toContain('generated.hero');
+
+    // Palette and motion reach the site as well as the blocks.
+    expect($data['theme']['primary'])->toBe('#134e4a');
+    $hero = collect($data['pages'][0]['content']['sections'])->firstWhere('type', 'hero.northbook');
+    expect($hero['props']['animation'])->toBe('fade-up');
+});

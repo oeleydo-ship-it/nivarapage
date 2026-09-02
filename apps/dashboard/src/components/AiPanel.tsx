@@ -70,6 +70,13 @@ function friendlyError(error: unknown): string | null {
   if (/maximum execution time/i.test(message) || errorCode(error) === 'ai_timeout') {
     return 'The AI took too long. Try again — a full site can take up to a minute — or ask for one page first.'
   }
+  // The browser says "network error" or "Failed to fetch" when the connection
+  // drops part-way through the stream, which on a whole-site build is almost
+  // always the server or a proxy giving up while the model is still writing.
+  // Saying so beats two words that sound like the customer's wifi.
+  if (!(error instanceof ApiError) && /network error|failed to fetch|load failed|networkerror/i.test(message)) {
+    return 'The connection dropped while the site was being written. A whole website can take a minute or more — try again, or build the home page first and add pages after.'
+  }
   return message
 }
 

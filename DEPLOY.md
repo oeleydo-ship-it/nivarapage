@@ -110,6 +110,33 @@ server {
 Do not add a `robots.txt` or `sitemap.xml` file to `public/` — both are routes
 that answer per site, and a static file would shadow them for every customer.
 
+## AI generation needs a patient proxy
+
+Building a whole website is one long request: the model is asked for the design,
+then for every page, and nothing is sent to the browser while it writes. A proxy
+that gives up on an idle connection after the usual 60 seconds will cut the
+stream part-way, and the builder reports that the connection dropped.
+
+Give the AI endpoints longer than the model can take. `AI_TIMEOUT` (default 180)
+is what the app allows the provider, so the proxy has to outlast it:
+
+```nginx
+location ~ ^/api/v1/ai/ {
+    proxy_read_timeout 300s;
+    proxy_send_timeout 300s;
+    fastcgi_read_timeout 300s;
+    # The generation stream is newline-delimited JSON and must not be buffered.
+    proxy_buffering off;
+    gzip off;
+}
+```
+
+PHP-FPM needs the same room, or the worker is killed mid-generation:
+`request_terminate_timeout = 300` in the pool config.
+
+If a whole-site build still drops while a single page succeeds, the proxy is
+almost always the thing to look at first.
+
 ## Queue and scheduler
 
 ```
