@@ -24,6 +24,8 @@ export function SiteSeoPage() {
   const [favicon, setFavicon] = useState('')
   const [social, setSocial] = useState('')
   const [robots, setRobots] = useState('index')
+  const [googleAnalyticsId, setGoogleAnalyticsId] = useState('')
+  const [googleSiteVerification, setGoogleSiteVerification] = useState('')
 
   useEffect(() => {
     if (!site) return
@@ -37,7 +39,12 @@ export function SiteSeoPage() {
     setFavicon(settings.favicon || '')
     setSocial(settings.social_image || '')
     setRobots(settings.robots || 'index')
+    setGoogleAnalyticsId(settings.google_analytics_id || '')
+    setGoogleSiteVerification(settings.google_site_verification || '')
   }, [settings])
+
+  const gaId = googleAnalyticsId.trim()
+  const gaValid = gaId === '' || /^(G|UA|GT)-[A-Za-z0-9-]+$/.test(gaId)
 
   const save = useMutation({
     mutationFn: async () => {
@@ -47,6 +54,8 @@ export function SiteSeoPage() {
         favicon,
         social_image: social,
         robots,
+        google_analytics_id: gaId || null,
+        google_site_verification: googleSiteVerification.trim() || null,
         locale: settings?.locale || 'en',
         redirect_secondary_to_primary: settings?.redirect_secondary_to_primary ?? true,
       })
@@ -109,10 +118,47 @@ export function SiteSeoPage() {
             ))}
           </select>
         </div>
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>
+        <Button onClick={() => save.mutate()} disabled={save.isPending || !gaValid}>
           Save SEO
         </Button>
         {save.isSuccess ? <p className="text-sm text-emerald-400">Saved.</p> : null}
+      </Card>
+
+      <Card className="mt-6 max-w-xl space-y-4">
+        <div>
+          <h2 className="font-medium text-white">Analytics &amp; verification</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Applies to every domain connected to this website — the tracking script and verification tag are written
+            into every published page.
+          </p>
+        </div>
+        <div>
+          <Label>Google Analytics measurement ID</Label>
+          <Input
+            value={googleAnalyticsId}
+            onChange={(e) => setGoogleAnalyticsId(e.target.value)}
+            placeholder="G-XXXXXXXXXX"
+          />
+          <p className="mt-1 text-[11px] text-zinc-500">
+            From Google Analytics → Admin → Data streams. Also accepts a legacy UA- or server-side GT- ID.
+          </p>
+          {!gaValid ? <p className="mt-1 text-[11px] text-red-400">Should look like G-XXXXXXXXXX.</p> : null}
+        </div>
+        <div>
+          <Label>Google Search Console verification</Label>
+          <Input
+            value={googleSiteVerification}
+            onChange={(e) => setGoogleSiteVerification(e.target.value)}
+            placeholder="The content value from the HTML tag verification method"
+          />
+          <p className="mt-1 text-[11px] text-zinc-500">
+            Paste just the content value, not the full &lt;meta&gt; tag. Verify against any connected domain — Search
+            Console just needs to see the tag once.
+          </p>
+        </div>
+        <Button onClick={() => save.mutate()} disabled={save.isPending || !gaValid}>
+          Save SEO
+        </Button>
       </Card>
     </div>
   )

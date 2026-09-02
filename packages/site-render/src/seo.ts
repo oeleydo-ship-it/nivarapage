@@ -90,5 +90,57 @@ export function pageSeoTags(
     tags.push(`<link rel="icon" href="${attr(site.settings.favicon)}">`);
   }
 
+  const verification = site.settings?.google_site_verification;
+  if (verification) {
+    tags.push(`<meta name="google-site-verification" content="${attr(verification)}">`);
+  }
+
+  if (robots.index) {
+    tags.push(structuredData(site, siteName, canonical, description));
+  }
+
+  const gaId = googleAnalyticsId(site);
+  if (gaId) {
+    tags.push(...googleAnalyticsTags(gaId));
+  }
+
   return { title, tags };
+}
+
+/**
+ * Only the exact shape Google issues ("G-", "UA-" or "GT-" followed by
+ * tracking-id characters) is trusted here: this value is interpolated into an
+ * inline <script> below, unescaped, because it must be valid JavaScript, not
+ * HTML text. The API already rejects anything else at save time; this is the
+ * last line of defense for a page that renders from a column for as long as
+ * it exists.
+ */
+function googleAnalyticsId(site: ResolvedSite): string | null {
+  const id = site.settings?.google_analytics_id;
+  return id && /^(G|UA|GT)-[A-Za-z0-9-]+$/.test(id) ? id : null;
+}
+
+function googleAnalyticsTags(id: string): string[] {
+  return [
+    `<script async src="https://www.googletagmanager.com/gtag/js?id=${id}"></script>`,
+    `<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date());gtag("config","${id}");</script>`,
+  ];
+}
+
+/**
+ * Minimal Organization/WebSite JSON-LD so search engines can attribute the
+ * page to a named business rather than guessing from the title tag. Skipped
+ * on a page that opted out of indexing - there is no reason to describe a
+ * page to a crawler that has been told not to list it.
+ */
+function structuredData(site: ResolvedSite, siteName: string, url: string, description?: string): string {
+  const data: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: siteName,
+    url,
+  };
+  if (description) data.description = description;
+
+  return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
 }

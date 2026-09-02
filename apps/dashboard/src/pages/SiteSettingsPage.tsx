@@ -60,6 +60,8 @@ const TIMEZONES = (() => {
   return ['UTC', 'America/New_York', 'America/Chicago', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Asia/Dubai']
 })()
 
+const GA_ID_PATTERN = /^(G|UA|GT)-[A-Za-z0-9-]+$/
+
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError || error instanceof Error) return error.message
   return 'Could not save settings.'
@@ -86,6 +88,8 @@ export function SiteSettingsPage() {
   const [favicon, setFavicon] = useState('')
   const [social, setSocial] = useState('')
   const [robots, setRobots] = useState('index')
+  const [googleAnalyticsId, setGoogleAnalyticsId] = useState('')
+  const [googleSiteVerification, setGoogleSiteVerification] = useState('')
   const [locale, setLocale] = useState('en')
   const [timezone, setTimezone] = useState('UTC')
   const [redirectSecondary, setRedirectSecondary] = useState(true)
@@ -105,10 +109,15 @@ export function SiteSettingsPage() {
     setFavicon(settings.favicon || '')
     setSocial(settings.social_image || '')
     setRobots(settings.robots || 'index')
+    setGoogleAnalyticsId(settings.google_analytics_id || '')
+    setGoogleSiteVerification(settings.google_site_verification || '')
     setLocale(settings.locale || 'en')
     setTimezone(settings.timezone || 'UTC')
     setRedirectSecondary(settings.redirect_secondary_to_primary ?? true)
   }, [settings])
+
+  const gaId = googleAnalyticsId.trim()
+  const gaValid = gaId === '' || GA_ID_PATTERN.test(gaId)
 
   const save = useMutation({
     mutationFn: async () => {
@@ -123,6 +132,8 @@ export function SiteSettingsPage() {
         favicon: favicon || null,
         social_image: social || null,
         robots,
+        google_analytics_id: gaId || null,
+        google_site_verification: googleSiteVerification.trim() || null,
         locale,
         timezone,
         redirect_secondary_to_primary: redirectSecondary,
@@ -328,6 +339,26 @@ export function SiteSettingsPage() {
                   ))}
                 </Select>
               </div>
+              <div>
+                <Label>Google Analytics measurement ID</Label>
+                <Input
+                  value={googleAnalyticsId}
+                  onChange={(e) => setGoogleAnalyticsId(e.target.value)}
+                  placeholder="G-XXXXXXXXXX"
+                />
+                <p className="mt-1 text-[11px] text-zinc-500">
+                  Written into every page on every domain connected to this website.
+                </p>
+                {!gaValid ? <p className="mt-1 text-[11px] text-red-400">Should look like G-XXXXXXXXXX.</p> : null}
+              </div>
+              <div>
+                <Label>Google Search Console verification</Label>
+                <Input
+                  value={googleSiteVerification}
+                  onChange={(e) => setGoogleSiteVerification(e.target.value)}
+                  placeholder="Content value from the HTML tag verification method"
+                />
+              </div>
               <Link to={`/sites/${id}/seo`} className="inline-flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300">
                 <Search size={14} />
                 Per-page SEO
@@ -378,7 +409,7 @@ export function SiteSettingsPage() {
             </Card>
 
             <div className="flex flex-wrap items-center gap-3">
-              <Button disabled={busy || !name.trim()} onClick={() => save.mutate()}>
+              <Button disabled={busy || !name.trim() || !gaValid} onClick={() => save.mutate()}>
                 {save.isPending ? <Loader2 size={15} className="animate-spin" /> : null}
                 {save.isPending ? 'Saving…' : 'Save settings'}
               </Button>

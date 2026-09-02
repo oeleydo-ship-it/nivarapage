@@ -104,6 +104,8 @@ class SiteController extends Controller
             'favicon' => ['nullable', 'string', 'max:2048'],
             'social_image' => ['nullable', 'string', 'max:2048'],
             'robots' => ['nullable', 'in:index,noindex,none'],
+            'google_analytics_id' => ['nullable', 'string', 'max:32', 'regex:/^(G|UA|GT)-[A-Za-z0-9-]+$/'],
+            'google_site_verification' => ['nullable', 'string', 'max:255'],
             'locale' => ['nullable', 'string', 'max:16'],
             'timezone' => ['nullable', 'string', 'max:64'],
             'redirect_secondary_to_primary' => ['boolean'],

@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'favicon',
     'social_image',
     'robots',
+    'google_analytics_id',
+    'google_site_verification',
     'locale',
     'timezone',
     'redirect_secondary_to_primary',

@@ -237,7 +237,7 @@ class SeoService
      */
     public function sanitizeSiteSettings(array $data): array
     {
-        foreach (['default_description', 'favicon', 'social_image', 'locale', 'timezone'] as $key) {
+        foreach (['default_description', 'favicon', 'social_image', 'locale', 'timezone', 'google_site_verification'] as $key) {
             if (array_key_exists($key, $data) && is_string($data[$key])) {
                 $data[$key] = $this->plain($data[$key], $key === 'default_description' ? 320 : 2048);
             }
@@ -245,6 +245,15 @@ class SeoService
         if (isset($data['robots'])) {
             $robots = is_string($data['robots']) ? $data['robots'] : 'index';
             $data['robots'] = in_array($robots, self::SITE_ROBOTS, true) ? $robots : 'index';
+        }
+        if (array_key_exists('google_analytics_id', $data)) {
+            $id = is_string($data['google_analytics_id']) ? trim($data['google_analytics_id']) : '';
+            // Interpolated unescaped into an inline <script> on every published
+            // page, so only the exact shape Google issues is ever accepted -
+            // request validation already checked this, but a public page
+            // renders from this column for as long as it exists, so it is
+            // worth guarding here too.
+            $data['google_analytics_id'] = preg_match('/^(G|UA|GT)-[A-Za-z0-9-]+$/', $id) === 1 ? $id : null;
         }
 
         return $data;

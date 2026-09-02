@@ -203,6 +203,8 @@ export interface SiteSettings {
   favicon?: string | null
   social_image?: string | null
   robots?: 'index' | 'noindex' | 'none' | string | null
+  google_analytics_id?: string | null
+  google_site_verification?: string | null
   locale?: string | null
   timezone?: string | null
   redirect_secondary_to_primary?: boolean
