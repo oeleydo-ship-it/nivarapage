@@ -20,6 +20,13 @@
       ],
       "port": 8000,
       "autoPort": false
+    },
+    {
+      "name": "reverb",
+      "runtimeExecutable": "C:/Users/Eleydo Family/.config/herd/bin/php84/php.exe",
+      "runtimeArgs": ["artisan", "reverb:start"],
+      "port": 8090,
+      "autoPort": false
     }
   ]
 }
