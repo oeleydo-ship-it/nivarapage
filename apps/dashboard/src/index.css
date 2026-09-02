@@ -233,48 +233,6 @@
   --tw-ring-color: color-mix(in srgb, #0b0d12 18%, transparent);
 }
 
-/*
- * The sign-in screens are dark by design in both themes, so they opt out of the
- * light-theme swap entirely: the standard ramp is restored inside `.auth-shell`
- * and the `text-white` / `border-white` inversions above are undone. Without
- * this the glass card renders as dark ink on a pale panel.
- */
-:root[data-theme='light'] .auth-shell {
-  color-scheme: dark;
-  --color-zinc-950: #09090b;
-  --color-zinc-900: #18181b;
-  --color-zinc-800: #27272a;
-  --color-zinc-700: #3f3f46;
-  --color-zinc-600: #52525b;
-  --color-zinc-500: #a1a1aa;
-  --color-zinc-400: #d4d4d8;
-  --color-zinc-300: #e4e4e7;
-  --color-zinc-200: #f4f4f5;
-  --color-zinc-100: #fafafa;
-  --color-zinc-50: #ffffff;
-  --color-teal-300: #5eead4;
-  --color-teal-400: #2dd4bf;
-}
-
-:root[data-theme='light'] .auth-shell [class~='text-white'],
-:root[data-theme='light'] .auth-shell [class~='hover:text-white']:hover {
-  color: #ffffff;
-}
-
-:root[data-theme='light'] .auth-shell [class*='border-white/'] {
-  border-color: color-mix(in srgb, #ffffff 12%, transparent);
-}
-
-:root[data-theme='light'] .auth-shell [class*='ring-white/'] {
-  --tw-ring-color: color-mix(in srgb, #ffffff 20%, transparent);
-}
-
-/* Belt and braces: the blanket `aside` rule below must not reach this subtree. */
-:root[data-theme='light'] .auth-shell aside {
-  background: transparent;
-  border-color: transparent;
-}
-
 /* The sidebar shares the page background in dark mode; light mode needs an edge. */
 /* The sidebar sits a step darker than the canvas so the two panes read apart. */
 :root[data-theme='light'] aside {

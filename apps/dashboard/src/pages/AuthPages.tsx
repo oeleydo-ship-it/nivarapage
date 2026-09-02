@@ -6,9 +6,9 @@ import { useBranding } from '../lib/useBranding'
 import type { Workspace } from '@uidesired/types'
 
 /*
- * The auth screens are dark in both themes. `.auth-shell` in index.css opts this
- * subtree out of the light-theme colour swap, so the classes below can be read
- * literally: `text-white` is white here, whatever theme the app is in.
+ * The auth screens are white in both themes. `.auth-shell` marks this subtree
+ * so it renders as a flat, gradient-free light page regardless of the app's
+ * active theme — colours below are literal, not theme tokens.
  */
 
 function GoogleIcon() {
@@ -45,7 +45,7 @@ function AlertIcon() {
 
 function CheckIcon() {
   return (
-    <svg className="mt-0.5 h-4 w-4 shrink-0 text-teal-300" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+    <svg className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
       <path
         fillRule="evenodd"
         d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.3 9.7a1 1 0 1 1 1.4-1.4l3.8 3.8 6.8-6.8a1 1 0 0 1 1.4 0z"
@@ -74,7 +74,7 @@ function ErrorNote({ children }: { children: ReactNode }) {
   return (
     <div
       role="alert"
-      className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-sm text-red-200"
+      className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
     >
       <AlertIcon />
       <span>{children}</span>
@@ -95,7 +95,7 @@ function Field({
   return (
     <div>
       <div className="mb-1.5 flex items-baseline justify-between gap-3">
-        <label htmlFor={id} className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+        <label htmlFor={id} className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
           {label}
         </label>
         {action}
@@ -106,9 +106,9 @@ function Field({
           id={id}
           type={isPassword && revealed ? 'text' : props.type}
           className={[
-            'w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm text-white',
-            'placeholder:text-slate-500 outline-none transition',
-            'hover:border-white/20 focus:border-teal-400/70 focus:bg-white/[0.07] focus:ring-4 focus:ring-teal-400/10',
+            'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900',
+            'placeholder:text-slate-400 outline-none transition',
+            'hover:border-slate-300 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10',
             isPassword ? 'pr-11' : '',
           ].join(' ')}
         />
@@ -117,7 +117,7 @@ function Field({
             type="button"
             onClick={() => setRevealed((value) => !value)}
             aria-label={revealed ? 'Hide password' : 'Show password'}
-            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 transition hover:text-slate-200"
+            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 transition hover:text-slate-600"
           >
             <EyeIcon open={revealed} />
           </button>
@@ -133,7 +133,7 @@ function SubmitButton({ pending, children }: { pending: boolean; children: React
     <button
       type="submit"
       disabled={pending}
-      className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-teal-400 to-teal-500 px-4 py-2.5 text-sm font-semibold text-[#04201f] shadow-[0_10px_30px_-10px_rgba(45,212,191,.8)] transition hover:from-teal-300 hover:to-teal-400 focus:outline-none focus:ring-4 focus:ring-teal-400/25 disabled:cursor-not-allowed disabled:opacity-60"
+      className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-500/25 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? <Spinner /> : null}
       {children}
@@ -143,7 +143,6 @@ function SubmitButton({ pending, children }: { pending: boolean; children: React
 
 const HIGHLIGHTS = [
   'Visual page builder with polished templates',
-  'Funnels, forms, and client sites in one workspace',
   'Publish to your own domain in minutes',
 ]
 
@@ -159,8 +158,8 @@ function AuthShell({
   footer?: ReactNode
 }) {
   const { data } = useBranding()
-  const logo = data?.logo_dark_url || data?.logo_url || null
-  const brand = data?.platform_name || 'UiDesired'
+  const logo = data?.logo_url || data?.logo_dark_url || null
+  const brand = data?.platform_name || 'My Website Builder'
   const tagline = data?.platform_tagline || 'Build beautiful websites without the busywork.'
 
   const wordmark = (size: 'sm' | 'lg') =>
@@ -172,7 +171,7 @@ function AuthShell({
       />
     ) : (
       <span
-        className={`font-[Fraunces,Georgia,serif] font-semibold tracking-tight text-white ${
+        className={`font-[Fraunces,Georgia,serif] font-semibold tracking-tight text-slate-900 ${
           size === 'lg' ? 'text-3xl' : 'text-xl'
         }`}
       >
@@ -181,26 +180,7 @@ function AuthShell({
     )
 
   return (
-    <div className="auth-shell relative min-h-screen overflow-hidden bg-[#070d16] font-[Manrope,system-ui,sans-serif] text-slate-200">
-      {/* Ambient colour wash. Sits behind everything and never intercepts clicks. */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(ellipse 90% 65% at 12% 8%, rgba(20,184,166,.28), transparent 58%), radial-gradient(ellipse 75% 55% at 88% 4%, rgba(56,102,255,.24), transparent 52%), radial-gradient(ellipse 70% 60% at 72% 96%, rgba(244,114,182,.12), transparent 50%), linear-gradient(165deg, #050a12 0%, #0a1220 48%, #0b1526 100%)',
-        }}
-      />
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.18]"
-        style={{
-          backgroundImage:
-            'linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px)',
-          backgroundSize: '56px 56px',
-          maskImage: 'radial-gradient(ellipse 70% 70% at 30% 30%, black 10%, transparent 70%)',
-          WebkitMaskImage: 'radial-gradient(ellipse 70% 70% at 30% 30%, black 10%, transparent 70%)',
-        }}
-      />
-
+    <div className="auth-shell relative min-h-screen bg-white font-[Manrope,system-ui,sans-serif] text-slate-700">
       <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-5 sm:px-8 lg:px-10">
         {/* Mobile / tablet header — the storytelling column is desktop-only. */}
         <header className="flex items-center justify-between py-6 lg:hidden">
@@ -210,43 +190,43 @@ function AuthShell({
         </header>
 
         <div className="grid flex-1 items-center gap-12 pb-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-16 lg:pb-0">
-          <section className="hidden min-w-0 flex-col justify-center py-14 lg:flex">
+          <section className="hidden min-w-0 flex-col justify-center border-r border-slate-100 py-14 pr-4 lg:flex">
             <Link to="/login" className="inline-flex w-fit">
               {wordmark('lg')}
             </Link>
 
-            <p className="mt-14 text-xs font-semibold uppercase tracking-[0.24em] text-teal-300/90">Website builder</p>
-            <h2 className="mt-4 font-[Fraunces,Georgia,serif] text-[2.75rem] font-semibold leading-[1.06] tracking-tight text-white xl:text-[3.25rem]">
+            <p className="mt-14 text-xs font-semibold uppercase tracking-[0.24em] text-teal-600">Website builder</p>
+            <h2 className="mt-4 font-[Fraunces,Georgia,serif] text-[2.75rem] font-semibold leading-[1.06] tracking-tight text-slate-900 xl:text-[3.25rem]">
               Design once.
               <br />
               Publish everywhere.
             </h2>
-            <p className="mt-5 max-w-md text-[0.975rem] leading-relaxed text-slate-400">{tagline}</p>
+            <p className="mt-5 max-w-md text-[0.975rem] leading-relaxed text-slate-500">{tagline}</p>
 
             <ul className="mt-9 space-y-3.5">
               {HIGHLIGHTS.map((item) => (
-                <li key={item} className="flex items-start gap-3 text-sm text-slate-300">
+                <li key={item} className="flex items-start gap-3 text-sm text-slate-600">
                   <CheckIcon />
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
 
-            <p className="mt-16 text-xs text-slate-600">
+            <p className="mt-16 text-xs text-slate-400">
               © {new Date().getFullYear()} {brand}
             </p>
           </section>
 
           <main className="min-w-0">
-            <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-6 shadow-[0_40px_90px_-30px_rgba(0,0,0,.85)] backdrop-blur-2xl sm:p-8">
-              <h1 className="font-[Fraunces,Georgia,serif] text-[1.75rem] font-semibold leading-tight tracking-tight text-white sm:text-3xl">
+            <div className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,.15)] sm:p-8">
+              <h1 className="font-[Fraunces,Georgia,serif] text-[1.75rem] font-semibold leading-tight tracking-tight text-slate-900 sm:text-3xl">
                 {title}
               </h1>
-              <p className="mt-2 text-sm leading-relaxed text-slate-400">{subtitle}</p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-500">{subtitle}</p>
               <div className="mt-7">{children}</div>
             </div>
-            {footer ? <div className="mt-5 text-center text-sm text-slate-400">{footer}</div> : null}
-            <p className="mt-8 text-center text-xs text-slate-600 lg:hidden">
+            {footer ? <div className="mt-5 text-center text-sm text-slate-500">{footer}</div> : null}
+            <p className="mt-8 text-center text-xs text-slate-400 lg:hidden">
               © {new Date().getFullYear()} {brand}
             </p>
           </main>
@@ -258,10 +238,10 @@ function AuthShell({
 
 function Divider({ children }: { children: ReactNode }) {
   return (
-    <div className="my-6 flex items-center gap-3 text-[0.7rem] font-medium uppercase tracking-[0.14em] text-slate-500">
-      <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/15" />
+    <div className="my-6 flex items-center gap-3 text-[0.7rem] font-medium uppercase tracking-[0.14em] text-slate-400">
+      <div className="h-px flex-1 bg-slate-200" />
       <span>{children}</span>
-      <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/15" />
+      <div className="h-px flex-1 bg-slate-200" />
     </div>
   )
 }
@@ -284,7 +264,7 @@ function GoogleAuthBlock({ label, requiresSignup = false }: { label: string; req
   }, [])
 
   if (status === null) {
-    return <div className="mb-6 h-[46px] animate-pulse rounded-xl bg-white/5" aria-hidden />
+    return <div className="mb-6 h-[46px] animate-pulse rounded-xl bg-slate-100" aria-hidden />
   }
   if (!status.enabled) return null
   if (requiresSignup && status.allow_registration === false) return null
@@ -306,7 +286,7 @@ function GoogleAuthBlock({ label, requiresSignup = false }: { label: string; req
               setLoading(false)
             }
           }}
-          className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/15 bg-white px-4 py-2.5 text-sm font-semibold text-[#1f1f1f] shadow-[0_8px_24px_-12px_rgba(0,0,0,.9)] transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? <Spinner /> : <GoogleIcon />}
           {loading ? 'Redirecting…' : label}
@@ -333,7 +313,7 @@ function passwordScore(value: string) {
 function PasswordMeter({ value }: { value: string }) {
   const score = useMemo(() => passwordScore(value), [value])
   const labels = ['Too short', 'Weak', 'Fair', 'Good', 'Strong']
-  const tones = ['bg-slate-700', 'bg-red-400', 'bg-amber-400', 'bg-teal-400', 'bg-emerald-400']
+  const tones = ['bg-slate-300', 'bg-red-400', 'bg-amber-400', 'bg-teal-500', 'bg-emerald-500']
 
   if (!value) return <>At least 8 characters.</>
 
@@ -343,7 +323,7 @@ function PasswordMeter({ value }: { value: string }) {
         {[0, 1, 2, 3].map((index) => (
           <span
             key={index}
-            className={`h-1 flex-1 rounded-full transition-colors ${index < score ? tones[score] : 'bg-white/10'}`}
+            className={`h-1 flex-1 rounded-full transition-colors ${index < score ? tones[score] : 'bg-slate-200'}`}
           />
         ))}
       </span>
@@ -367,7 +347,7 @@ export function LoginPage() {
       footer={
         <>
           New here?{' '}
-          <Link to="/register" className="font-semibold text-teal-300 transition hover:text-teal-200">
+          <Link to="/register" className="font-semibold text-teal-600 transition hover:text-teal-700">
             Create an account
           </Link>
         </>
@@ -409,7 +389,7 @@ export function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           required
           action={
-            <Link to="/forgot-password" className="text-xs font-medium text-teal-300 transition hover:text-teal-200">
+            <Link to="/forgot-password" className="text-xs font-medium text-teal-600 transition hover:text-teal-700">
               Forgot password?
             </Link>
           }
@@ -439,7 +419,7 @@ export function RegisterPage() {
       footer={
         <>
           Already have an account?{' '}
-          <Link to="/login" className="font-semibold text-teal-300 transition hover:text-teal-200">
+          <Link to="/login" className="font-semibold text-teal-600 transition hover:text-teal-700">
             Sign in
           </Link>
         </>
@@ -529,7 +509,7 @@ export function ForgotPasswordPage() {
         done ? null : (
           <>
             Remembered it?{' '}
-            <Link to="/login" className="font-semibold text-teal-300 transition hover:text-teal-200">
+            <Link to="/login" className="font-semibold text-teal-600 transition hover:text-teal-700">
               Sign in
             </Link>
           </>
@@ -538,11 +518,11 @@ export function ForgotPasswordPage() {
     >
       {done ? (
         <div className="space-y-4">
-          <div className="flex items-start gap-2 rounded-xl border border-teal-400/25 bg-teal-400/10 px-3 py-2.5 text-sm text-teal-100">
+          <div className="flex items-start gap-2 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2.5 text-sm text-teal-800">
             <CheckIcon />
             <span>If that email exists, we sent a reset link. Check your inbox and spam folder.</span>
           </div>
-          <Link to="/login" className="inline-flex text-sm font-semibold text-teal-300 transition hover:text-teal-200">
+          <Link to="/login" className="inline-flex text-sm font-semibold text-teal-600 transition hover:text-teal-700">
             Back to sign in
           </Link>
         </div>
@@ -597,7 +577,7 @@ export function ResetPasswordPage() {
       {!token ? (
         <ErrorNote>
           This reset link is missing a token.{' '}
-          <Link to="/forgot-password" className="font-semibold text-teal-300 underline-offset-2 hover:underline">
+          <Link to="/forgot-password" className="font-semibold text-teal-600 underline-offset-2 hover:underline">
             Request a new one
           </Link>
           .
@@ -682,7 +662,7 @@ export function AuthCallbackPage() {
       {error ? (
         <div className="space-y-3">
           <ErrorNote>{error}</ErrorNote>
-          <Link to="/login" className="inline-flex text-sm font-semibold text-teal-300 transition hover:text-teal-200">
+          <Link to="/login" className="inline-flex text-sm font-semibold text-teal-600 transition hover:text-teal-700">
             Back to sign in
           </Link>
         </div>
