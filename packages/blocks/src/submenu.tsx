@@ -6,7 +6,7 @@
  * inline-editable, and the whole shape is declared once by `navLinksField()`
  * so every block in every template family uses the same data.
  */
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { EditableText, editOf } from './editable'
 import { cx, items, str, type Props } from './primitives'
 
@@ -34,6 +34,13 @@ export function SubmenuCaret({ show }: { show: boolean }) {
 /**
  * Wraps a nav link so its dropdown can anchor to it. Renders nothing extra
  * when the item has no children, keeping simple navs untouched.
+ *
+ * An item with children also gets a disclosure button. On a wide screen the
+ * dropdown still opens on hover and the button is hidden; in the mobile drawer
+ * there is no hover, so without it every submenu had to be left permanently
+ * expanded - which is what buried the real links under a wall of child items.
+ * The button is a sibling of the link rather than inside it, so opening a
+ * submenu cannot navigate away from the page by accident.
  */
 export function NavItem({
   item,
@@ -44,7 +51,31 @@ export function NavItem({
   className?: string
   children: ReactNode
 }) {
-  return <span className={cx('ud-navitem', hasSubmenu(item) && 'ud-navitem--has-menu', className)}>{children}</span>
+  const [open, setOpen] = useState(false)
+  const hasChildren = hasSubmenu(item)
+
+  return (
+    <span className={cx('ud-navitem', hasChildren && 'ud-navitem--has-menu', hasChildren && open && 'is-open', className)}>
+      {children}
+      {hasChildren ? (
+        <button
+          type="button"
+          className="ud-navitem__toggle"
+          aria-expanded={open}
+          aria-label={`${open ? 'Hide' : 'Show'} ${str(item.label, 'submenu')} submenu`}
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            setOpen((value) => !value)
+          }}
+        >
+          <svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M2.5 4.5 6 8l3.5-3.5" />
+          </svg>
+        </button>
+      ) : null}
+    </span>
+  )
 }
 
 /** The dropdown panel itself. */

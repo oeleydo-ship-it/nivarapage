@@ -2248,9 +2248,22 @@ export const blockCss = `
 .ud-navitem:hover>.ud-submenu,.ud-navitem:focus-within>.ud-submenu{visibility:visible;opacity:1;translate:0 0;transition:opacity .13s ease,translate .13s ease,visibility 0s}
 .ud-submenu__link{display:block;padding:8px 12px;border-radius:6px;color:var(--color-text,#111);text-decoration:none;font-size:.85rem;font-weight:500;letter-spacing:normal;text-transform:none;white-space:nowrap}
 .ud-submenu__link:hover{background:color-mix(in srgb,var(--color-primary,#2563eb) 12%,transparent);color:var(--color-primary,#2563eb)}
+/* The disclosure button is for touch, where there is no hover to open a
+   dropdown with. On a wide screen hover still does it and the button stays out
+   of the way. */
+.ud-navitem__toggle{display:none;align-items:center;justify-content:center;width:2.25rem;height:2.25rem;padding:0;border:0;background:none;color:inherit;cursor:pointer;position:absolute;top:0;right:0;opacity:.65;transition:transform .16s ease,opacity .16s ease}
+.ud-navitem__toggle:hover{opacity:1}
+.ud-navitem.is-open>.ud-navitem__toggle{transform:rotate(180deg);opacity:1}
 @container udpage (max-width:860px){
-  .ud-navitem{display:flex;flex-direction:column;align-items:stretch;width:100%}
-  .ud-submenu{position:static;display:grid;margin:4px 0 8px 12px;border:0;box-shadow:none;padding:0;min-width:0;background:transparent;visibility:visible;opacity:1;translate:none;transition:none}
+  .ud-navitem{display:flex;flex-direction:column;align-items:stretch;width:100%;position:relative}
+  /* Collapsed until the disclosure button is pressed. Leaving every submenu
+     open pushed the top-level links off the screen. */
+  .ud-submenu{position:static;display:none;margin:4px 0 8px 12px;border:0;box-shadow:none;padding:0;min-width:0;background:transparent;visibility:visible;opacity:1;translate:none;transition:none}
+  .ud-navitem.is-open>.ud-submenu{display:grid}
+  /* Hover cannot open a menu on a touch screen, so the button is the only way in. */
+  .ud-navitem:hover>.ud-submenu,.ud-navitem:focus-within>.ud-submenu{display:none}
+  .ud-navitem.is-open:hover>.ud-submenu,.ud-navitem.is-open:focus-within>.ud-submenu{display:grid}
+  .ud-navitem--has-menu>.ud-navitem__toggle{display:inline-flex}
   .ud-navitem--has-menu{padding-bottom:0;margin-bottom:0}
   .ud-submenu__link{padding:7px 0;font-size:.8rem}
   .ud-submenu__caret{display:none}
