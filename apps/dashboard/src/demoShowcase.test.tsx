@@ -1,6 +1,6 @@
-import { render } from '@testing-library/react'
+import { fireEvent, render } from '@testing-library/react'
 import React from 'react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { BlockRenderer, EDIT_PROP, getBlock } from '@uidesired/blocks'
 
 /**
@@ -80,5 +80,80 @@ describe('gallery.showcase', () => {
     expect(container.textContent).toContain('Ready-made designs')
     expect((block.defaultProps.items as unknown[]).length).toBeGreaterThanOrEqual(3)
     expect(block.defaultProps.buttonLabel).toBe('View demo')
+  })
+})
+
+describe('gallery.showcase filter tabs', () => {
+  const many = [
+    { ...demo, title: 'Voltera', category: 'Agency' },
+    { ...demo, title: 'Northbook', category: 'Services' },
+    { ...demo, title: 'Halcyon', category: 'Services' },
+  ]
+
+  it('builds one tab per category the demos actually carry', () => {
+    const { container } = renderShowcase({ items: many, allLabel: 'All templates' })
+    const tabs = [...container.querySelectorAll('[role="tab"]')].map((node) => node.textContent?.trim())
+
+    // No separate list to maintain, so a tab cannot outlive its last demo.
+    expect(tabs).toEqual(['All templates', 'Agency', 'Services'])
+  })
+
+  it('filters the cards on the same page without navigating', () => {
+    const { container } = renderShowcase({ items: many })
+    expect(container.textContent).toContain('Voltera')
+    expect(container.textContent).toContain('Northbook')
+
+    const services = [...container.querySelectorAll('[role="tab"]')].find((n) => n.textContent?.trim() === 'Services')!
+    fireEvent.click(services)
+
+    expect(container.textContent).not.toContain('Voltera')
+    expect(container.textContent).toContain('Northbook')
+    expect(container.textContent).toContain('Halcyon')
+    expect(services.getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('goes back to everything from the first tab', () => {
+    const { container } = renderShowcase({ items: many, allLabel: 'All templates' })
+    const tab = (label: string) =>
+      [...container.querySelectorAll('[role="tab"]')].find((n) => n.textContent?.trim() === label)!
+
+    fireEvent.click(tab('Agency'))
+    expect(container.textContent).not.toContain('Northbook')
+
+    fireEvent.click(tab('All templates'))
+    expect(container.textContent).toContain('Voltera')
+    expect(container.textContent).toContain('Northbook')
+  })
+
+  it('still edits the right row after the grid has been filtered', () => {
+    const commit = vi.fn()
+    const { container } = renderShowcase({
+      items: many,
+      [EDIT_PROP]: { commit, pickImage: () => {} },
+    })
+
+    fireEvent.click([...container.querySelectorAll('[role="tab"]')].find((n) => n.textContent?.trim() === 'Services')!)
+
+    // Halcyon is index 2 of the full list, not index 1 of the filtered view.
+    const headings = [...container.querySelectorAll('h3')]
+    const halcyon = headings.find((node) => node.textContent?.includes('Halcyon'))!
+    halcyon.textContent = 'Halcyon renamed'
+    fireEvent.blur(halcyon)
+
+    expect(commit).toHaveBeenCalledWith(['items', 2, 'title'], 'Halcyon renamed')
+  })
+
+  it('hides the tabs when there is nothing to filter by', () => {
+    const one = renderShowcase({ items: [{ ...demo, category: 'Agency' }] })
+    expect(one.container.querySelector('[role="tab"]')).toBeNull()
+
+    const none = renderShowcase({ items: [{ ...demo, category: '' }, { ...demo, title: 'B', category: '' }] })
+    expect(none.container.querySelector('[role="tab"]')).toBeNull()
+  })
+
+  it('can be turned off entirely', () => {
+    const { container } = renderShowcase({ items: many, showFilters: false })
+    expect(container.querySelector('[role="tab"]')).toBeNull()
+    expect(container.textContent).toContain('Voltera')
   })
 })

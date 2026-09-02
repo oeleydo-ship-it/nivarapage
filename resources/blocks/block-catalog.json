@@ -58138,24 +58138,36 @@
         "buttonLabel": "View demo",
         "buttonVariant": "secondary",
         "openInNewTab": true,
+        "showFilters": true,
+        "allLabel": "All templates",
         "items": [
           {
             "src": "",
             "title": "Voltera",
+            "category": "Agency",
             "description": "A high-energy marketing agency site with bold panels and a lime accent.",
             "url": "/templates/voltera/preview"
           },
           {
             "src": "",
             "title": "Northbook",
+            "category": "Services",
             "description": "A calm, professional template for accountancy and financial services.",
             "url": "/templates/northbook/preview"
           },
           {
             "src": "",
             "title": "Halcyon",
+            "category": "Services",
             "description": "A light product template for SaaS, with pricing and a changelog.",
             "url": "/templates/halcyon/preview"
+          },
+          {
+            "src": "",
+            "title": "Tessera",
+            "category": "Editorial",
+            "description": "A light editorial layout ruled by hairlines, for content-led brands.",
+            "url": "/templates/tessera/preview"
           }
         ]
       },
@@ -58197,6 +58209,12 @@
               "group": "content"
             },
             {
+              "key": "category",
+              "type": "text",
+              "label": "Category",
+              "group": "content"
+            },
+            {
               "key": "description",
               "type": "textarea",
               "label": "Description",
@@ -58215,6 +58233,18 @@
               "group": "content"
             }
           ]
+        },
+        {
+          "key": "showFilters",
+          "type": "toggle",
+          "label": "Show filter tabs",
+          "group": "layout"
+        },
+        {
+          "key": "allLabel",
+          "type": "text",
+          "label": "First tab label",
+          "group": "content"
         },
         {
           "key": "buttonLabel",

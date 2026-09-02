@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { EditableImage, EditableText, editOf } from '../editable'
 import {
   Body,
@@ -310,12 +310,15 @@ export const galleryShowcase = defineBlock({
     buttonLabel: 'View demo',
     buttonVariant: 'secondary',
     openInNewTab: true,
+    showFilters: true,
+    allLabel: 'All templates',
     // Real template slugs, so the block arrives with working demo links and
     // the button is visible from the moment it is dropped in.
     items: [
-      { src: '', title: 'Voltera', description: 'A high-energy marketing agency site with bold panels and a lime accent.', url: '/templates/voltera/preview' },
-      { src: '', title: 'Northbook', description: 'A calm, professional template for accountancy and financial services.', url: '/templates/northbook/preview' },
-      { src: '', title: 'Halcyon', description: 'A light product template for SaaS, with pricing and a changelog.', url: '/templates/halcyon/preview' },
+      { src: '', title: 'Voltera', category: 'Agency', description: 'A high-energy marketing agency site with bold panels and a lime accent.', url: '/templates/voltera/preview' },
+      { src: '', title: 'Northbook', category: 'Services', description: 'A calm, professional template for accountancy and financial services.', url: '/templates/northbook/preview' },
+      { src: '', title: 'Halcyon', category: 'Services', description: 'A light product template for SaaS, with pricing and a changelog.', url: '/templates/halcyon/preview' },
+      { src: '', title: 'Tessera', category: 'Editorial', description: 'A light editorial layout ruled by hairlines, for content-led brands.', url: '/templates/tessera/preview' },
     ],
   },
   schema: schema(
@@ -326,12 +329,15 @@ export const galleryShowcase = defineBlock({
       [
         image('src', 'Screenshot'),
         text('title', 'Title'),
+        text('category', 'Category', { placeholder: 'Groups this demo under a filter tab' }),
         textarea('description', 'Description'),
         link('url', 'Demo link'),
         text('buttonLabel', 'Button label', { placeholder: 'Leave blank to use the shared label' }),
       ],
-      { itemLabel: 'Demo', itemDefaults: { src: '', title: '', description: '', url: '' } },
+      { itemLabel: 'Demo', itemDefaults: { src: '', title: '', category: '', description: '', url: '' } },
     ),
+    toggle('showFilters', 'Show filter tabs'),
+    text('allLabel', 'First tab label'),
     text('buttonLabel', 'Shared button label'),
     select('buttonVariant', 'Button style', [['primary', 'Solid'], ['secondary', 'Outline'], ['ghost', 'Quiet']], 'design'),
     toggle('openInNewTab', 'Open demos in a new tab'),
@@ -347,12 +353,72 @@ export const galleryShowcase = defineBlock({
     const ratio = str(props.imageRatio, 'landscape')
     const zoom = bool(props.zoomOnHover, true)
     const newTab = bool(props.openInNewTab, true)
+    const allLabel = str(props.allLabel, 'All templates')
+
+    // The tabs are whatever categories the demos actually carry, in the order
+    // they first appear. Nothing to maintain separately, so a tab can never
+    // outlive the last demo under it.
+    const categories: string[] = []
+    for (const item of list) {
+      const category = str(item.category).trim()
+      if (category && !categories.includes(category)) categories.push(category)
+    }
+    const showFilters = bool(props.showFilters, true) && categories.length > 1
+
+    const [active, setActive] = useState('')
+    // A tab whose demos were renamed or removed must not leave an empty page.
+    const current = active && categories.includes(active) ? active : ''
+    const shown = current ? list.filter((item) => str(item.category).trim() === current) : list
 
     return (
       <SectionShell props={props} tone="default">
         <SectionHead props={props} defaultHeading="Ready-made designs" />
+
+        {showFilters ? (
+          <div
+            role="tablist"
+            aria-label="Filter demos"
+            style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 22 }}
+          >
+            {[{ key: '', label: allLabel }, ...categories.map((key) => ({ key, label: key }))].map((tab) => {
+              const on = tab.key === current
+              return (
+                <button
+                  key={tab.key || '__all'}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => setActive(tab.key)}
+                  style={{
+                    cursor: 'pointer',
+                    borderRadius: 999,
+                    padding: '9px 18px',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    lineHeight: 1.2,
+                    transition: 'background .15s, color .15s',
+                    // Same variables and fallbacks the shared stylesheet uses,
+                    // so the tabs take the site's theme and still read on a
+                    // page that has not set one.
+                    border: on
+                      ? '1px solid transparent'
+                      : '1px solid color-mix(in srgb, var(--ud-fg, #0f172a) 18%, transparent)',
+                    background: on ? 'var(--color-primary, #2563eb)' : 'transparent',
+                    color: on ? '#fff' : 'inherit',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
+          </div>
+        ) : null}
+
         <Grid cols={num(props.columns, 3)} gap={num(props.gap, 24)}>
-          {list.map((item, index) => {
+          {shown.map((item) => {
+            // Index into the real list, so editing a card still writes to the
+            // right row after the grid has been filtered.
+            const index = list.indexOf(item)
             const url = str(item.url)
             // A per-demo label wins, so one card can say "Preview" while the
             // rest say "View demo"; blank falls back to the shared one.
@@ -365,10 +431,10 @@ export const galleryShowcase = defineBlock({
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 12,
-                  border: '1px solid var(--color-border, rgba(0,0,0,.08))',
-                  borderRadius: 'var(--radius-card, 14px)',
+                  border: '1px solid color-mix(in srgb, var(--ud-fg, #0f172a) 8%, transparent)',
+                  borderRadius: 'var(--radius-card, 12px)',
                   overflow: 'hidden',
-                  background: 'var(--color-surface)',
+                  background: 'var(--ud-card, var(--color-surface, #f8fafc))',
                 }}
               >
                 <Media
