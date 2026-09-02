@@ -32,7 +32,7 @@ it('seeds twenty published multi-page templates with distinct themes', function 
         ->and($templates['realty']->theme_tokens['headingFont'])->toContain('Fraunces')
         ->and($templates['clinic']->name)->toBe('Cedar Clinic')
         ->and($templates['clinic']->theme_tokens['headingFont'])->toContain('Cormorant Garamond')
-        ->and($templates['consulting']->name)->toBe('Meridian')
+        ->and($templates['consulting']->name)->toBe('Ashcroft')
         ->and($templates['consulting']->theme_tokens['headingFont'])->toContain('Newsreader')
         ->and($templates['aitool']->name)->toBe('AI Tool')
         ->and($templates['aitool']->theme_tokens['headingFont'])->toContain('Inter')
@@ -79,6 +79,28 @@ it('seeds twenty published multi-page templates with distinct themes', function 
         ->and($templates['moksha']->theme_tokens['headingFont'])->toContain('Inter')
         ->and($templates['moksha']->theme_tokens['primary'])->toBe('#5437FF')
         ->and($templates['moksha']->theme_tokens['buttonRadius'])->toBe('999px');
+});
+
+/**
+ * Two templates once shipped as "Meridian" - the consulting kit and the SaaS
+ * kit - so the gallery listed the same name twice and neither could be told
+ * apart. Slugs were unique, which is why nothing caught it.
+ */
+it('gives every template a name of its own', function () {
+    $this->seed(TemplateSeeder::class);
+
+    $names = Template::query()->pluck('name')->all();
+    $duplicates = array_keys(array_filter(array_count_values($names), fn (int $count) => $count > 1));
+
+    expect($duplicates)->toBe([]);
+    expect(count($names))->toBe(count(array_unique($names)));
+});
+
+it('gives every template a slug of its own', function () {
+    $this->seed(TemplateSeeder::class);
+
+    $slugs = Template::query()->pluck('slug')->all();
+    expect(count($slugs))->toBe(count(array_unique($slugs)));
 });
 
 it('applies a template theme when a tenant creates a website', function () {

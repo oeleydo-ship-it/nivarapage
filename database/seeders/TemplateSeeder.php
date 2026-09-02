@@ -104,7 +104,9 @@ class TemplateSeeder extends Seeder
         $this->publish(
             category: ['slug' => 'consulting', 'name' => 'Consulting'],
             slug: 'consulting',
-            name: 'Meridian',
+            // Renamed off 'Meridian': that name now belongs to the SaaS kit
+            // whose block family is actually called *.meridian.
+            name: 'Ashcroft',
             description: 'A partner-led firm: practice, insights, and a serious inquiry form — Newsreader on navy and gold.',
             featured: true,
             theme: TemplateConsulting::theme(),

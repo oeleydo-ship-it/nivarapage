@@ -3667,7 +3667,8 @@ export const blockCss = `
 .ud-md-head--center{justify-items:center;text-align:center}
 .ud-md-head--center .ud-md-lead{margin-inline:auto}
 
-.ud-md-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 20px;border-radius:999px;font-size:13.5px;font-weight:500;line-height:1.35;transition:background .16s ease,border-color .16s ease,color .16s ease}
+.ud-md-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 20px;border-radius:999px;font-size:13.5px;font-weight:500;line-height:1.35;transition:background .16s ease,border-color .16s ease,color .16s ease,transform .12s ease}
+.ud-md-btn:active{transform:translateY(1px)}
 .ud-md-btn--dark{background:var(--md-ink);color:#fff}
 .ud-md-btn--dark:hover{background:color-mix(in srgb,var(--md-ink) 86%,#fff)}
 .ud-md-btn--outline{background:#fff;color:var(--md-ink);border:1px solid var(--md-line)}
@@ -3706,7 +3707,10 @@ export const blockCss = `
 .ud-md-nav__link:hover{color:var(--md-body)}
 .ud-md-nav__end{display:flex;align-items:center;gap:14px}
 .ud-md-nav__plain{font-size:13.5px;color:var(--md-ink)}
-.ud-md-nav__toggle{display:none;border:0;background:transparent;color:inherit;cursor:pointer}
+.ud-md-nav__toggle{display:none;place-items:center;width:40px;height:40px;margin-right:-8px;border:0;border-radius:10px;background:transparent;color:inherit;cursor:pointer}
+.ud-md-nav__toggle:hover{background:var(--md-tint)}
+/* Only visible once the row collapses into the drawer. */
+.ud-md-nav__drawerlink{display:none;font-size:14px;color:var(--md-ink);padding-block:6px}
 
 /* ---- hero */
 .ud-md-hero{padding-block:0}
@@ -3725,24 +3729,33 @@ export const blockCss = `
 /* ---- logo rail */
 .ud-md-logos{padding-block:26px;border-block:1px solid var(--md-line)}
 .ud-md-logos__title{text-align:center;color:var(--md-muted);font-size:12.5px;margin-bottom:14px}
-.ud-md-logos__rail{display:flex;align-items:center;gap:46px;overflow-x:auto;padding-inline:clamp(20px,4cqi,40px);scrollbar-width:none}
-.ud-md-logos__rail::-webkit-scrollbar{display:none}
+/* The rail scrolls left forever. Two identical tracks sit side by side and both slide one track-width, so the seam never shows. */
+.ud-md-logos__viewport{display:flex;overflow-x:auto;scrollbar-width:none}
+.ud-md-logos__viewport::-webkit-scrollbar{display:none}
+.ud-md-logos__viewport.is-scrolling{overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
+.ud-md-logos__rail{display:flex;align-items:center;gap:46px;padding-inline:23px;flex:none}
+.ud-md-logos__viewport:not(.is-scrolling) .ud-md-logos__rail{padding-inline:clamp(20px,4cqi,40px)}
+.ud-md-logos__viewport.is-scrolling .ud-md-logos__rail{animation:ud-md-marquee var(--md-marquee,34s) linear infinite}
+.ud-md-logos__viewport.is-scrolling:hover .ud-md-logos__rail{animation-play-state:paused}
+@keyframes ud-md-marquee{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+@media (prefers-reduced-motion:reduce){.ud-md-logos__viewport.is-scrolling .ud-md-logos__rail{animation:none}.ud-md-logos__viewport.is-scrolling{overflow-x:auto;mask-image:none}}
 .ud-md-logos__word{flex:none;font-size:17px;font-weight:600;color:var(--md-ink);letter-spacing:-.02em;opacity:.78}
 .ud-md-logos__img{flex:none;width:96px}
 
 /* ---- bento */
-.ud-md-bento__grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;margin-top:34px}
-.ud-md-bento__card{grid-column:span 2;display:flex;flex-direction:column;gap:6px;padding:20px;border:1px solid var(--md-line);border-radius:var(--md-r);background:var(--md-tint)}
+.ud-md-bento__grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px;margin-top:42px}
+.ud-md-bento__card{grid-column:span 2;display:flex;flex-direction:column;gap:6px;padding:22px;border:1px solid var(--md-line);border-radius:var(--md-r);background:var(--md-tint);transition:border-color .18s ease,transform .18s ease}
+.ud-md-bento__card:hover{border-color:color-mix(in srgb,var(--md-ink) 20%,transparent);transform:translateY(-2px)}
 .ud-md-bento__card.is-wide{grid-column:span 4}
 .ud-md-bento__title{font-size:15px;font-weight:600}
 .ud-md-bento__text{font-size:12.5px;color:var(--md-body);line-height:1.55}
-.ud-md-bento__frame{position:relative;overflow:hidden;border-radius:10px;margin-top:auto;min-height:130px;display:grid;place-items:center}
+.ud-md-bento__frame{position:relative;overflow:hidden;border-radius:10px;margin-top:14px;min-height:168px;display:grid;place-items:center;padding:16px}
 .ud-md-bento__frame img{position:relative;z-index:1;border-radius:8px}
 
 /* ---- stats */
 .ud-md-stats--tint{background:var(--md-tint)}
 .ud-md-stats--dark{background:var(--md-dark)}
-.ud-md-stats__grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px;text-align:center}
+.ud-md-stats__grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px;text-align:center;padding-block:8px}
 .ud-md-stat__value{font-size:clamp(24px,3.2cqi,34px);font-weight:600;color:var(--md-ink);letter-spacing:-.03em}
 .ud-md-stat__label{margin-top:3px;font-size:12.5px;color:var(--md-muted)}
 .ud-md-stats--dark .ud-md-stat__value{color:#fff}
@@ -3751,7 +3764,8 @@ export const blockCss = `
 /* ---- case tiles */
 .ud-md-cases__top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:24px}
 .ud-md-cases__grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
-.ud-md-case{display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:var(--md-r);min-height:280px;background:var(--md-tint);color:var(--md-ink)}
+.ud-md-case{display:flex;flex-direction:column;gap:8px;padding:18px;border-radius:var(--md-r);min-height:300px;background:var(--md-tint);color:var(--md-ink);transition:transform .18s ease}
+.ud-md-case:hover{transform:translateY(-3px)}
 .ud-md-case__brand{font-size:15px;font-weight:700;letter-spacing:-.02em}
 .ud-md-case__text{font-size:12.5px;line-height:1.5}
 .ud-md-case__img{margin-top:auto}
@@ -3768,7 +3782,8 @@ export const blockCss = `
 .ud-md-pillars__grid{display:grid;grid-template-columns:repeat(var(--ud-cols,4),minmax(0,1fr));gap:14px;margin-top:34px;text-align:left}
 .ud-md-pillars__grid[data-cols="2"]{grid-template-columns:repeat(2,minmax(0,1fr))}
 .ud-md-pillars__grid[data-cols="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}
-.ud-md-pillar{display:grid;gap:8px;align-content:start;padding:20px;border:1px solid var(--md-line);border-radius:var(--md-r);background:#fff}
+.ud-md-pillar{display:grid;gap:8px;align-content:start;padding:22px;border:1px solid var(--md-line);border-radius:var(--md-r);background:var(--color-background,#fff);transition:border-color .18s ease}
+.ud-md-pillar:hover{border-color:color-mix(in srgb,var(--md-ink) 20%,transparent)}
 .ud-md-pillar__icon{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--md-tint);color:var(--md-ink)}
 .ud-md-pillar__title{font-size:14px;font-weight:600}
 .ud-md-pillar__text{font-size:12.5px;color:var(--md-body);line-height:1.55}
@@ -3885,8 +3900,15 @@ export const blockCss = `
   .ud-md-cases__grid,.ud-md-pillars__grid,.ud-md-pillars__grid[data-cols="3"]{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ud-md-footer__grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ud-md-nav__links{display:none}
-  .ud-md-nav__links.is-open{display:flex;position:absolute;top:62px;left:12px;right:12px;flex-direction:column;align-items:stretch;padding:12px;border-radius:12px;background:var(--color-background,#fff);border:1px solid var(--md-line);z-index:70}
-  .ud-md-nav__toggle{display:inline-grid;place-items:center}
+  .ud-md-nav__links.is-open{display:flex;position:absolute;top:100%;left:12px;right:12px;margin-top:6px;flex-direction:column;align-items:stretch;gap:2px;padding:12px;border-radius:12px;background:var(--color-background,#fff);border:1px solid var(--md-line);box-shadow:0 18px 40px -28px color-mix(in srgb,var(--md-ink) 60%,transparent);z-index:70}
+  .ud-md-nav__links.is-open .ud-md-nav__link{padding-block:8px}
+  .ud-md-nav__links.is-open .ud-md-nav__drawerlink{display:block}
+  .ud-md-nav__toggle{display:inline-grid}
+  /* The wordmark note and the plain Docs link both live in the drawer at this
+     width; keeping them in the row leaves no room for the primary action. */
+  .ud-md-logo__note{display:none}
+  .ud-md-nav__plain{display:none}
+  .ud-md-nav__bar{gap:12px}
 }
 @container udpage (max-width:600px){
   .ud-md-bento__card,.ud-md-bento__card.is-wide{grid-column:span 6}

@@ -221995,6 +221995,8 @@
       "version": 1,
       "defaultProps": {
         "heading": "",
+        "scroll": true,
+        "speed": 34,
         "items": [
           {
             "label": "Northwind"
@@ -222049,6 +222051,18 @@
               "group": "content"
             }
           ]
+        },
+        {
+          "key": "scroll",
+          "type": "toggle",
+          "label": "Scroll continuously",
+          "group": "design"
+        },
+        {
+          "key": "speed",
+          "type": "slider",
+          "label": "Seconds per loop",
+          "group": "design"
         },
         {
           "key": "tone",

@@ -296,6 +296,11 @@ export const navbarMeridian = defineBlock({
                 <Submenu props={props} item={item} index={index} />
               </NavItem>
             ))}
+            {str(props.secondaryLabel) ? (
+              <a className="ud-md-nav__drawerlink" href={str(props.secondaryUrl, '#')}>
+                {str(props.secondaryLabel)}
+              </a>
+            ) : null}
           </nav>
           <div className="ud-md-nav__end">
             {str(props.secondaryLabel) || edit ? (
@@ -308,8 +313,14 @@ export const navbarMeridian = defineBlock({
                 <EditableText edit={edit} path={['buttonLabel']} value={str(props.buttonLabel)} as="span" placeholder="Log in" />
               </MdButton>
             ) : null}
-            <button type="button" className="ud-md-nav__toggle" aria-label="Menu" onClick={() => setOpen((v) => !v)}>
-              <Icon name="menu" size={18} />
+            <button
+              type="button"
+              className="ud-md-nav__toggle"
+              aria-label={open ? 'Close menu' : 'Open menu'}
+              aria-expanded={open}
+              onClick={() => setOpen((v) => !v)}
+            >
+              <Icon name={open ? 'close' : 'menu'} size={20} />
             </button>
           </div>
         </div>
@@ -417,6 +428,8 @@ export const logosMeridian = defineBlock({
   icon: 'Grid',
   defaultProps: {
     heading: '',
+    scroll: true,
+    speed: 34,
     items: [
       { label: 'Northwind' },
       { label: 'Cardplane' },
@@ -429,10 +442,42 @@ export const logosMeridian = defineBlock({
     ],
     animation: 'fade-up',
   },
-  schema: schema(headingField, repeater('items', 'Logos', [text('label', 'Label'), image('image', 'Logo')], { itemLabel: 'Logo' })),
+  schema: schema(
+    headingField,
+    repeater('items', 'Logos', [text('label', 'Label'), image('image', 'Logo')], { itemLabel: 'Logo' }),
+    toggle('scroll', 'Scroll continuously', 'design'),
+    field('speed', 'slider', 'Seconds per loop', 'design', { min: 10, max: 90, unit: 's' }),
+  ),
   component: function LogosMeridian(props) {
     const edit = editOf(props)
     const rows = items(props.items, [])
+    // Scrolling is off while editing, so a label cannot slide away mid-edit.
+    const scrolling = bool(props.scroll, true) && !edit
+    const seconds = Math.min(Math.max(num(props.speed, 34), 10), 90)
+
+    const logo = (item: Props, index: number, clone = false) =>
+      str(item.image) ? (
+        <Media
+          key={(clone ? 'c' : '') + String(index)}
+          src={item.image}
+          alt={clone ? '' : str(item.label)}
+          ratio="wide"
+          className="ud-md-logos__img"
+          edit={clone ? undefined : edit}
+          path={['items', index, 'image']}
+        />
+      ) : (
+        <EditableText
+          key={(clone ? 'c' : '') + String(index)}
+          edit={clone ? undefined : edit}
+          path={['items', index, 'label']}
+          value={str(item.label)}
+          as="span"
+          className="ud-md-logos__word"
+          placeholder="Brand"
+        />
+      )
+
     return (
       <SectionShell props={props} tone="default" className="ud-md ud-md-logos" bleed>
         {str(props.heading) || edit ? (
@@ -440,22 +485,20 @@ export const logosMeridian = defineBlock({
             <EditableText edit={edit} path={['heading']} value={str(props.heading)} as="p" className="ud-md-logos__title" placeholder="Trusted by" />
           </div>
         ) : null}
-        <div className="ud-md-logos__rail">
-          {rows.map((item, index) =>
-            str(item.image) ? (
-              <Media key={index} src={item.image} alt={str(item.label)} ratio="wide" className="ud-md-logos__img" edit={edit} path={['items', index, 'image']} />
-            ) : (
-              <EditableText
-                key={index}
-                edit={edit}
-                path={['items', index, 'label']}
-                value={str(item.label)}
-                as="span"
-                className="ud-md-logos__word"
-                placeholder="Brand"
-              />
-            ),
-          )}
+        <div className={cx('ud-md-logos__viewport', scrolling && 'is-scrolling')}>
+          <div
+            className="ud-md-logos__rail"
+            style={scrolling ? ({ ['--md-marquee' as string]: String(seconds) + 's' } as CSSProperties) : undefined}
+          >
+            {rows.map((item, index) => logo(item, index))}
+          </div>
+          {scrolling ? (
+            // A second copy makes the loop seamless; it is hidden from
+            // assistive tech so the names are not announced twice.
+            <div className="ud-md-logos__rail" aria-hidden style={{ ['--md-marquee' as string]: String(seconds) + 's' } as CSSProperties}>
+              {rows.map((item, index) => logo(item, index, true))}
+            </div>
+          ) : null}
         </div>
       </SectionShell>
     )
