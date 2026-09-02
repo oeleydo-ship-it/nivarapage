@@ -25,6 +25,38 @@ class OpenAiProvider implements AiProvider
         return $this->config->provider;
     }
 
+    /**
+     * Why nothing came back, in terms someone can act on.
+     *
+     * "The AI provider returned an empty response" is true of every one of
+     * these and useless for all of them. A reasoning model that used its whole
+     * budget thinking is the common one, and the fix is a bigger ceiling.
+     *
+     * @param  array<string, mixed>|null  $body
+     */
+    private static function emptyReason(?array $body): string
+    {
+        $choice = is_array($body['choices'][0] ?? null) ? $body['choices'][0] : [];
+        $finish = is_string($choice['finish_reason'] ?? null) ? $choice['finish_reason'] : '';
+        $reasoning = $choice['message']['reasoning_content'] ?? null;
+
+        if ($finish === 'length') {
+            return is_string($reasoning) && trim($reasoning) !== ''
+                ? 'The model spent its whole token budget thinking and never wrote an answer. Raise Max tokens in Admin → AI, or pick a model that does not reason.'
+                : 'The model hit its token limit before finishing. Raise Max tokens in Admin → AI.';
+        }
+
+        if ($finish === 'content_filter') {
+            return 'The provider blocked this request with a content filter.';
+        }
+
+        if (is_string($reasoning) && trim($reasoning) !== '') {
+            return 'The model returned its reasoning but no answer. Raise Max tokens in Admin → AI, or pick a model that does not reason.';
+        }
+
+        return 'The AI provider returned an empty response'.($finish !== '' ? ' (finish reason: '.$finish.').' : '.');
+    }
+
     public function complete(string $system, string $prompt, array $options = []): string
     {
         $payload = AiChatPayload::openaiCompatible($this->config, $system, $prompt, $options);
@@ -66,12 +98,22 @@ class OpenAiProvider implements AiProvider
         }
 
         $text = $response->json('choices.0.message.content');
+
+        // Some OpenAI-compatible APIs return the content as a list of parts
+        // rather than a string; Moonshot does this for some models.
+        if (is_array($text)) {
+            $text = implode('', array_map(
+                static fn ($part) => is_array($part) ? (string) ($part['text'] ?? '') : (string) $part,
+                $text,
+            ));
+        }
+
         if (! is_string($text) || trim($text) === '') {
             $text = $response->json('output_text');
         }
 
         if (! is_string($text) || trim($text) === '') {
-            throw new AiProviderException('The AI provider returned an empty response.');
+            throw new AiProviderException(self::emptyReason($response->json()));
         }
 
         return $text;

@@ -12,6 +12,13 @@ namespace App\Services\Ai;
 final class AiChatPayload
 {
     /**
+     * Least a reasoning model needs before it can answer at all: enough to
+     * think and still have room to write. Applied only to models that reason,
+     * so a plain chat model keeps whatever ceiling it was given.
+     */
+    public const REASONING_FLOOR = 1024;
+
+    /**
      * @param  array<string, mixed>  $options
      * @return array<string, mixed>
      */
@@ -28,6 +35,14 @@ final class AiChatPayload
                 ['role' => 'user', 'content' => $prompt],
             ],
         ];
+
+        // A reasoning model spends the same budget thinking and answering, so a
+        // small ceiling is used up before it writes anything and the reply comes
+        // back empty. The connectivity probe asks for 16 tokens, which no
+        // reasoning model can answer in.
+        if (self::reasons($model)) {
+            $max = max($max, self::REASONING_FLOOR);
+        }
 
         if (self::usesCompletionTokens($model)) {
             $payload['max_completion_tokens'] = $max;
@@ -48,7 +63,12 @@ final class AiChatPayload
         }
 
         if (self::isKimiK3($model)) {
-            $payload['reasoning_effort'] = $max <= 64 ? 'low' : 'high';
+            // Low, not high. What is being asked for here is structured JSON
+            // built from a catalogue that is already in the prompt, and every
+            // token spent deliberating is one not spent writing the answer -
+            // on a tight budget that is the difference between a site and an
+            // empty response.
+            $payload['reasoning_effort'] = 'low';
         }
 
         return $payload;
@@ -95,6 +115,19 @@ final class AiChatPayload
         return ! str_starts_with($model, 'gpt-5')
             && ! self::isKimiK3($model)
             && ! str_starts_with($model, 'kimi-k2.7');
+    }
+
+    /**
+     * Models that think before they answer, and so need headroom for both.
+     *
+     * K2.5 reasons by default but is told not to above; K3 always does, and
+     * GPT-5.x reasons too.
+     */
+    public static function reasons(string $model): bool
+    {
+        $model = strtolower($model);
+
+        return self::isKimiK3($model) || str_starts_with($model, 'gpt-5');
     }
 
     public static function isKimiK25(string $model): bool

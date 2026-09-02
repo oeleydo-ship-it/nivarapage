@@ -719,7 +719,9 @@ it('builds chat payloads that newer models will accept', function () {
     $k3 = AiChatPayload::openaiCompatible($k3cfg, 'sys', 'user', ['max_tokens' => 8000]);
     expect($k3)->toHaveKey('max_completion_tokens', 8000)
         ->not->toHaveKey('temperature')
-        ->and($k3['reasoning_effort'])->toBe('high');
+        // Low: the budget is shared between thinking and writing, and what is
+        // wanted here is JSON built from a catalogue already in the prompt.
+        ->and($k3['reasoning_effort'])->toBe('low');
 
     $opus = new AiConfig(true, 'anthropic', 'claude-opus-5', 'https://api.anthropic.com', 'sk-test', 4000, 0.7, 30);
     $body = AiChatPayload::anthropic($opus, 'sys', 'user', ['max_tokens' => 4000]);
