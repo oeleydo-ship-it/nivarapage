@@ -211,13 +211,13 @@ class TemplateMeridian
                 'headingAlt' => 'programmable money',
                 'description' => '',
                 'items' => [
-                    ['title' => 'Bring digital accounts to every user', 'text' => 'Let people anywhere hold and use balances through products they already understand.', 'image' => TemplateContent::photo('1451187580459-43490279c0fa', 900), 'tint' => 'rose', 'span' => 'wide'],
-                    ['title' => 'Build high-performance trading systems', 'text' => 'Support low-latency execution for high-frequency flows.', 'image' => TemplateContent::photo('1611974789855-9c2a0a7236a3', 700), 'tint' => 'violet', 'span' => 'normal'],
-                    ['title' => 'Automate treasury operations', 'text' => 'Route and deploy capital with fine-grained approvals and programmable policy.', 'image' => TemplateContent::photo('1460925895917-afdab827c52f', 700), 'tint' => 'sky', 'span' => 'normal'],
+                    ['title' => 'Bring digital accounts to every user', 'text' => 'Let people anywhere hold and use balances through products they already understand.', 'image' => TemplateContent::photo('1639322537228-f710d846310a', 900), 'tint' => 'rose', 'span' => 'wide'],
+                    ['title' => 'Build high-performance trading systems', 'text' => 'Support low-latency execution for high-frequency flows.', 'image' => TemplateContent::photo('1551288049-bebda4e38f71', 700), 'tint' => 'violet', 'span' => 'normal'],
+                    ['title' => 'Automate treasury operations', 'text' => 'Route and deploy capital with fine-grained approvals and programmable policy.', 'image' => TemplateContent::photo('1618044733300-9472054094ee', 700), 'tint' => 'sky', 'span' => 'normal'],
                     ['title' => 'Launch modern banking experiences', 'text' => 'Everything you need to build products that help people store, save, spend and move money globally.', 'image' => TemplateContent::photo('1554224155-6726b3ff858f', 900), 'tint' => 'lilac', 'span' => 'wide'],
-                    ['title' => 'Execute agentic payments', 'text' => 'Let software hold funds and transact autonomously inside limits you define.', 'image' => TemplateContent::photo('1526374965328-7f61d4dc18c5', 700), 'tint' => 'mint', 'span' => 'normal'],
+                    ['title' => 'Execute agentic payments', 'text' => 'Let software hold funds and transact autonomously inside limits you define.', 'image' => TemplateContent::photo('1642132652860-471b4228023e', 700), 'tint' => 'mint', 'span' => 'normal'],
                     ['title' => 'Enable card spend from balances', 'text' => 'Turn held balances into everyday spending power with global card acceptance.', 'image' => TemplateContent::photo('1563013544-824ae1b704d3', 700), 'tint' => 'violet', 'span' => 'normal'],
-                    ['title' => 'Put idle balances to work', 'text' => 'Access yield markets and pass returns directly on to your users.', 'image' => TemplateContent::photo('1543286386-713bdd548da4', 700), 'tint' => 'rose', 'span' => 'normal'],
+                    ['title' => 'Put idle balances to work', 'text' => 'Access yield markets and pass returns directly on to your users.', 'image' => TemplateContent::photo('1640340434855-6084b1f4901c', 700), 'tint' => 'rose', 'span' => 'normal'],
                 ],
             ])),
             TemplateContent::section('stats', 'stats.meridian', array_merge(self::motion(40), [

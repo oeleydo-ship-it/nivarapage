@@ -3651,14 +3651,14 @@ export const blockCss = `
    inkwell-dark band for enterprise sections.
    Heading resets use :where() so a single-class rule can still override them.
 */
-.ud-md{--md-ink:var(--color-text,#0a0a0b);--md-muted:var(--color-muted,#8e8e98);--md-body:color-mix(in srgb,var(--md-ink) 74%,transparent);--md-line:color-mix(in srgb,var(--md-ink) 11%,transparent);--md-tint:var(--color-surface,#f5f5fb);--md-lilac:color-mix(in srgb,var(--color-accent,#8ea2f5) 46%,#fff);--md-dark:var(--color-secondary,#0b1020);--md-r:14px;color:var(--md-body);font-family:var(--font-body,inherit);font-size:14.5px;line-height:1.6}
+.ud-md{--md-ink:var(--color-text,#0a0a0b);--md-muted:var(--color-muted,#8e8e98);--md-body:color-mix(in srgb,var(--md-ink) 74%,transparent);--md-line:color-mix(in srgb,var(--md-ink) 11%,transparent);--md-tint:var(--color-surface,#f5f5fb);--md-lilac:color-mix(in srgb,var(--color-accent,#8ea2f5) 46%,#fff);--md-dark:var(--color-secondary,#0b1020);--md-hue-a:var(--md-mesh-a,var(--color-accent,#7b5cf5));--md-hue-b:var(--md-mesh-b,#e070b8);--md-hue-c:var(--md-mesh-c,#5c9bf5);--md-r:14px;color:var(--md-body);font-family:var(--font-body,inherit);font-size:14.5px;line-height:1.6}
 .ud-md :where(h1,h2,h3,h4){margin:0;font-family:var(--font-heading,inherit);color:var(--md-ink);letter-spacing:-.025em;font-weight:var(--heading-weight,600)}
 .ud-md :where(p){margin:0}
 .ud-md :where(ul){margin:0;padding:0;list-style:none}
 .ud-md :where(a){color:inherit;text-decoration:none}
 
-.ud-md-title{font-size:clamp(26px,3.6cqi,42px);line-height:1.14;display:grid;gap:1px}
-.ud-md-title--xl{font-size:clamp(32px,5cqi,60px)}
+.ud-md-title{font-size:clamp(24px,2.7cqi,33px);line-height:1.18;display:grid;gap:1px}
+.ud-md-title--xl{font-size:clamp(30px,3.5cqi,45px);line-height:1.12}
 .ud-md-title__a{display:block;color:var(--md-ink)}
 .ud-md-title__b{display:block;color:var(--md-muted)}
 .ud-md-eyebrow{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--md-muted)}
@@ -3692,11 +3692,11 @@ export const blockCss = `
 
 /* pastel gradient mesh behind product imagery */
 .ud-md-mesh{position:absolute;inset:0;z-index:0;pointer-events:none;border-radius:inherit}
-.ud-md-mesh--violet{background:radial-gradient(60% 70% at 22% 22%,color-mix(in srgb,var(--color-primary,#6d5ef0) 34%,#fff),transparent 70%),radial-gradient(55% 62% at 79% 32%,color-mix(in srgb,var(--color-accent,#8ea2f5) 30%,#fff),transparent 72%),linear-gradient(140deg,color-mix(in srgb,var(--color-primary,#6d5ef0) 14%,#fff),color-mix(in srgb,var(--color-accent,#8ea2f5) 7%,#fff))}
-.ud-md-mesh--rose{background:radial-gradient(60% 70% at 22% 22%,color-mix(in srgb,var(--color-accent,#f0709e) 32%,#fff),transparent 70%),radial-gradient(55% 62% at 79% 32%,color-mix(in srgb,var(--color-primary,#f0996d) 28%,#fff),transparent 72%),linear-gradient(140deg,color-mix(in srgb,var(--color-accent,#f0709e) 14%,#fff),color-mix(in srgb,var(--color-primary,#f0996d) 7%,#fff))}
-.ud-md-mesh--sky{background:radial-gradient(60% 70% at 22% 22%,color-mix(in srgb,var(--color-accent,#6d9df0) 32%,#fff),transparent 70%),radial-gradient(55% 62% at 79% 32%,color-mix(in srgb,var(--color-primary,#6d5ef0) 28%,#fff),transparent 72%),linear-gradient(140deg,color-mix(in srgb,var(--color-accent,#6d9df0) 14%,#fff),color-mix(in srgb,var(--color-primary,#6d5ef0) 7%,#fff))}
-.ud-md-mesh--mint{background:radial-gradient(60% 70% at 22% 22%,color-mix(in srgb,var(--color-accent,#39cf9a) 32%,#fff),transparent 70%),radial-gradient(55% 62% at 79% 32%,color-mix(in srgb,var(--color-primary,#5ec2f0) 28%,#fff),transparent 72%),linear-gradient(140deg,color-mix(in srgb,var(--color-accent,#39cf9a) 14%,#fff),color-mix(in srgb,var(--color-primary,#5ec2f0) 7%,#fff))}
-.ud-md-mesh--lilac{background:radial-gradient(60% 70% at 22% 22%,color-mix(in srgb,var(--color-primary,#8b74ef) 28%,#fff),transparent 70%),radial-gradient(55% 62% at 79% 32%,color-mix(in srgb,var(--color-accent,#c974ef) 26%,#fff),transparent 72%),linear-gradient(140deg,color-mix(in srgb,var(--color-primary,#8b74ef) 14%,#fff),color-mix(in srgb,var(--color-accent,#c974ef) 7%,#fff))}
+.ud-md-mesh--violet{background:radial-gradient(62% 74% at 18% 24%,color-mix(in srgb,var(--md-hue-a) 74%,transparent),transparent 72%),radial-gradient(58% 66% at 82% 28%,color-mix(in srgb,var(--md-hue-b) 62%,transparent),transparent 74%),radial-gradient(70% 60% at 52% 96%,color-mix(in srgb,var(--md-hue-a) 48%,transparent),transparent 76%),linear-gradient(140deg,color-mix(in srgb,var(--md-hue-a) 20%,#fff),color-mix(in srgb,var(--md-hue-b) 14%,#fff))}
+.ud-md-mesh--rose{background:radial-gradient(62% 74% at 18% 24%,color-mix(in srgb,var(--md-hue-b) 60%,transparent),transparent 72%),radial-gradient(58% 66% at 82% 28%,color-mix(in srgb,var(--md-hue-a) 48%,transparent),transparent 74%),radial-gradient(70% 60% at 52% 96%,color-mix(in srgb,var(--md-hue-b) 34%,transparent),transparent 76%),linear-gradient(140deg,color-mix(in srgb,var(--md-hue-b) 15%,#fff),color-mix(in srgb,var(--md-hue-a) 9%,#fff))}
+.ud-md-mesh--sky{background:radial-gradient(62% 74% at 18% 24%,color-mix(in srgb,var(--md-hue-c) 58%,transparent),transparent 72%),radial-gradient(58% 66% at 82% 28%,color-mix(in srgb,var(--md-hue-a) 46%,transparent),transparent 74%),radial-gradient(70% 60% at 52% 96%,color-mix(in srgb,var(--md-hue-c) 32%,transparent),transparent 76%),linear-gradient(140deg,color-mix(in srgb,var(--md-hue-c) 14%,#fff),color-mix(in srgb,var(--md-hue-a) 8%,#fff))}
+.ud-md-mesh--mint{background:radial-gradient(62% 74% at 18% 24%,color-mix(in srgb,var(--md-hue-c) 46%,transparent),transparent 72%),radial-gradient(58% 66% at 82% 28%,color-mix(in srgb,var(--md-hue-b) 38%,transparent),transparent 74%),radial-gradient(70% 60% at 52% 96%,color-mix(in srgb,var(--md-hue-c) 20%,transparent),transparent 76%),linear-gradient(140deg,color-mix(in srgb,var(--md-hue-c) 12%,#fff),color-mix(in srgb,var(--md-hue-b) 6%,#fff))}
+.ud-md-mesh--lilac{background:radial-gradient(62% 74% at 18% 24%,color-mix(in srgb,var(--md-hue-a) 44%,transparent),transparent 72%),radial-gradient(58% 66% at 82% 28%,color-mix(in srgb,var(--md-hue-b) 36%,transparent),transparent 74%),radial-gradient(70% 60% at 52% 96%,color-mix(in srgb,var(--md-hue-a) 18%,transparent),transparent 76%),linear-gradient(140deg,color-mix(in srgb,var(--md-hue-a) 12%,#fff),color-mix(in srgb,var(--md-hue-b) 6%,#fff))}
 
 /* ---- navbar */
 .ud-md-nav{position:relative;z-index:60;background:var(--color-background,#fff);border-bottom:1px solid var(--md-line)}
@@ -3714,10 +3714,10 @@ export const blockCss = `
 
 /* ---- hero */
 .ud-md-hero{padding-block:0}
-.ud-md-hero__grid{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:0}
+.ud-md-hero__grid{display:grid;grid-template-columns:minmax(0,0.86fr) minmax(0,1.14fr);align-items:stretch;gap:0}
 /* The hero bleeds full width, so the copy column is pushed right until its left edge lands on the same gutter as the navbar inside .ud-container. */
-.ud-md-hero__copy{display:grid;gap:16px;justify-items:start;padding-block:clamp(48px,7cqi,104px);padding-inline-end:clamp(20px,4cqi,48px);width:100%;max-width:calc(var(--ud-max,1160px) / 2 - clamp(20px,4cqi,40px));margin-left:auto}
-.ud-md-hero__panel{position:relative;overflow:hidden;min-height:min(560px,60cqi);display:grid;place-items:center;padding:34px}
+.ud-md-hero__copy{display:grid;gap:16px;align-content:center;justify-items:start;padding-block:clamp(48px,6cqi,96px);padding-inline-start:max(clamp(20px,4cqi,40px),(100cqw - var(--ud-max,1160px)) / 2);padding-inline-end:clamp(20px,3cqi,44px)}
+.ud-md-hero__panel{position:relative;overflow:hidden;min-height:min(600px,46cqi);display:grid;place-items:center;padding:clamp(24px,3cqi,54px)}
 .ud-md-hero__img{position:relative;z-index:1;width:100%}
 .ud-md-hero__img img{border-radius:10px;box-shadow:0 30px 70px -40px color-mix(in srgb,var(--md-ink) 50%,transparent)}
 
@@ -3741,7 +3741,7 @@ export const blockCss = `
 .ud-md-logos__viewport.is-scrolling:hover .ud-md-logos__rail{animation-play-state:paused}
 @keyframes ud-md-marquee{from{transform:translateX(0)}to{transform:translateX(-100%)}}
 @media (prefers-reduced-motion:reduce){.ud-md-logos__viewport.is-scrolling .ud-md-logos__rail{animation:none}.ud-md-logos__viewport.is-scrolling{overflow-x:auto;mask-image:none}}
-.ud-md-logos__word{flex:none;font-size:17px;font-weight:600;color:var(--md-ink);letter-spacing:-.02em;opacity:.78}
+.ud-md-logos__word{flex:none;font-size:15px;font-weight:600;color:var(--md-muted);letter-spacing:-.01em;white-space:nowrap}
 .ud-md-logos__img{flex:none;width:96px}
 
 /* ---- bento */
@@ -3751,7 +3751,7 @@ export const blockCss = `
 .ud-md-bento__card.is-wide{grid-column:span 4}
 .ud-md-bento__title{font-size:15px;font-weight:600}
 .ud-md-bento__text{font-size:12.5px;color:var(--md-body);line-height:1.55}
-.ud-md-bento__frame{position:relative;overflow:hidden;border-radius:10px;margin-top:14px;min-height:168px;display:grid;place-items:center;padding:16px}
+.ud-md-bento__frame{position:relative;overflow:hidden;border-radius:10px;margin-top:16px;min-height:180px;display:grid;place-items:center;padding:18px}
 .ud-md-bento__frame img{position:relative;z-index:1;border-radius:8px}
 
 /* ---- stats */
