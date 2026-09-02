@@ -227,7 +227,20 @@ class PublicLivechatController extends Controller
     if (!token || !conv) return;
     try {
       const data = await api('/conversations/' + (conv.uuid || localStorage.getItem('ud.lc.uuid.' + boot.config.public_key)));
-      conv = data; messages = data.messages || []; typing = Boolean(data.agent_typing) && awaitingReply(messages); render();
+      conv = data; messages = data.messages || []; typing = Boolean(data.agent_typing) && awaitingReply(messages);
+      // render() rebuilds the whole panel from scratch, which would otherwise
+      // wipe out whatever the visitor is mid-typing every time a poll lands.
+      const draftField = root.querySelector('.ud-lc-composer input[name="body"]');
+      const draft = draftField ? draftField.value : '';
+      const draftFocused = draftField === document.activeElement;
+      render();
+      if (draft) {
+        const nextField = root.querySelector('.ud-lc-composer input[name="body"]');
+        if (nextField) {
+          nextField.value = draft;
+          if (draftFocused) nextField.focus();
+        }
+      }
     } catch {}
     setTimeout(poll, typing ? 1200 : 3500);
   }
