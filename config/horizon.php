@@ -199,7 +199,7 @@ return [
     'defaults' => [
         'supervisor-1' => [
             'connection' => 'redis',
-            'queue' => ['default', 'domains', 'publishing', 'media', 'notifications', 'livechat'],
+            'queue' => ['livechat', 'default', 'domains', 'publishing', 'media', 'notifications', 'analytics'],
             'balance' => 'auto',
             'autoScalingStrategy' => 'time',
             'maxProcesses' => 1,

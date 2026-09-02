@@ -83,10 +83,40 @@ class GenerateLivechatAiReply implements ShouldQueue
 
     public function failed(\Throwable $exception): void
     {
-        LivechatConversation::query()->where('id', $this->conversationId)->update(['agent_typing_until' => null]);
         Log::warning('livechat.ai.failed', [
             'conversation_id' => $this->conversationId,
             'message' => $exception->getMessage(),
         ]);
+
+        $conversation = LivechatConversation::query()->with('site')->find($this->conversationId);
+        if (! $conversation) {
+            return;
+        }
+
+        // Clearing the typing flag alone left the visitor watching the
+        // indicator stop and then nothing arrive at all. A person who asked a
+        // question is owed an answer even when the model could not produce one,
+        // so say so and put the conversation in the human queue.
+        if ($conversation->status !== 'closed' && $conversation->handler === 'ai') {
+            $message = $conversation->messages()->create([
+                'role' => 'ai',
+                'body' => 'Sorry - I could not answer that one. I have passed this to a colleague, who will reply here shortly.',
+                'meta' => ['after_message_id' => $this->afterMessageId, 'handoff' => true, 'handoff_reason' => 'error'],
+            ]);
+            LivechatMessageCreated::dispatch($message);
+
+            $conversation->update([
+                'handler' => 'human',
+                'status' => 'waiting',
+                'last_message_at' => now(),
+                'agent_typing_until' => null,
+            ]);
+            NotifyLivechatAgents::dispatch($conversation->id);
+            LivechatConversationUpdated::dispatch($conversation->fresh(['site', 'assignee', 'client']));
+
+            return;
+        }
+
+        $conversation->update(['agent_typing_until' => null]);
     }
 }

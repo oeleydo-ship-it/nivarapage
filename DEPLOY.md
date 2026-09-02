@@ -119,7 +119,7 @@ that answer per site, and a static file would shadow them for every customer.
 Run one worker, via systemd or Supervisor:
 
 ```
-php /var/www/uidesired/artisan queue:work --queue=publishing,domains,media,notifications,default
+php /var/www/uidesired/artisan queue:work --queue=livechat,publishing,domains,media,notifications,analytics,default
 ```
 
 ## Re-rendering published sites

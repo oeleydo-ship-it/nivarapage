@@ -141,7 +141,7 @@ class PublicLivechatController extends Controller
   }
   function typingRow(){
     if (!typing) return '';
-    const label = conv && conv.handler === 'ai' ? 'AI is checking the details' : 'Agent is typing';
+    const label = conv && conv.handler === 'ai' ? 'Agent is checking the details' : 'Agent is typing';
     return '<div class="ud-lc-bubble ud-lc-typing"><span style="display:inline-flex;gap:4px"><i class="ud-lc-pulse"></i><i class="ud-lc-pulse" style="animation-delay:140ms"></i><i class="ud-lc-pulse" style="animation-delay:280ms"></i></span>'+label+'</div>';
   }
   function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
