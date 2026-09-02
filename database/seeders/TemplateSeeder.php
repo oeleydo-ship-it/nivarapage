@@ -320,6 +320,16 @@ class TemplateSeeder extends Seeder
             theme: TemplateHalcyon::theme(),
             pages: TemplateHalcyon::pages(),
         );
+
+        $this->publish(
+            category: ['slug' => 'saas', 'name' => 'SaaS'],
+            slug: 'meridian',
+            name: 'Meridian',
+            description: 'A developer-infrastructure and fintech kit: near-white pages, two-tone headlines that fade from black to grey, pastel gradient-mesh panels behind product imagery, a bento feature grid, coloured case tiles, a two-plan pricing pair with a dark comparison matrix, a lavender company band, a stepped contact form and an open-positions list, across seven fully editable pages.',
+            featured: true,
+            theme: TemplateMeridian::theme(),
+            pages: TemplateMeridian::pages(),
+        );
     }
 
     /**
