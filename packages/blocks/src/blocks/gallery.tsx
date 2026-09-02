@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 import { EditableImage, EditableText, editOf } from '../editable'
 import {
   Body,
+  Button,
   Grid,
   Media,
   SafeText,
@@ -13,7 +14,7 @@ import {
   str,
   type Props,
 } from '../primitives'
-import { columnsField, descriptionField, field, gapField, headFields, headingField, image, link, repeater, schema, select, text, toggle } from '../schema'
+import { columnsField, descriptionField, field, gapField, headFields, headingField, image, link, repeater, schema, select, text, textarea, toggle } from '../schema'
 import { defineBlock } from '../types'
 
 const galleryRepeater = repeater(
@@ -275,6 +276,162 @@ export const galleryLogos = defineBlock({
             )
           })}
         </div>
+      </SectionShell>
+    )
+  },
+  settings: null,
+})
+
+/* -------------------------------------------------------- gallery.showcase */
+
+/** Six demo cards, so the block reads as a showcase before anything is filled in. */
+const showcasePlaceholders = Array.from({ length: 6 }).map((_, index) => ({
+  src: '',
+  title: '',
+  description: '',
+  url: '',
+  tint: index,
+}))
+
+export const galleryShowcase = defineBlock({
+  type: 'gallery.showcase',
+  version: 1,
+  category: 'gallery',
+  label: 'Demo showcase',
+  icon: 'LayoutGrid',
+  defaultProps: {
+    eyebrow: 'Templates',
+    heading: 'Ready-made designs',
+    description: 'Every template is fully editable once it is applied. Open one to see how it behaves.',
+    columns: 3,
+    gap: 24,
+    imageRatio: 'landscape',
+    zoomOnHover: true,
+    buttonLabel: 'View demo',
+    buttonVariant: 'secondary',
+    openInNewTab: true,
+    // Real template slugs, so the block arrives with working demo links and
+    // the button is visible from the moment it is dropped in.
+    items: [
+      { src: '', title: 'Voltera', description: 'A high-energy marketing agency site with bold panels and a lime accent.', url: '/templates/voltera/preview' },
+      { src: '', title: 'Northbook', description: 'A calm, professional template for accountancy and financial services.', url: '/templates/northbook/preview' },
+      { src: '', title: 'Halcyon', description: 'A light product template for SaaS, with pricing and a changelog.', url: '/templates/halcyon/preview' },
+    ],
+  },
+  schema: schema(
+    ...headFields,
+    repeater(
+      'items',
+      'Demos',
+      [
+        image('src', 'Screenshot'),
+        text('title', 'Title'),
+        textarea('description', 'Description'),
+        link('url', 'Demo link'),
+        text('buttonLabel', 'Button label', { placeholder: 'Leave blank to use the shared label' }),
+      ],
+      { itemLabel: 'Demo', itemDefaults: { src: '', title: '', description: '', url: '' } },
+    ),
+    text('buttonLabel', 'Shared button label'),
+    select('buttonVariant', 'Button style', [['primary', 'Solid'], ['secondary', 'Outline'], ['ghost', 'Quiet']], 'design'),
+    toggle('openInNewTab', 'Open demos in a new tab'),
+    columnsField(2, 4),
+    gapField,
+    select('imageRatio', 'Image ratio', [['landscape', '4:3'], ['square', '1:1'], ['portrait', '3:4'], ['wide', '16:9']], 'design'),
+    toggle('zoomOnHover', 'Zoom on hover', 'design'),
+  ),
+  component: function DemoShowcase(props) {
+    const edit = editOf(props)
+    const list = items(props.items, showcasePlaceholders)
+    const sharedLabel = str(props.buttonLabel, 'View demo')
+    const ratio = str(props.imageRatio, 'landscape')
+    const zoom = bool(props.zoomOnHover, true)
+    const newTab = bool(props.openInNewTab, true)
+
+    return (
+      <SectionShell props={props} tone="default">
+        <SectionHead props={props} defaultHeading="Ready-made designs" />
+        <Grid cols={num(props.columns, 3)} gap={num(props.gap, 24)}>
+          {list.map((item, index) => {
+            const url = str(item.url)
+            // A per-demo label wins, so one card can say "Preview" while the
+            // rest say "View demo"; blank falls back to the shared one.
+            const label = str(item.buttonLabel) || sharedLabel
+
+            return (
+              <article
+                key={index}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12,
+                  border: '1px solid var(--color-border, rgba(0,0,0,.08))',
+                  borderRadius: 'var(--radius-card, 14px)',
+                  overflow: 'hidden',
+                  background: 'var(--color-surface)',
+                }}
+              >
+                <Media
+                  src={item.src}
+                  alt={str(item.alt, str(item.title))}
+                  ratio={ratio}
+                  zoom={zoom}
+                  edit={edit}
+                  path={['items', index, 'src']}
+                  style={
+                    str(item.src)
+                      ? undefined
+                      : ({
+                          background: `color-mix(in srgb, var(--color-primary) ${10 + (index % 4) * 6}%, var(--color-surface))`,
+                        } as CSSProperties)
+                  }
+                />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 18px 20px' }}>
+                  <EditableText
+                    edit={edit}
+                    path={['items', index, 'title']}
+                    value={str(item.title)}
+                    as="h3"
+                    className="ud-h4"
+                    style={{ margin: 0 }}
+                    placeholder="Template name"
+                  />
+                  <EditableText
+                    edit={edit}
+                    path={['items', index, 'description']}
+                    value={str(item.description)}
+                    as="p"
+                    className="ud-small"
+                    style={{ margin: 0 }}
+                    placeholder="What this template is for"
+                    multiline
+                  />
+
+                  {/* The button stays on screen while editing even before a link
+                      is set, so the label can be written before the demo exists. */}
+                  {url || edit ? (
+                    <div style={{ marginTop: 6 }}>
+                      <Button
+                        href={url || '#'}
+                        variant={str(props.buttonVariant, 'secondary') as 'primary' | 'secondary' | 'ghost'}
+                        target={newTab ? '_blank' : undefined}
+                      >
+                        <EditableText
+                          edit={edit}
+                          path={['items', index, 'buttonLabel']}
+                          value={label}
+                          as="span"
+                          placeholder="View demo"
+                        />
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              </article>
+            )
+          })}
+        </Grid>
       </SectionShell>
     )
   },

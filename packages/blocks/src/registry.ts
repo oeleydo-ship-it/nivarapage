@@ -40,7 +40,7 @@ import {
   contentTextImage,
   contentTwoColumns,
 } from './blocks/content'
-import { galleryCarousel, galleryGrid, galleryLogos, galleryMasonry } from './blocks/gallery'
+import { galleryCarousel, galleryGrid, galleryLogos, galleryMasonry, galleryShowcase } from './blocks/gallery'
 import { pricingComparison, pricingThree, pricingTwo } from './blocks/pricing'
 import { faqAccordion, faqTwoColumn } from './blocks/faq'
 import { ctaBackground, ctaSimple, ctaSplit } from './blocks/cta'
@@ -413,6 +413,7 @@ const blocks = [
   galleryMasonry,
   galleryCarousel,
   galleryLogos,
+  galleryShowcase,
   galleryCompare,
   galleryProjects,
   pricingTwo,
