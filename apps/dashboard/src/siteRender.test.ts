@@ -137,3 +137,39 @@ describe('site header and footer', () => {
     expect(payload).toContain('footer.simple')
   })
 })
+
+describe('livechat widget', () => {
+  const scriptUrl = 'https://app.example.com/api/v1/public/livechat/pk_live_abc/widget.js'
+
+  /** Script tags in the document, so the hydration JSON is not mistaken for one. */
+  function scriptSrcs(html: string): string[] {
+    return [...html.matchAll(/<script[^>]*src="([^"]+)"/g)].map((match) => match[1])
+  }
+
+  function withLivechat(enabled: boolean) {
+    return render({
+      site: {
+        ...(site as Record<string, unknown>),
+        livechat: { public_key: 'pk_live_abc', enabled, script_url: scriptUrl },
+      } as never,
+    })
+  }
+
+  it('writes the widget script into the page when the site has one enabled', () => {
+    const html = withLivechat(true)
+
+    expect(scriptSrcs(html)).toContain(scriptUrl)
+    // Async so the widget cannot hold up the page it is bolted onto.
+    expect(html).toContain(`<script src="${scriptUrl}" async></script>`)
+  })
+
+  it('writes no script tag when the widget is off', () => {
+    // The URL still travels in the hydration payload, which is why this looks
+    // for a tag rather than the string.
+    expect(scriptSrcs(withLivechat(false))).not.toContain(scriptUrl)
+  })
+
+  it('writes nothing when the site has no widget at all', () => {
+    expect(scriptSrcs(render()).some((src) => src.includes('livechat'))).toBe(false)
+  })
+})

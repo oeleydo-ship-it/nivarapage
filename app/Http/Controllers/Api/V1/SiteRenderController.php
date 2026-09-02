@@ -88,11 +88,34 @@ class SiteRenderController extends Controller
      * separate public endpoints would risk pages being rendered against
      * different versions of the theme or navigation.
      */
+    /**
+     * The livechat widget a published page should boot, or null.
+     *
+     * The URL is absolute and points at this application: a published site is
+     * served from the customer's own hostname, which knows nothing about the
+     * widget endpoints.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function livechat(Site $site): ?array
+    {
+        $widget = $site->livechatWidget;
+        if (! $widget || ! $widget->enabled || ! $widget->public_key) {
+            return null;
+        }
+
+        return [
+            'public_key' => $widget->public_key,
+            'enabled' => true,
+            'script_url' => rtrim((string) config('app.url'), '/').'/api/v1/public/livechat/'.$widget->public_key.'/widget.js',
+        ];
+    }
+
     public function payload(Site $site, SeoService $seo, NavigationService $navigation, SiteChromeService $chrome): JsonResponse
     {
         Gate::authorize('view', $site);
 
-        $site->load(['settings', 'theme', 'domains', 'workspace']);
+        $site->load(['settings', 'theme', 'domains', 'workspace', 'livechatWidget']);
         $primary = $site->domains->firstWhere('is_primary', true);
         $host = $primary?->hostname
             ?? $site->domains->firstWhere('status', 'active')?->hostname
@@ -125,6 +148,9 @@ class SiteRenderController extends Controller
                     'branding_removed' => (bool) $site->workspace?->branding_removed,
                     'settings' => $site->settings?->toArray(),
                     'theme' => $site->theme?->tokens ?? [],
+                    // Published pages are static, so the widget has to be
+                    // written into them here rather than added on a visit.
+                    'livechat' => $this->livechat($site),
                 ],
                 'menus' => $navigation->tree($site),
                 // The header and footer every page is wrapped in. Sent once and

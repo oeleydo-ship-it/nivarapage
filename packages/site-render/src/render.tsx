@@ -58,6 +58,21 @@ export function renderSiteDocument(input: RenderSiteInput): string {
   );
 
   const body = renderToString(<PublishedPage site={site} page={page} menus={menus} chrome={chrome} />);
+
+  /**
+   * The livechat widget, when the site has one switched on.
+   *
+   * It is a tag rather than part of the React tree because the script boots
+   * and renders itself, and it is absolute because a published site is served
+   * from the customer's own hostname while the widget is answered by the
+   * application. Written in at publish time, so switching the widget on takes
+   * effect the next time the site is published.
+   */
+  const livechat = site.livechat;
+  const livechatTag =
+    livechat?.enabled && livechat.script_url
+      ? `\n<script src="${attr(livechat.script_url)}" async></script>`
+      : "";
   const themeStyle = styleAttribute(themeTokensToStyle(tokens) as Record<string, unknown>);
 
   // The data the client needs to hydrate the identical tree. Serialised with
@@ -96,7 +111,7 @@ ${head}
 <body class="min-h-full antialiased">
 <div id="site-root">${body}</div>
 <script id="site-data" type="application/json">${hydrationData}</script>
-<script src="${attr(runtimeBase)}/site.js" defer></script>
+<script src="${attr(runtimeBase)}/site.js" defer></script>${livechatTag}
 </body>
 </html>
 `;

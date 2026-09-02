@@ -25,6 +25,8 @@ export type ResolvedSite = {
     enabled: boolean;
     position?: string;
     primary_color?: string;
+    /** Absolute URL of the widget boot script, built by the API. */
+    script_url?: string | null;
   } | null;
 };
 
