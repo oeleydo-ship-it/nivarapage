@@ -145,6 +145,66 @@ class DomainService
     }
 
     /**
+     * Hands back every hostname a site holds, because the site is going away.
+     *
+     * A hostname belongs to one site. Leaving the rows behind kept the name
+     * taken by a site nobody could open any more: the Domains page was gone
+     * with the site, so there was no way to disconnect it and no way to use the
+     * name again. The rows are soft deleted rather than erased so restoring the
+     * site can hand them back, and the custom ones are released at the provider
+     * too - otherwise the certificate and hostname linger in Cloudflare.
+     */
+    public function releaseForSite(Site $site): void
+    {
+        $domains = Domain::query()->where('site_id', $site->id)->get();
+
+        foreach ($domains as $domain) {
+            if ($domain->type === 'custom') {
+                DeleteCustomHostname::dispatch($domain->id)->onQueue('domains');
+            }
+
+            $this->cache->invalidateDomain($domain);
+            $domain->delete();
+        }
+
+        if ($domains->isNotEmpty()) {
+            $this->audit->log('domain.released', $site, [
+                'site_id' => $site->id,
+                'hostnames' => $domains->pluck('hostname')->all(),
+            ], $site->workspace);
+        }
+    }
+
+    /**
+     * Gives a restored site its hostnames back, where they are still free.
+     *
+     * Between the delete and the restore someone may have connected the same
+     * name to another site. That claim wins - it is the live one - so a taken
+     * hostname stays with its new owner and the tombstone is dropped rather
+     * than restored into a duplicate.
+     */
+    public function restoreForSite(Site $site): void
+    {
+        $domains = Domain::onlyTrashed()->where('site_id', $site->id)->get();
+
+        foreach ($domains as $domain) {
+            $taken = Domain::query()
+                ->where('hostname', $domain->hostname)
+                ->where('id', '!=', $domain->id)
+                ->exists();
+
+            if ($taken) {
+                $domain->forceDelete();
+
+                continue;
+            }
+
+            $domain->restore();
+            $this->cache->invalidateDomain($domain->fresh('site'));
+        }
+    }
+
+    /**
      * @throws InvalidArgumentException when the hostname can never work
      */
     private function assertConnectable(string $hostname): void

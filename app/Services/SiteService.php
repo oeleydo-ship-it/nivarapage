@@ -10,9 +10,9 @@ use App\Models\SiteThemeSetting;
 use App\Models\Template;
 use App\Models\User;
 use App\Support\CurrentWorkspace;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use InvalidArgumentException;
 
 class SiteService
 {
@@ -26,12 +26,13 @@ class SiteService
         private readonly TenantCacheService $cache,
         private readonly NavigationService $navigation,
         private readonly FormService $forms,
+        private readonly DomainService $domains,
     ) {}
 
     /**
      * @param  array<string, mixed>  $data
      */
-    public function create(User $user, array $data): \App\Models\Site
+    public function create(User $user, array $data): Site
     {
         $workspace = $this->currentWorkspace->workspace;
         abort_unless($workspace, 422, 'Workspace is required.');
@@ -49,7 +50,7 @@ class SiteService
         $subdomainName = $data['subdomain'] ?? Str::slug($data['name']);
 
         $created = DB::transaction(function () use ($user, $data, $workspace, $template, $subdomainName) {
-            $site = \App\Models\Site::query()->create([
+            $site = Site::query()->create([
                 'workspace_id' => $workspace->id,
                 'name' => $data['name'],
                 'business_name' => $data['business_name'] ?? null,
@@ -107,7 +108,7 @@ class SiteService
         return $created;
     }
 
-    public function duplicate(\App\Models\Site $site, User $user): \App\Models\Site
+    public function duplicate(Site $site, User $user): Site
     {
         $workspace = $site->workspace;
         $this->limits->assertOrFail($workspace, 'number_of_sites');
@@ -155,23 +156,27 @@ class SiteService
         });
     }
 
-    public function delete(\App\Models\Site $site): void
+    public function delete(Site $site): void
     {
+        // Before the site goes, so the cache is invalidated while the domains
+        // can still be read back off it.
+        $this->domains->releaseForSite($site);
         $site->delete();
         $this->cache->invalidateSite($site);
         $this->audit->log('site.deleted', $site);
     }
 
-    public function restore(\App\Models\Site $site): \App\Models\Site
+    public function restore(Site $site): Site
     {
         $this->limits->assertOrFail($site->workspace, 'number_of_sites');
         $site->restore();
+        $this->domains->restoreForSite($site);
         $this->audit->log('site.restored', $site);
 
         return $site->fresh();
     }
 
-    public function applyTemplate(\App\Models\Site $site, Template $template, User $user): \App\Models\Site
+    public function applyTemplate(Site $site, Template $template, User $user): Site
     {
         if ($template->is_premium) {
             $this->features->assertEnabled($site->workspace, 'premium_templates');
@@ -200,7 +205,7 @@ class SiteService
      *
      * @param  list<array{name: string, slug: string, is_homepage?: bool, content: array<string, mixed>}>  $pages
      * @param  array<string, mixed>  $theme
-     * @return array{pages: \Illuminate\Database\Eloquent\Collection<int, Page>, theme: array<string, mixed>, skipped: list<string>, current_content: array<string, mixed>|null}
+     * @return array{pages: Collection<int, Page>, theme: array<string, mixed>, skipped: list<string>, current_content: array<string, mixed>|null}
      */
     public function applyAiGeneration(Site $site, User $user, array $pages, array $theme = [], ?int $currentPageId = null): array
     {
@@ -232,6 +237,7 @@ class SiteService
                 if ($current && (int) $page->id === (int) $current->id) {
                     $currentContent = $content;
                 }
+
                 continue;
             }
 

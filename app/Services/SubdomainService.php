@@ -70,6 +70,15 @@ class SubdomainService
             throw new InvalidArgumentException($result['reason'] ?? 'Subdomain is not available.');
         }
 
+        // check() reads through the soft-delete scope but the unique index on
+        // hostname does not, so a subdomain freed with its site is available and
+        // still fails to insert. Clear the tombstone the same way a custom
+        // domain does before claiming the name.
+        Domain::withTrashed()
+            ->whereNotNull('deleted_at')
+            ->where('hostname', $result['hostname'])
+            ->forceDelete();
+
         return Domain::query()->create([
             'workspace_id' => $workspaceId,
             'site_id' => $siteId,
