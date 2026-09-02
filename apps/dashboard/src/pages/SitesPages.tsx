@@ -283,6 +283,9 @@ export function CreateSitePage() {
   // Opt-in: the template's own copy is a sensible default, so this is a choice
   // rather than something that happens to every new site.
   const [writeCopy, setWriteCopy] = useState(false)
+  // What to write about, in the customer's own words. Falls back to the
+  // description from step 1 when they leave it empty.
+  const [copyBrief, setCopyBrief] = useState('')
   const [copyError, setCopyError] = useState<string | null>(null)
   const aiStatus = useQuery({ queryKey: ['ai-status'], queryFn: aiApi.status })
   const [checking, setChecking] = useState(false)
@@ -339,8 +342,7 @@ export function CreateSitePage() {
         try {
           await aiApi.generateTemplateCopy({
             site_id: site.id,
-            prompt: description || undefined,
-            tone: undefined,
+            prompt: copyBrief.trim() || description || undefined,
           })
         } catch (error) {
           setCopyError(errorText(error, 'The website was created, but the AI could not write its copy.'))
@@ -674,6 +676,26 @@ export function CreateSitePage() {
                   Rewrites {selectedTemplate.name}&rsquo;s words for {business_name || name || 'this business'}. The
                   design, the blocks and their order stay exactly as the template has them.
                 </span>
+              </span>
+            </label>
+          ) : null}
+          {writeCopy && selectedTemplate && aiStatus.data?.available ? (
+            <label className="block text-xs text-zinc-500">
+              What should it say?
+              <textarea
+                className="mt-1 h-24 w-full resize-y rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-600"
+                placeholder={'e.g. Write the content for my website — a web developer in Dubai building fast, custom sites for small businesses. Friendly and direct.'}
+                value={copyBrief}
+                onChange={(event) => setCopyBrief(event.target.value)}
+                disabled={create.isPending}
+                maxLength={2000}
+              />
+              <span className="mt-1 block">
+                {copyBrief.trim()
+                  ? 'Say what you do, who it is for, and the tone you want.'
+                  : description
+                    ? 'Leave this empty and the description from step 1 is used.'
+                    : 'Leave this empty and only the website name and category are used.'}
               </span>
             </label>
           ) : null}

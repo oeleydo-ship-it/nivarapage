@@ -107,7 +107,11 @@ class AiPromptBuilder
             $lines[] = 'What it does: '.$site->description;
         }
         if (! empty($input['prompt'])) {
-            $lines[] = 'Extra brief: '.$input['prompt'];
+            // The customer's own words about what they want written. It leads,
+            // because a site's stored name and category are often placeholders
+            // typed in a hurry while this is what they actually asked for.
+            $lines[] = 'Write about this, and prefer it over the details above where they disagree:';
+            $lines[] = $input['prompt'];
         }
         if (! empty($input['tone'])) {
             $lines[] = 'Tone of voice: '.$input['tone'];

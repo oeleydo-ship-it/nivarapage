@@ -17,6 +17,7 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { sitesApi } from '../lib/endpoints'
+import { siteOrigin } from '../lib/siteUrls'
 import { Badge, Button, Card, type BadgeTone } from '../ui/primitives'
 import { publishSiteWithRenders } from '@/lib/publishSite'
 
@@ -25,10 +26,17 @@ export function primaryHost(site: Site): string {
   return primary?.hostname || '—'
 }
 
+/**
+ * Where a site is actually reachable.
+ *
+ * Delegates to siteOrigin so a local host keeps the port Laravel serves on -
+ * without it every "visit site" link in development lands on a dead address,
+ * because site hostnames are stored without one.
+ */
 export function sitePreviewUrl(hostname: string): string | null {
   if (!hostname || hostname === '—') return null
-  const protocol = hostname.includes('localhost') || hostname.endsWith('.test') || hostname.endsWith('.local') ? 'http' : 'https'
-  return `${protocol}://${hostname}`
+
+  return siteOrigin(hostname)
 }
 
 export function relativeTime(value?: string | null): string | null {
@@ -213,6 +221,25 @@ export function SiteCard({ site, layout = 'list' }: { site: Site; layout?: SiteC
           role="menu"
           className="absolute right-0 z-30 mt-1 w-48 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 py-1 shadow-xl"
         >
+          {/* First, because seeing the live site is the thing people open this
+              menu for most often. Only offered once the site is published:
+              before that the address answers 404 and looks like a fault. */}
+          {liveUrl && site.status === 'published' && !trashed ? (
+            <>
+              <a
+                role="menuitem"
+                href={liveUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-900 hover:text-white"
+                onClick={() => setMenuOpen(false)}
+              >
+                <ExternalLink size={14} className="text-zinc-500" />
+                Visit site
+              </a>
+              <div className="my-1 border-t border-zinc-800" />
+            </>
+          ) : null}
           {MENU_LINKS.map((item) => (
             <Link
               key={item.label}
