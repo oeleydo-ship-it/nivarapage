@@ -359,6 +359,17 @@ export interface PlanLimitDefinition {
 
 export type PlanLimitSchema = Record<string, PlanLimitDefinition>
 
+/**
+ * The header and footer a site shows on every page.
+ *
+ * Both hold the same shape as a page's content, so the builder edits them with
+ * the canvas it already has and the renderer composes them into each page.
+ */
+export interface SiteChrome {
+  header: PageContent
+  footer: PageContent
+}
+
 export interface Plan {
   id: number
   slug: string

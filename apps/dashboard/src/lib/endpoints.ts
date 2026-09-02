@@ -19,6 +19,7 @@ import type {
   Plan,
   PlanLimitSchema,
   Site,
+  SiteChrome,
   SiteForm,
   SiteSettings,
   Subscription,
@@ -133,6 +134,11 @@ export const sitesApi = {
   theme: (id: string | number) => http.get<{ tokens?: Record<string, unknown> } | Record<string, unknown>>(`/sites/${id}/theme`),
   updateTheme: (id: string | number, tokens: Record<string, unknown>) =>
     http.put(`/sites/${id}/theme`, { tokens }),
+  /** The header and footer this site puts on every page. */
+  chrome: (id: string | number) => http.get<SiteChrome>(`/sites/${id}/chrome`),
+  /** Send only the slot being edited; the other is left as it is. */
+  updateChrome: (id: string | number, body: Partial<SiteChrome>) =>
+    http.put<SiteChrome>(`/sites/${id}/chrome`, body),
   applyTemplate: (id: string | number, template_id: number) =>
     http.post<Site>(`/sites/${id}/apply-template`, { template_id }),
   previewToken: (id: string | number) =>

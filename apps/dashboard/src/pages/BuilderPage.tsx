@@ -54,7 +54,7 @@ import {
   Trash2,
   Undo2,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { blogApi, formsApi, menusApi, pagesApi, sitesApi } from '../lib/endpoints'
 import { setAtPath } from '../lib/props'
@@ -412,10 +412,29 @@ export function BuilderPage() {
       : [],
   }))
 
-  const currentPage =
-    pages.data?.find((page) => String(page.id) === params.get('page')) ||
-    pages.data?.find((page) => page.is_homepage) ||
-    pages.data?.[0]
+  /**
+   * The canvas edits one of three things: a page, the site header, or the site
+   * footer. The header and footer are section lists in a page's shape, so the
+   * same canvas, palette and settings panel work on them unchanged - only where
+   * the content is loaded from and saved to differs.
+   */
+  const chromeParam = params.get('chrome')
+  const chromeSlot = chromeParam === 'header' || chromeParam === 'footer' ? chromeParam : null
+  // Read inside the debounced save, which would otherwise close over a stale value.
+  const chromeSlotRef = useRef<'header' | 'footer' | null>(chromeSlot)
+  chromeSlotRef.current = chromeSlot
+
+  const chromeQuery = useQuery({
+    queryKey: ['site-chrome', id],
+    queryFn: () => sitesApi.chrome(id!),
+    enabled: Boolean(id),
+  })
+
+  const currentPage = chromeSlot
+    ? undefined
+    : pages.data?.find((page) => String(page.id) === params.get('page')) ||
+      pages.data?.find((page) => page.is_homepage) ||
+      pages.data?.[0]
 
   useEffect(() => {
     window.localStorage.setItem('ud-editor-left', leftOpen ? '1' : '0')
@@ -435,14 +454,24 @@ export function BuilderPage() {
   }, [themeQuery.data, setTheme])
 
   useEffect(() => {
-    if (!currentPage) return
+    if (chromeSlot || !currentPage) return
     setContext(String(id), String(currentPage.id))
     const draft = currentPage.draft?.content || { schemaVersion: 1 as const, sections: [] }
     setContent(draft, false)
     resetHistory()
     select(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage?.id])
+  }, [currentPage?.id, chromeSlot])
+
+  useEffect(() => {
+    if (!chromeSlot || !chromeQuery.data) return
+    // No page id: saving goes to the site's chrome endpoint instead of a draft.
+    setContext(String(id), '')
+    setContent(chromeQuery.data[chromeSlot] || { schemaVersion: 1 as const, sections: [] }, false)
+    resetHistory()
+    select(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chromeSlot, chromeQuery.data])
 
   useEffect(() => {
     const forms = siteForms.data
@@ -459,21 +488,45 @@ export function BuilderPage() {
     return () => clearTimeout(timer)
   }, [toast])
 
+  /**
+   * Writes the canvas back to wherever it came from.
+   *
+   * A page goes to its draft; the header and footer go to the site, where every
+   * page picks them up at render time. Sending only the slot being edited
+   * leaves the other one alone.
+   */
+  const writeContent = useCallback(
+    async (content: PageContent) => {
+      const slot = chromeSlotRef.current
+      if (slot) {
+        await sitesApi.updateChrome(id!, { [slot]: content })
+        await qc.invalidateQueries({ queryKey: ['site-chrome', id] })
+
+        return
+      }
+      const pageId = useEditorStore.getState().pageId
+      if (!pageId) throw new Error('Create a page before saving.')
+      await pagesApi.saveDraft(pageId, content)
+    },
+    [id, qc],
+  )
+
   const saveDraft = useMemo(
     () =>
       debounce(async () => {
         const state = useEditorStore.getState()
-        if (!state.pageId || !state.dirty) return
+        if (!state.dirty) return
+        if (!chromeSlotRef.current && !state.pageId) return
         setSaveStatus('saving')
         try {
-          await pagesApi.saveDraft(state.pageId, state.content)
+          await writeContent(state.content)
           setSaveStatus('saved')
           useEditorStore.setState({ dirty: false })
         } catch {
           setSaveStatus('error')
         }
       }, 800),
-    [setSaveStatus],
+    [setSaveStatus, writeContent],
   )
 
   useEffect(() => {
@@ -600,10 +653,10 @@ export function BuilderPage() {
 
   const persistDraft = useCallback(async () => {
     const state = useEditorStore.getState()
-    if (!state.pageId) return { ok: false, error: 'Create a page before saving.' }
+    if (!chromeSlotRef.current && !state.pageId) return { ok: false, error: 'Create a page before saving.' }
     setSaveStatus('saving')
     try {
-      await pagesApi.saveDraft(state.pageId, state.content)
+      await writeContent(state.content)
       useEditorStore.setState({ dirty: false })
       setSaveStatus('saved')
       return { ok: true as const }
@@ -611,7 +664,7 @@ export function BuilderPage() {
       setSaveStatus('error')
       return { ok: false, error: errorText(error, 'Could not save the draft') }
     }
-  }, [setSaveStatus])
+  }, [setSaveStatus, writeContent])
 
   const saveNow = useCallback(async () => {
     const result = await persistDraft()
@@ -685,7 +738,7 @@ export function BuilderPage() {
   /** Persists in-flight edits before loading another page's draft. */
   const switchPage = useCallback(
     async (page: { id: number | string }) => {
-      if (String(page.id) === String(currentPage?.id ?? '')) return
+      if (!chromeSlot && String(page.id) === String(currentPage?.id ?? '')) return
       if (useEditorStore.getState().dirty) {
         const saved = await persistDraft()
         if (!saved.ok) {
@@ -695,7 +748,23 @@ export function BuilderPage() {
       }
       setParams({ page: String(page.id) })
     },
-    [currentPage?.id, persistDraft, setParams, setToast],
+    [chromeSlot, currentPage?.id, persistDraft, setParams, setToast],
+  )
+
+  /** Same flow as switching pages: whatever is on the canvas is saved first. */
+  const switchChrome = useCallback(
+    async (slot: 'header' | 'footer') => {
+      if (chromeSlot === slot) return
+      if (useEditorStore.getState().dirty) {
+        const saved = await persistDraft()
+        if (!saved.ok) {
+          setToast(saved.error || 'Could not save the draft', { tone: 'err' })
+          return
+        }
+      }
+      setParams({ chrome: slot })
+    },
+    [chromeSlot, persistDraft, setParams, setToast],
   )
 
   const publish = useCallback(async () => {
@@ -824,6 +893,8 @@ export function BuilderPage() {
           <PageMenu
             pages={pages.data || []}
             current={currentPage}
+            chromeSlot={chromeSlot}
+            onSelectChrome={(slot) => void switchChrome(slot)}
             starterContent={starterContent}
             onSelect={(page) => void switchPage(page)}
             onChanged={() => qc.invalidateQueries({ queryKey: ['pages', id] })}

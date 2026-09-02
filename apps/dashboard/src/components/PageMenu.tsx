@@ -1,5 +1,5 @@
 import type { Page, PageContent } from '@uidesired/types'
-import { ChevronDown, Copy, FileText, Home, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, Copy, FileText, Home, Layout, Pencil, PanelBottom, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { pagesApi } from '../lib/endpoints'
 import { Button, Input } from '../ui/primitives'
@@ -15,14 +15,19 @@ function slugify(input: string): string {
 export function PageMenu({
   pages,
   current,
+  chromeSlot,
   starterContent,
   onSelect,
+  onSelectChrome,
   onChanged,
   onError,
   onInfo,
 }: {
   pages: Page[]
   current?: Page
+  /** Set while the canvas is editing the site header or footer instead of a page. */
+  chromeSlot?: 'header' | 'footer' | null
+  onSelectChrome?: (slot: 'header' | 'footer') => void
   /** Sections a brand-new page starts with, so the canvas is never blank. */
   starterContent: (page: { name: string; slug: string }) => PageContent
   onSelect: (page: Page) => void
@@ -138,14 +143,46 @@ export function PageMenu({
         onClick={() => setOpen(!open)}
         title="Pages"
       >
-        <FileText size={14} className="text-zinc-500" />
-        <span className="max-w-40 truncate">{current?.name || 'Pages'}</span>
-        {current?.is_homepage ? <Home size={11} className="text-zinc-500" /> : null}
+        {chromeSlot === 'header' ? (
+          <Layout size={14} className="text-zinc-500" />
+        ) : chromeSlot === 'footer' ? (
+          <PanelBottom size={14} className="text-zinc-500" />
+        ) : (
+          <FileText size={14} className="text-zinc-500" />
+        )}
+        <span className="max-w-40 truncate">
+          {chromeSlot === 'header' ? 'Site header' : chromeSlot === 'footer' ? 'Site footer' : current?.name || 'Pages'}
+        </span>
+        {!chromeSlot && current?.is_homepage ? <Home size={11} className="text-zinc-500" /> : null}
         <ChevronDown size={13} className="text-zinc-500" />
       </button>
 
       {open ? (
         <div className="absolute left-0 top-full z-50 mt-1 w-80 rounded-xl border border-zinc-800 bg-zinc-950 p-2 shadow-2xl">
+          {onSelectChrome ? (
+            <div className="mb-1 border-b border-zinc-800 pb-1">
+              <p className="px-2 py-1 text-[11px] uppercase tracking-wide text-zinc-500">Shown on every page</p>
+              {([
+                ['header', 'Site header', Layout],
+                ['footer', 'Site footer', PanelBottom],
+              ] as const).map(([slot, label, Icon]) => (
+                <button
+                  key={slot}
+                  type="button"
+                  className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm ${
+                    chromeSlot === slot ? 'bg-zinc-800 text-white' : 'text-zinc-300 hover:bg-zinc-900'
+                  }`}
+                  onClick={() => {
+                    setOpen(false)
+                    onSelectChrome(slot)
+                  }}
+                >
+                  <Icon size={14} className="text-zinc-500" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <div className="max-h-72 space-y-0.5 overflow-y-auto">
             {pages.map((page) => (
               <div
