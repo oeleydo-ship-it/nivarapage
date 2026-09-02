@@ -423,7 +423,7 @@ export const pageHeadMeridian = defineBlock({
 export const logosMeridian = defineBlock({
   type: 'logos.meridian',
   version: 1,
-  category: 'logos',
+  category: 'gallery',
   label: 'Meridian logo rail',
   icon: 'Grid',
   defaultProps: {
@@ -603,7 +603,7 @@ export const bentoMeridian = defineBlock({
 export const statsMeridian = defineBlock({
   type: 'stats.meridian',
   version: 1,
-  category: 'stats',
+  category: 'features',
   label: 'Meridian stat row',
   icon: 'BarChart',
   defaultProps: {
