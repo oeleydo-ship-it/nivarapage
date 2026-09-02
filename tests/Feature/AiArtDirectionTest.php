@@ -213,3 +213,34 @@ it('does not re-direct a site that already has a design of its own', function ()
     // The site's own design decides; nobody is asked to pick a new one.
     expect(FakeAiProvider::calls()[0]['system'])->not->toContain('You are the art director');
 });
+
+it('describes what every kit looks like, not just what it can build', function () {
+    $catalogue = app(SiteKitProfile::class)->catalogue();
+    expect($catalogue)->not->toBeEmpty();
+
+    // A kit added without a style note would be offered as a bare key, and the
+    // art director would be picking between them on section lists alone.
+    foreach ($catalogue as $kit) {
+        expect($kit['note'])->not->toBe('', "Kit '{$kit['key']}' has no style note in SiteKitProfile::KIT_NOTES.");
+        expect($kit['label'])->not->toBe('');
+    }
+});
+
+it('puts the style notes in front of the art director', function () {
+    $fx = artFixture();
+    FakeAiProvider::push(kitSiteJson());
+
+    test()->withHeaders($fx['headers'])
+        ->postJson('/api/v1/ai/generate-page', [
+            'site_id' => $fx['site'],
+            'prompt' => 'A dark, exclusive venture capital firm.',
+        ])
+        ->assertOk();
+
+    $prompt = FakeAiProvider::calls()[0]['prompt'];
+    expect($prompt)->toContain('Dark venture capital and advisory');
+    expect($prompt)->toContain('High-energy marketing agency');
+    // The name people know it by, not the block suffix.
+    expect($prompt)->toContain('Nivara');
+    expect($prompt)->toContain('Cinder & Row');
+});

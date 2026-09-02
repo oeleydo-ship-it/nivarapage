@@ -21,6 +21,84 @@ class SiteKitProfile
     public const MIN_KIT_BLOCKS = 6;
 
     /**
+     * What each kit looks like, and the name people know it by.
+     *
+     * Art direction picks a kit for a brief. Given only the sections a kit can
+     * build it can judge whether a kit *fits* but not whether it *suits* - the
+     * choice between a black VC deck and a mint AI-launch page is a question of
+     * look, and both can build a pricing page. These lines are drawn from each
+     * kit's own source header, or from its template description where the source
+     * carries none, so they describe what is really on screen.
+     *
+     * A kit missing from here still works; it is simply offered without a
+     * description, which is what AiArtDirectionTest guards against.
+     *
+     * @var array<string, array{label: string, note: string}>
+     */
+    public const KIT_NOTES = [
+        'voltera' => [
+            'label' => 'Voltera',
+            'note' => 'High-energy marketing agency. Electric indigo-blue panels on white, chartreuse lime pill buttons, near-black geometric headlines, generously rounded cards.',
+        ],
+        'halcyon' => [
+            'label' => 'Halcyon',
+            'note' => 'Calm bootstrapped SaaS. Near-white pages lit by soft pastel blooms, two-tone headlines, hairline white cards, a bright sky-blue accent and a near-black footer.',
+        ],
+        'meridian' => [
+            'label' => 'Meridian',
+            'note' => 'Developer infrastructure and fintech. Near-white with pastel gradient-mesh panels, a lavender band for company pages, ink-dark enterprise bands, solid black pill buttons.',
+        ],
+        'tessera' => [
+            'label' => 'Tessera',
+            'note' => 'Light editorial B2B. A near-white sheet ruled by hairline dividers rather than colour changes, one warm ember accent, tight geometric grotesk, black footer.',
+        ],
+        'quarry' => [
+            'label' => 'Quarry',
+            'note' => 'Regulated operations and industry. Warm bone grounds, deep forest-green bands, marker-highlight accents, uppercase grotesk headings and mono micro-labels.',
+        ],
+        'vantage' => [
+            'label' => 'Vantage.OS',
+            'note' => 'Calm platform and IT services. Playfair Display headlines on near-white, monospace micro labels, a single royal-blue accent and deep-navy impact bands.',
+        ],
+        'junction' => [
+            'label' => 'Junction',
+            'note' => 'Automation and AI orchestration. Figtree headlines on warm off-white, one hot-orange accent, near-black buttons, tinted screenshot cards, deep olive and indigo bands.',
+        ],
+        'kindred' => [
+            'label' => 'Kindred',
+            'note' => 'Group brand or family of companies. A saturated brand red, pale-pink bands with slanted edges, bold geometric headlines closed by a red full stop, serif editorial titles.',
+        ],
+        'northbook' => [
+            'label' => 'Northbook',
+            'note' => 'Professional accountancy and financial services. Deep teal-navy headings closed by a green full stop, a pale sage hero band, green pill buttons, thin-bordered white cards.',
+        ],
+        'axiom' => [
+            'label' => 'Axiom North',
+            'note' => 'Dark venture capital and advisory. Near-black throughout, Syne and DM Sans, amber glow accents, portfolio filters - confident and exclusive.',
+        ],
+        'cinder' => [
+            'label' => 'Cinder & Row',
+            'note' => 'Full-width editorial trade services, built for heating and home trades. Oversized serif type, orange italic accents, bento service cards, local coverage.',
+        ],
+        'lumen' => [
+            'label' => 'Lumen & Lane',
+            'note' => 'Practical local trades, built for electricians. Navy and signal-yellow, framed photo heroes, plain service cards, transparent pricing and booking forms.',
+        ],
+        'moksha' => [
+            'label' => 'Nivara',
+            'note' => 'Wellness, yoga and studio spaces. Clean purple on white, an immersive photo hero, class programmes, instructor story - warm and unhurried.',
+        ],
+        'solara' => [
+            'label' => 'Solara',
+            'note' => 'Light AI-agent product launch. Inter on white with a light orange wash, a pastel feature stack, monthly and yearly pricing, a peach footer.',
+        ],
+        'verdara' => [
+            'label' => 'Verdara',
+            'note' => 'Light AI product launch with a green cast. Inter, mint glow, overlapping photography and scroll motion - fresh and optimistic.',
+        ],
+    ];
+
+    /**
      * Design props that are page-wide conventions rather than per-section
      * choices. Mirrors the editor's own inheritance list, so a block the AI
      * writes matches one the user drags in.
@@ -38,6 +116,15 @@ class SiteKitProfile
         'bodyWeight',
         'eyebrowStyle',
     ];
+
+    /**
+     * The name a kit goes by, which is not always its block suffix: the `moksha`
+     * blocks are the Nivara template, and `cinder` is Cinder & Row.
+     */
+    public static function labelFor(string $key): string
+    {
+        return self::KIT_NOTES[$key]['label'] ?? ucfirst($key);
+    }
 
     /**
      * Every family large enough to count as a kit.
@@ -70,7 +157,7 @@ class SiteKitProfile
      * small: all 368 blocks with their props run to about 75,000 characters,
      * while one kit's blocks are nearer 5,000.
      *
-     * @return list<array{key: string, label: string, blocks: int, purposes: list<string>}>
+     * @return list<array{key: string, label: string, note: string, blocks: int, purposes: list<string>}>
      */
     public function catalogue(): array
     {
@@ -85,7 +172,8 @@ class SiteKitProfile
 
             $out[] = [
                 'key' => $key,
-                'label' => ucfirst($key),
+                'label' => self::labelFor($key),
+                'note' => self::KIT_NOTES[$key]['note'] ?? '',
                 'blocks' => count($types),
                 'purposes' => array_keys($purposes),
             ];
@@ -113,7 +201,7 @@ class SiteKitProfile
 
         return [
             'key' => $key,
-            'label' => ucfirst($key),
+            'label' => self::labelFor($key),
             'types' => $kits[$key],
             'design' => $design,
         ];
@@ -154,7 +242,7 @@ class SiteKitProfile
 
         return [
             'key' => $key,
-            'label' => ucfirst($key),
+            'label' => self::labelFor($key),
             'types' => $kits[$key],
             'design' => $this->designFrom($sections),
         ];

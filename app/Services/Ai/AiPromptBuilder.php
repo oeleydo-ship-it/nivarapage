@@ -141,9 +141,12 @@ class AiPromptBuilder
         }
 
         $lines[] = '';
-        $lines[] = 'Kits available (key — sections it can build):';
+        $lines[] = 'Kits available. Each is: key (name) — what it looks like — the sections it can build.';
+        $lines[] = 'Choose on both. The look has to suit the business, and the sections have to cover what the site needs.';
         foreach ($kits as $kit) {
-            $lines[] = '- '.$kit['key'].' ('.$kit['blocks'].' blocks) — '.implode(', ', $kit['purposes']);
+            $lines[] = '- '.$kit['key'].' ('.$kit['label'].')'
+                .($kit['note'] !== '' ? ' — '.$kit['note'] : '')
+                .' — sections: '.implode(', ', $kit['purposes']);
         }
 
         return implode("\n", $lines);
