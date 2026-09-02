@@ -190,7 +190,7 @@ class AiController extends Controller
             'current_content' => ['nullable', 'array'],
             'selected_type' => ['nullable', 'string', 'max:80'],
             'selected_heading' => ['nullable', 'string', 'max:160'],
-            'generation_mode' => ['nullable', 'in:auto,full_site,current_page,blocks'],
+            'generation_mode' => ['nullable', 'in:auto,full_site,current_page,copy,blocks'],
             'requested_pages' => ['nullable', 'integer', 'min:1', 'max:8'],
         ]);
 
@@ -241,7 +241,7 @@ class AiController extends Controller
             'current_content' => ['nullable', 'array'],
             'selected_type' => ['nullable', 'string', 'max:80'],
             'selected_heading' => ['nullable', 'string', 'max:160'],
-            'generation_mode' => ['nullable', 'in:auto,full_site,current_page,blocks'],
+            'generation_mode' => ['nullable', 'in:auto,full_site,current_page,copy,blocks'],
             'requested_pages' => ['nullable', 'integer', 'min:1', 'max:8'],
         ]);
 
@@ -310,15 +310,21 @@ class AiController extends Controller
                     }
                 }
 
-                foreach ($sections as $index => $section) {
-                    $emit('block', [
-                        'page_index' => null,
-                        'page_slug' => $data['page_slug'] ?? 'home',
-                        'page_home' => (bool) ($data['is_homepage'] ?? false),
-                        'index' => $index,
-                        'total' => count($sections),
-                        'section' => $section,
-                    ]);
+                // A standalone section is a block being inserted, and the client
+                // previews it by splicing it into the page. The sections of a
+                // copy rewrite are the page's own blocks coming back with new
+                // words, so streaming them here would preview the page twice.
+                if ($result['action'] !== 'rewrite_copy') {
+                    foreach ($sections as $index => $section) {
+                        $emit('block', [
+                            'page_index' => null,
+                            'page_slug' => $data['page_slug'] ?? 'home',
+                            'page_home' => (bool) ($data['is_homepage'] ?? false),
+                            'index' => $index,
+                            'total' => count($sections),
+                            'section' => $section,
+                        ]);
+                    }
                 }
 
                 $this->audit->log('ai.chat', $site, [

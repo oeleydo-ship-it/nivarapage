@@ -354,27 +354,41 @@ class AiPromptBuilder
         return implode("\n", $lines);
     }
 
-    public function chatSystemPrompt(): string
+    /**
+     * @param  array{key: string, label: string, types: list<string>, design: array<string, mixed>}|null  $kit
+     */
+    public function chatSystemPrompt(?array $kit = null): string
     {
         $maxPages = max(1, (int) config('ai.max_pages', 5));
+
+        // On a site built from a template kit the person already chose a design.
+        // Banning kit types here - as this prompt used to do unconditionally -
+        // left the model no way to keep it: every edit came back as generated.*
+        // blocks and the template was gone. The ban only makes sense when there
+        // is no kit to preserve.
+        $typeRule = $kit === null
+            ? '- "type" MUST be a generated.* block type listed below. Never invent types. Never use catalog kits (hero.centered, navbar.cta, faq.accordion, and similar).'
+            : '- "type" MUST come from the "'.$kit['label'].'" kit block list below. Reuse the exact type a section already has unless the user asked for a different kind of section. Fall back to a generated.* type only when the kit has nothing for that purpose. Never invent types.';
 
         return implode("\n", [
             'You are a website-builder copilot in a chat. The user can follow up, revise, add pages, add blocks, and change the theme.',
             'You return ONLY JSON. No markdown, no code fences, no commentary.',
             'Output shape:',
-            '{"action":"apply_site|replace_page|create_page|insert_blocks|update_theme|reply","message":"<short chat reply>","theme":{},"pages":[{"name":"Home","slug":"home","is_homepage":true,"sections":[{"type":"...","props":{}}]}],"sections":[{"type":"...","props":{}}]}',
+            '{"action":"apply_site|replace_page|rewrite_copy|create_page|insert_blocks|update_theme|reply","message":"<short chat reply>","theme":{},"pages":[{"name":"Home","slug":"home","is_homepage":true,"sections":[{"type":"...","props":{}}]}],"sections":[{"type":"...","props":{}}]}',
             'action meanings:',
             '- apply_site: build or rebuild a multi-page website. Fill pages (1–'.$maxPages.') and optional theme.',
-            '- replace_page: rewrite the current page. Fill pages with exactly one page (the current one) or sections for that page.',
+            '- replace_page: change the STRUCTURE of the current page - different sections, a different order, a different kind of layout. Fill pages with exactly one page (the current one) or sections for that page.',
+            '- rewrite_copy: change only the WORDS on the current page and keep every block, its order and its design exactly as they are. Return no pages and no sections - the editor rewrites the existing blocks in place. Use this for "rewrite the content", "improve the copy", "make it about a bakery", "change the text", translations, and tone changes.',
             '- create_page: add a new site page. Fill pages with one non-homepage page (name, slug, sections). Include navbar + footer matching the site.',
-            '- insert_blocks: add one or more generated.* blocks to the current page. Fill sections (max 4).',
+            '- insert_blocks: add one or more blocks to the current page. Fill sections (max 4).',
             '- update_theme: only change theme tokens. Fill theme with the keys that change.',
             '- reply: ask a clarifying question. No pages/sections/theme.',
-            'When Generation mode is supplied in the user prompt, obey it: full_site uses apply_site, current_page uses replace_page, and blocks uses insert_blocks.',
-            'Follow-ups: honour the conversation. Do not regenerate the whole site unless asked. "Add an About page" is create_page. "Make the hero shorter" is replace_page. "Add a FAQ" is insert_blocks. "Use navy and gold" is update_theme.',
+            'Prefer rewrite_copy over replace_page whenever the request is about wording. Rewriting words is not a reason to rebuild a page.',
+            'When Generation mode is supplied in the user prompt, obey it: full_site uses apply_site, current_page uses replace_page, copy uses rewrite_copy, and blocks uses insert_blocks.',
+            'Follow-ups: honour the conversation. Do not regenerate the whole site unless asked. "Add an About page" is create_page. "Rewrite the content" is rewrite_copy. "Make the hero shorter" is rewrite_copy. "Swap the hero for a video hero" is replace_page. "Add a FAQ" is insert_blocks. "Use navy and gold" is update_theme.',
             'Theme keys allowed: primary, secondary, accent, background, surface, text, muted, headingFont, bodyFont, headingWeight, bodyWeight, buttonRadius, cardRadius, containerWidth, sectionSpacing.',
             'Rules:',
-            '- "type" MUST be a generated.* block type listed below. Never invent types. Never use catalog kits (hero.centered, navbar.cta, faq.accordion, and similar).',
+            $typeRule,
             '- Do not emit ids, versions, HTML, scripts, styles or external image urls.',
             '- Navbar link urls are "/" and "/{slug}". Never "#".',
             '- Produce publication-ready content for every visible field. Never rely on catalog defaults.',
@@ -412,6 +426,7 @@ class AiPromptBuilder
         $modeLabel = match ($mode) {
             'full_site' => 'Full website. Return action apply_site and a complete sitemap.',
             'current_page' => 'Current page only. Return action replace_page and exactly one page.',
+            'copy' => 'Copy only. Return action rewrite_copy. Keep every block and its design; only the words change.',
             'blocks' => 'Blocks only. Return action insert_blocks with one to four sections.',
             default => 'Automatic. Infer the smallest appropriate scope from the request.',
         };

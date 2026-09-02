@@ -32,6 +32,7 @@ type ChatMessage = {
 
 const SUGGESTIONS: Array<{ label: string; mode: AiGenerationMode }> = [
   { label: 'Build a multi-page site for my business', mode: 'full_site' },
+  { label: 'Rewrite this page for my business, keep the design', mode: 'copy' },
   { label: 'Redesign this page with stronger copy', mode: 'current_page' },
   { label: 'Insert a FAQ and call-to-action', mode: 'blocks' },
   { label: 'Switch the theme to navy and gold', mode: 'auto' },
@@ -41,6 +42,7 @@ const GENERATION_MODES: Array<{ id: AiGenerationMode; label: string; hint: strin
   { id: 'auto', label: 'Auto', hint: 'AI chooses the smallest useful scope' },
   { id: 'full_site', label: 'Website', hint: 'Build a complete multi-page website' },
   { id: 'current_page', label: 'Page', hint: 'Replace and improve the current page' },
+  { id: 'copy', label: 'Copy', hint: 'Rewrite the words only — layout and design stay put' },
   { id: 'blocks', label: 'Blocks', hint: 'Insert new sections into this page' },
 ]
 
@@ -178,6 +180,17 @@ export function AiPanel({
 
     if ((result.action === 'apply_site' || result.action === 'create_page' || result.action === 'replace_page') && pages.length) {
       return applyPages(pages, nextTheme, result.action)
+    }
+
+    // Copy-only: the server returned the page's own blocks with new words in
+    // them, so this swaps content without touching which blocks are on the page.
+    if (result.action === 'rewrite_copy' && sections.length) {
+      useHistoryStore.getState().push(useEditorStore.getState().content)
+      useEditorStore.getState().setContent({ schemaVersion: 1, sections }, true)
+      const rewritten = result.report?.rewritten
+      return typeof rewritten === 'number'
+        ? `Rewrote ${rewritten} piece${rewritten === 1 ? '' : 's'} of copy. The layout is unchanged.`
+        : 'Rewrote the copy. The layout is unchanged.'
     }
 
     if (result.action === 'replace_page' && sections.length && !pages.length) {
@@ -524,7 +537,7 @@ export function AiPanel({
               <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Generate</span>
               <span className="text-[11px] text-zinc-400">{GENERATION_MODES.find((item) => item.id === generationMode)?.hint}</span>
             </div>
-            <div className="grid grid-cols-4 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 p-1">
+            <div className="grid grid-cols-5 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 p-1">
               {GENERATION_MODES.map((mode) => (
                 <button
                   key={mode.id}

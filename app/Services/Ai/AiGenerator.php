@@ -204,12 +204,28 @@ class AiGenerator
             'code' => 'const brief = analyze(request, currentSite);',
             'progress' => 12,
         ]);
+
+        $liveSections = is_array($input['current_content']['sections'] ?? null)
+            ? $input['current_content']['sections']
+            : null;
+
+        // "Copy only" is not a request the model needs to classify: the mode is
+        // already the instruction, and a routing round-trip could only disagree
+        // with it and rebuild the page. Go straight to the slot rewriter, which
+        // cannot change a block type.
+        if ((string) ($input['generation_mode'] ?? 'auto') === 'copy') {
+            return $this->rewriteCurrentPageCopy($site, $input, $liveSections, $emit);
+        }
+
         $emit('generating', 'Planning pages, navigation, theme, and block composition.', [
             'code' => 'const sitemap = await composePages(brief);',
             'progress' => 28,
         ]);
         $raw = $this->complete(
-            $this->prompts->chatSystemPrompt(),
+            // The kit the page is already built from decides whether the model
+            // is allowed to answer in kit blocks. Without it every reply came
+            // back as generated.* and replaced the chosen template.
+            $this->prompts->chatSystemPrompt($this->kits->detect($site, $liveSections)),
             $this->prompts->chatPrompt($site, $input),
             ['max_tokens' => (int) config('ai.site_max_tokens', 8000)],
         );
@@ -225,6 +241,20 @@ class AiGenerator
         }
 
         $action = $this->normaliseChatAction($decoded);
+
+        // The model asked for a words-only change. Ignore any sections it sent
+        // with it and rewrite the live page through the slot path instead, so
+        // the answer cannot carry a different layout in on the side.
+        if ($action === 'rewrite_copy') {
+            return $this->rewriteCurrentPageCopy(
+                $site,
+                $input,
+                $liveSections,
+                $emit,
+                trim((string) ($decoded['message'] ?? $decoded['reply'] ?? '')),
+            );
+        }
+
         $emit('assembling', 'Assembling safe, editable page and block data.', [
             'action' => $action,
             'code' => 'const pages = repairAndAssemble(sitemap);',
@@ -293,9 +323,6 @@ class AiGenerator
             $action = 'update_theme';
         }
 
-        $liveSections = is_array($input['current_content']['sections'] ?? null)
-            ? $input['current_content']['sections']
-            : null;
         $matched = $this->matchSiteDesign($site, $pages, $sections, $liveSections);
         $pages = $matched['pages'];
         $sections = $matched['sections'];
@@ -321,6 +348,106 @@ class AiGenerator
     }
 
     /**
+     * Rewrites the words on the page the user is looking at, and nothing else.
+     *
+     * Chat's other answers hand back sections the model composed, which is what
+     * lets "rewrite the content" arrive as a differently-built page. This route
+     * never asks for sections: it sends the copy the live blocks declare and
+     * puts the replies back into those same blocks, so the template the
+     * customer chose survives by construction.
+     *
+     * @param  array<string, mixed>  $input
+     * @param  list<array<string, mixed>>|null  $liveSections
+     * @return array<string, mixed>
+     */
+    private function rewriteCurrentPageCopy(
+        Site $site,
+        array $input,
+        ?array $liveSections,
+        callable $emit,
+        string $message = '',
+    ): array {
+        $sections = is_array($liveSections) ? array_values($liveSections) : [];
+        if ($sections === []) {
+            throw AiException::invalidOutput('There is nothing on this page to rewrite yet. Add some blocks first.');
+        }
+
+        $emit('generating', 'Rewriting the copy in the blocks already on this page.', [
+            'code' => 'const slots = collectCopy(page.sections);',
+            'progress' => 34,
+        ]);
+
+        // Chat states the request in `messages`; the copy prompt reads `prompt`.
+        // Without this the rewrite never sees what was asked for and writes
+        // generic copy off the site name alone.
+        if (empty($input['prompt'])) {
+            $input['prompt'] = $this->lastUserMessage($input);
+        }
+
+        $result = $this->generateTemplateCopy($site, $sections, $input);
+
+        $emit('validating', 'Checking the new copy against the live block catalog.', [
+            'code' => 'validate(sections, blockCatalog);',
+            'progress' => 74,
+        ]);
+
+        if ($result['report']['rewritten'] === 0) {
+            throw AiException::invalidOutput('The AI did not return any usable copy. Try again.');
+        }
+
+        $report = $result['report'];
+        if ($message === '') {
+            $message = 'I rewrote the copy on this page and left the layout exactly as it was.';
+        }
+
+        $emit('ready', 'Generation is ready to render on the canvas.', [
+            'action' => 'rewrite_copy',
+            'pages' => 0,
+            'sections' => count($result['sections']),
+            'code' => 'render(sections, { live: true });',
+            'progress' => 88,
+        ]);
+
+        return [
+            'action' => 'rewrite_copy',
+            'message' => mb_substr($message, 0, 600),
+            'pages' => [],
+            'sections' => $result['sections'],
+            'theme' => [],
+            'report' => [
+                'sections' => count($result['sections']),
+                'dropped_types' => [],
+                'dropped_props' => [],
+                'pages' => 0,
+                'slots' => $report['slots'],
+                'rewritten' => $report['rewritten'],
+            ],
+        ];
+    }
+
+    /**
+     * The most recent thing the person actually asked for.
+     *
+     * @param  array<string, mixed>  $input
+     */
+    private function lastUserMessage(array $input): string
+    {
+        $messages = is_array($input['messages'] ?? null) ? $input['messages'] : [];
+
+        foreach (array_reverse($messages) as $message) {
+            if (! is_array($message) || ($message['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $text = trim((string) ($message['content'] ?? ''));
+            if ($text !== '') {
+                return $text;
+            }
+        }
+
+        return '';
+    }
+
+    /**
      * @param  array<string, mixed>  $decoded
      */
     private function normaliseChatAction(array $decoded): string
@@ -330,7 +457,14 @@ class AiGenerator
             'site' => 'apply_site',
             'generate_site' => 'apply_site',
             'page' => 'replace_page',
-            'revise' => 'replace_page',
+            // "revise" used to mean replace_page, which is why asking to revise
+            // the wording rebuilt the page. Revising is a copy edit unless the
+            // model explicitly asks to replace the page.
+            'revise' => 'rewrite_copy',
+            'rewrite' => 'rewrite_copy',
+            'copy' => 'rewrite_copy',
+            'content' => 'rewrite_copy',
+            'rewrite_content' => 'rewrite_copy',
             'new_page' => 'create_page',
             'add_page' => 'create_page',
             'block' => 'insert_blocks',
@@ -340,7 +474,7 @@ class AiGenerator
             'ask' => 'reply',
         ];
         $action = $aliases[$action] ?? $action;
-        $allowed = ['apply_site', 'replace_page', 'create_page', 'insert_blocks', 'update_theme', 'reply'];
+        $allowed = ['apply_site', 'replace_page', 'rewrite_copy', 'create_page', 'insert_blocks', 'update_theme', 'reply'];
 
         return in_array($action, $allowed, true) ? $action : 'reply';
     }

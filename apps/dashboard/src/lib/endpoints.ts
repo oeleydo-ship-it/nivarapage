@@ -369,6 +369,9 @@ export type AiReport = {
   sections?: number
   dropped_types?: string[]
   dropped_props?: string[]
+  /** Copy-only rewrites: how many text slots were offered and replaced. */
+  slots?: number
+  rewritten?: number
 }
 
 export type AiGeneratedPage = {
@@ -393,7 +396,7 @@ export type AiGenerateBlockResult = {
   usage: AiUsage
 }
 
-export type AiChatAction = 'apply_site' | 'replace_page' | 'create_page' | 'insert_blocks' | 'update_theme' | 'reply'
+export type AiChatAction = 'apply_site' | 'replace_page' | 'rewrite_copy' | 'create_page' | 'insert_blocks' | 'update_theme' | 'reply'
 
 export type AiChatResult = {
   action: AiChatAction
@@ -405,7 +408,7 @@ export type AiChatResult = {
   usage: AiUsage
 }
 
-export type AiGenerationMode = 'auto' | 'full_site' | 'current_page' | 'blocks'
+export type AiGenerationMode = 'auto' | 'full_site' | 'current_page' | 'copy' | 'blocks'
 
 export type AiChatRequest = {
   site_id: string | number
