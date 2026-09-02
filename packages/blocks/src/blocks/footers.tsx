@@ -135,7 +135,7 @@ function Brand({ props, size = 'md' }: { props: Props; size?: 'md' | 'lg' }) {
     <EditableText
       edit={editOf(props)}
       path={['brand']}
-      value={str(props.brand, 'UiDesired')}
+      value={str(props.brand, 'Your Brand')}
       as="strong"
       className={size === 'lg' ? 'ud-h3' : 'ud-h4'}
       style={{ display: 'block' }}
@@ -153,8 +153,8 @@ export const footerSimple = defineBlock({
   label: 'Simple footer',
   icon: 'PanelBottom',
   defaultProps: {
-    brand: 'UiDesired',
-    copyright: `© ${new Date().getFullYear()} UiDesired. All rights reserved.`,
+    brand: 'Your Brand',
+    copyright: `© ${new Date().getFullYear()} Your Brand. All rights reserved.`,
     legal: [
       { label: 'Privacy', url: '/privacy' },
       { label: 'Terms', url: '/terms' },
@@ -172,7 +172,7 @@ export const footerSimple = defineBlock({
           <EditableText
             edit={editOf(props)}
             path={['copyright']}
-            value={str(props.copyright, '© UiDesired')}
+            value={str(props.copyright, '© Your Brand')}
             as="span"
             className="ud-small"
             placeholder="© Your company"
@@ -197,9 +197,9 @@ export const footerCentered = defineBlock({
   label: 'Centered footer',
   icon: 'Minus',
   defaultProps: {
-    brand: 'UiDesired',
+    brand: 'Your Brand',
     tagline: 'Websites that look designed, not assembled.',
-    copyright: `© ${new Date().getFullYear()} UiDesired`,
+    copyright: `© ${new Date().getFullYear()} Your Brand`,
     links: [
       { label: 'Home', url: '/' },
       { label: 'Work', url: '/work' },
@@ -262,9 +262,9 @@ export const footerMulti = defineBlock({
   label: 'Multi-column footer',
   icon: 'Columns3',
   defaultProps: {
-    brand: 'UiDesired',
+    brand: 'Your Brand',
     tagline: 'The website builder for teams that care how things look.',
-    copyright: `© ${new Date().getFullYear()} UiDesired. All rights reserved.`,
+    copyright: `© ${new Date().getFullYear()} Your Brand. All rights reserved.`,
     columns: columnDefaults,
     social: socialDefaults,
     legal: [

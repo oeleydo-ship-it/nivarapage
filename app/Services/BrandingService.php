@@ -27,6 +27,8 @@ class BrandingService
         'image/jpeg' => 'jpg',
         'image/webp' => 'webp',
         'image/svg+xml' => 'svg',
+        'image/x-icon' => 'ico',
+        'image/vnd.microsoft.icon' => 'ico',
     ];
 
     /** Max upload size in bytes. A logo has no business being larger. */
@@ -43,10 +45,11 @@ class BrandingService
         $stored = PlatformSetting::query()->pluck('value', 'key');
 
         return [
-            'platform_name' => (string) ($stored['platform_name'] ?? config('app.name', 'UiDesired')),
+            'platform_name' => (string) ($stored->get('platform_name') ?: 'My Website Builder'),
             'platform_tagline' => (string) ($stored['platform_tagline'] ?? 'Website builder'),
             'logo_url' => $this->url((string) ($stored['platform_logo'] ?? '')),
             'logo_dark_url' => $this->url((string) ($stored['platform_logo_dark'] ?? '')),
+            'favicon_url' => $this->url((string) ($stored['platform_favicon'] ?? '')),
             'platform_domain' => app(PlatformSettingsService::class)->platformDomain(),
         ];
     }
@@ -54,13 +57,13 @@ class BrandingService
     /**
      * Stores an uploaded logo and returns its public URL.
      *
-     * @param  'platform_logo'|'platform_logo_dark'  $key
+     * @param  'platform_logo'|'platform_logo_dark'|'platform_favicon'  $key
      */
     public function storeLogo(UploadedFile $file, string $key = 'platform_logo'): string
     {
         $mime = $file->getMimeType() ?: $file->getClientMimeType();
         if (! array_key_exists($mime, self::ALLOWED)) {
-            throw new InvalidArgumentException('Use a PNG, JPEG, WebP or SVG image.');
+            throw new InvalidArgumentException('Use a PNG, JPEG, WebP, SVG or ICO image.');
         }
 
         $contents = $file->get();
@@ -98,7 +101,11 @@ class BrandingService
         return $this->url($path);
     }
 
-    /** Removes the logo and its file, falling back to the wordmark. */
+    /**
+     * Removes the logo and its file, falling back to the wordmark.
+     *
+     * @param  'platform_logo'|'platform_logo_dark'|'platform_favicon'  $key
+     */
     public function clearLogo(string $key = 'platform_logo'): void
     {
         $this->deleteStoredFile($key);

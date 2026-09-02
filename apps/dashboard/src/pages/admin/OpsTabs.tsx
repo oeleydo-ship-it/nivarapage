@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { adminApi, type FailedJob } from '../../lib/endpoints'
 import { Badge, Button, Card, DataTable, EmptyState, Input, Label } from '../../ui/primitives'
 import { actionTone, formatTimestamp, metadataSummary } from '../ActivityPage'
-import { BrandingPanel, MailPanel } from './BrandingMailPanels'
+import { BrandingPanel, FaviconPanel, MailPanel } from './BrandingMailPanels'
 import { AdminSearch, unixTimestamp } from './shared'
 
 export function FormsTab() {
@@ -361,8 +361,11 @@ export function SettingsTab() {
       {notice ? <p className="text-sm text-emerald-400">{notice}</p> : null}
       {save.isError ? <p className="text-sm text-red-400">{save.error instanceof Error ? save.error.message : 'Save failed'}</p> : null}
       <div>
-        <Label>Platform name</Label>
-        <Input value={platformName} onChange={(e) => setPlatformName(e.target.value)} />
+        <Label>Application name</Label>
+        <Input value={platformName} onChange={(e) => setPlatformName(e.target.value)} placeholder="My Website Builder" />
+        <p className="mt-1.5 text-xs text-zinc-500">
+          Shown across the dashboard, sign-in screens, and published-site credits.
+        </p>
       </div>
       <div>
         <Label>Tagline</Label>
@@ -399,6 +402,7 @@ export function SettingsTab() {
       </Button>
     </Card>
       <BrandingPanel />
+      <FaviconPanel />
       <MailPanel />
     </div>
   )

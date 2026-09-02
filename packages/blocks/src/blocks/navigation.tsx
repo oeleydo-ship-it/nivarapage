@@ -48,7 +48,7 @@ const chromeFields = [
 const navSchema = bareSchema(...brandFields, linkRepeater, ...ctaGroup, ...chromeFields)
 
 const baseNavProps: BlockProps = {
-  logo: 'UiDesired',
+  logo: 'Your Brand',
   logoUrl: '/',
   logoIcon: 'sparkles',
   showMark: true,

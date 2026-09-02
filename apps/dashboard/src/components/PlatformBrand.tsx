@@ -6,7 +6,7 @@ import { useBranding } from '../lib/useBranding'
  */
 export function PlatformBrand({ onDark = true, className }: { onDark?: boolean; className?: string }) {
   const { data } = useBranding()
-  const name = data?.platform_name || 'UiDesired'
+  const name = data?.platform_name || 'My Website Builder'
   const tagline = data?.platform_tagline ?? 'Website builder'
   const logo = (onDark ? data?.logo_dark_url || data?.logo_url : data?.logo_url) || null
 

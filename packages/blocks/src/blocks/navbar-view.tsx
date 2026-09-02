@@ -67,7 +67,7 @@ export function Logo({ props }: { props: Props }) {
               <Icon name={str(props.logoIcon, 'sparkles')} size={16} />
             </span>
           ) : null}
-          <EditableText edit={edit} path={['logo']} value={str(props.logo, 'UiDesired')} as="span" placeholder="Logo" />
+          <EditableText edit={edit} path={['logo']} value={str(props.logo, 'Your Brand')} as="span" placeholder="Logo" />
         </>
       )}
     </a>

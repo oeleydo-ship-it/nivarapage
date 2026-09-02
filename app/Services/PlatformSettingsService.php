@@ -31,7 +31,7 @@ class PlatformSettingsService
         $stored = PlatformSetting::query()->pluck('value', 'key');
 
         return [
-            'platform_name' => (string) ($stored['platform_name'] ?? config('app.name', 'UiDesired')),
+            'platform_name' => (string) ($stored->get('platform_name') ?: 'My Website Builder'),
             'platform_tagline' => (string) ($stored['platform_tagline'] ?? 'Website builder'),
             'support_email' => (string) ($stored['support_email'] ?? ''),
             'platform_domain' => $this->platformDomain(),

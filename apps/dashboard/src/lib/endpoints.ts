@@ -613,13 +613,13 @@ export const adminApi = {
   testMailSettings: (to: string) =>
     http.post<{ ok: boolean; message?: string; status?: AdminMailSettings }>('/admin/mail-settings/test', { to }),
   branding: () => http.get<PlatformBranding>('/admin/branding'),
-  uploadLogo: (file: File, variant: 'light' | 'dark' = 'light') => {
+  uploadLogo: (file: File, variant: 'light' | 'dark' | 'favicon' = 'light') => {
     const fd = new FormData()
     fd.append('file', file)
     fd.append('variant', variant)
     return http.upload<PlatformBranding>('/admin/branding/logo', fd)
   },
-  clearLogo: (variant: 'light' | 'dark' = 'light') =>
+  clearLogo: (variant: 'light' | 'dark' | 'favicon' = 'light') =>
     http.delete<PlatformBranding>(`/admin/branding/logo?variant=${variant}`),
 }
 
@@ -646,6 +646,7 @@ export type PlatformBranding = {
   platform_tagline: string
   logo_url: string | null
   logo_dark_url: string | null
+  favicon_url: string | null
   platform_domain?: string
 }
 

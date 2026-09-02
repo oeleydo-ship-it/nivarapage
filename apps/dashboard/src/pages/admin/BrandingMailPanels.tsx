@@ -15,12 +15,18 @@ function LogoSlot({
   url,
   label,
   hint,
+  accept = 'image/png,image/jpeg,image/webp,image/svg+xml',
+  emptyText = 'No logo — the wordmark is used',
+  previewClassName = 'max-h-12 max-w-full object-contain',
   onChanged,
 }: {
-  variant: 'light' | 'dark'
+  variant: 'light' | 'dark' | 'favicon'
   url: string | null
   label: string
   hint: string
+  accept?: string
+  emptyText?: string
+  previewClassName?: string
   onChanged: () => void
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
@@ -49,16 +55,16 @@ function LogoSlot({
         }`}
       >
         {url ? (
-          <img src={url} alt={`${label} preview`} className="max-h-12 max-w-full object-contain" />
+          <img src={url} alt={`${label} preview`} className={previewClassName} />
         ) : (
-          <span className="text-xs text-zinc-500">No logo — the wordmark is used</span>
+          <span className="text-xs text-zinc-500">{emptyText}</span>
         )}
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         <input
           ref={fileRef}
           type="file"
-          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          accept={accept}
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0]
@@ -113,6 +119,39 @@ export function BrandingPanel() {
           label="Dark background logo"
           hint="Optional. Used where the surface behind it is dark."
           url={branding.data?.logo_dark_url ?? null}
+          onChanged={onChanged}
+        />
+      </div>
+    </Card>
+  )
+}
+
+export function FaviconPanel() {
+  const qc = useQueryClient()
+  const branding = useQuery({ queryKey: ['admin-branding'], queryFn: adminApi.branding })
+
+  const onChanged = () => {
+    void qc.invalidateQueries({ queryKey: ['admin-branding'] })
+    void qc.invalidateQueries({ queryKey: ['branding'] })
+  }
+
+  return (
+    <Card className="max-w-xl space-y-3">
+      <div>
+        <h2 className="font-medium text-white">Favicon</h2>
+        <p className="text-sm text-zinc-500">
+          The browser-tab icon for the dashboard and sign-in screens. ICO, PNG or SVG, up to 2 MB.
+        </p>
+      </div>
+      <div className="max-w-[220px]">
+        <LogoSlot
+          variant="favicon"
+          label="Favicon"
+          hint="Square works best — it's shown small."
+          accept="image/x-icon,image/vnd.microsoft.icon,image/png,image/svg+xml,.ico"
+          emptyText="No custom favicon — the default is used"
+          previewClassName="h-8 w-8 object-contain"
+          url={branding.data?.favicon_url ?? null}
           onChanged={onChanged}
         />
       </div>

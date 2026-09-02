@@ -782,7 +782,7 @@
       "category": "navigation",
       "version": 1,
       "defaultProps": {
-        "logo": "UiDesired",
+        "logo": "Your Brand",
         "logoUrl": "/",
         "logoIcon": "sparkles",
         "showMark": true,
@@ -1559,7 +1559,7 @@
       "category": "navigation",
       "version": 1,
       "defaultProps": {
-        "logo": "UiDesired",
+        "logo": "Your Brand",
         "logoUrl": "/",
         "logoIcon": "sparkles",
         "showMark": true,
@@ -2336,7 +2336,7 @@
       "category": "navigation",
       "version": 1,
       "defaultProps": {
-        "logo": "UiDesired",
+        "logo": "Your Brand",
         "logoUrl": "/",
         "logoIcon": "sparkles",
         "showMark": true,
@@ -3117,7 +3117,7 @@
       "category": "navigation",
       "version": 1,
       "defaultProps": {
-        "logo": "UiDesired",
+        "logo": "Your Brand",
         "logoUrl": "/",
         "logoIcon": "sparkles",
         "showMark": true,
@@ -12143,7 +12143,7 @@
       "defaultProps": {
         "eyebrow": "Website builder",
         "heading": "Build a site you are proud of",
-        "description": "UiDesired helps teams launch polished websites without waiting on developers.",
+        "description": "A polished website your team can launch without waiting on developers.",
         "buttonLabel": "Start building",
         "buttonUrl": "/signup",
         "secondaryLabel": "See a demo",
@@ -38210,7 +38210,7 @@
           },
           {
             "title": "Build & launch",
-            "text": "Production websites on UiDesired, wired to your forms and analytics.",
+            "text": "Production websites wired to your forms and analytics.",
             "icon": "rocket",
             "price": "from $6,200",
             "features": "Page build\nForms and automations\nGo-live support"
@@ -38976,7 +38976,7 @@
           },
           {
             "title": "Build & launch",
-            "text": "Production websites on UiDesired, wired to your forms and analytics.",
+            "text": "Production websites wired to your forms and analytics.",
             "icon": "rocket",
             "price": "from $6,200",
             "features": "Page build\nForms and automations\nGo-live support"
@@ -90501,8 +90501,8 @@
       "category": "footer",
       "version": 1,
       "defaultProps": {
-        "brand": "UiDesired",
-        "copyright": "© 2026 UiDesired. All rights reserved.",
+        "brand": "Your Brand",
+        "copyright": "© 2026 Your Brand. All rights reserved.",
         "legal": [
           {
             "label": "Privacy",
@@ -91210,9 +91210,9 @@
       "category": "footer",
       "version": 1,
       "defaultProps": {
-        "brand": "UiDesired",
+        "brand": "Your Brand",
         "tagline": "Websites that look designed, not assembled.",
-        "copyright": "© 2026 UiDesired",
+        "copyright": "© 2026 Your Brand",
         "links": [
           {
             "label": "Home",
@@ -91935,9 +91935,9 @@
       "category": "footer",
       "version": 1,
       "defaultProps": {
-        "brand": "UiDesired",
+        "brand": "Your Brand",
         "tagline": "The website builder for teams that care how things look.",
-        "copyright": "© 2026 UiDesired. All rights reserved.",
+        "copyright": "© 2026 Your Brand. All rights reserved.",
         "columns": [
           {
             "title": "Product",

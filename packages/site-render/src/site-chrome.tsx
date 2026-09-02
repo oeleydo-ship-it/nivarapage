@@ -36,11 +36,15 @@ export function SiteChrome({
   menus,
   siteName,
   showBranding = true,
+  platformName,
+  platformUrl,
   children,
 }: {
   menus?: Menu[] | null;
   siteName?: string;
   showBranding?: boolean;
+  platformName?: string | null;
+  platformUrl?: string | null;
   children: ReactNode;
 }) {
   const header = menus?.find((menu) => menu.location === "header") || menus?.[0];
@@ -79,12 +83,12 @@ export function SiteChrome({
           <NavList items={footer.items} />
         </footer>
       ) : null}
-      {showBranding ? <PlatformBadge /> : null}
+      {showBranding ? <PlatformBadge platformName={platformName} platformUrl={platformUrl} /> : null}
     </>
   );
 }
 
-function PlatformBadge() {
+function PlatformBadge({ platformName, platformUrl }: { platformName?: string | null; platformUrl?: string | null }) {
   return (
     <div
       style={{
@@ -94,9 +98,8 @@ function PlatformBadge() {
         color: "var(--color-muted)",
       }}
     >
-      Made with{" "}
-      <a href="https://uidesired.com" style={{ color: "inherit" }}>
-        UiDesired
+      <a href={platformUrl || "/"} style={{ color: "inherit" }}>
+        {`Made with ${platformName || "this website builder"}`}
       </a>
     </div>
   );

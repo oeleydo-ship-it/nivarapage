@@ -267,7 +267,7 @@ export function SiteLivechatPage() {
                 value={widget.embed_script || ''}
               />
               <p className="mt-2 text-xs text-zinc-500">
-                Published UiDesired sites inject the widget automatically when it is enabled. Use the snippet for other hosts.
+                Published sites on this platform inject the widget automatically when it is enabled. Use the snippet for other hosts.
               </p>
             </div>
           </Card>

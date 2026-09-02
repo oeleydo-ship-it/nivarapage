@@ -9,6 +9,8 @@ const site = {
   host: 'acme.example.com',
   redirect_to_primary: false,
   branding_removed: false,
+  platform_name: 'Acme Platform',
+  platform_url: 'https://app.example.com',
   theme: { headingFont: 'Inter', bodyFont: 'Inter', colorPrimary: '#123456' },
   settings: { locale: 'en', default_description: 'We make things.' },
 } as never
@@ -82,9 +84,9 @@ describe('renderSiteDocument', () => {
   })
 
   it('keeps the branding credit unless the site paid to remove it', () => {
-    expect(render()).toContain('Made with UiDesired')
+    expect(render()).toContain('Made with Acme Platform')
     const removed = { ...(site as object), branding_removed: true }
-    expect(render({ site: removed })).not.toContain('Made with UiDesired')
+    expect(render({ site: removed })).not.toContain('Made with Acme Platform')
   })
 })
 

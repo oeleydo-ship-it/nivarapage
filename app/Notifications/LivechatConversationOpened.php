@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\LivechatConversation;
+use App\Services\BrandingService;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -35,6 +36,6 @@ class LivechatConversationOpened extends Notification
                 $this->conversation->region,
                 $this->conversation->country,
             ])->filter()->implode(', ') ?: '—'))
-            ->line('Open Livechat in UiDesired to reply.');
+            ->line('Open Livechat in '.app(BrandingService::class)->public()['platform_name'].' to reply.');
     }
 }

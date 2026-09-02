@@ -88,7 +88,7 @@ export const heroCentered = defineBlock({
   defaultProps: {
     eyebrow: 'Website builder',
     heading: 'Build a site you are proud of',
-    description: 'UiDesired helps teams launch polished websites without waiting on developers.',
+    description: 'A polished website your team can launch without waiting on developers.',
     buttonLabel: 'Start building',
     buttonUrl: '/signup',
     secondaryLabel: 'See a demo',

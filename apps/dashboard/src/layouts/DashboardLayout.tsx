@@ -137,8 +137,8 @@ export function DashboardLayout() {
 
   const user = userQuery.data as User | undefined
   const currentId = getWorkspaceId()
-  const workspaceName = (workspaces.data || []).find((w) => String(w.id) === String(currentId))?.name
-  const brandName = useBranding().data?.platform_name || 'UiDesired'
+  const workspaceName = (workspaces.data || []).find((w) => String(w.id) === String(currentId))?.name
+  const brandName = useBranding().data?.platform_name || 'My Website Builder'
 
   const workspaceSelect = (
     <select

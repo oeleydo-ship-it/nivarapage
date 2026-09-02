@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\FormSubmission;
+use App\Services\BrandingService;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -44,6 +45,6 @@ class FormSubmissionReceived extends Notification
             $mail->line(ucfirst(str_replace('_', ' ', (string) $key)).': '.(is_scalar($value) ? (string) $value : json_encode($value)));
         }
 
-        return $mail->line('Open the Forms inbox in UiDesired to follow up.');
+        return $mail->line('Open the Forms inbox in '.app(BrandingService::class)->public()['platform_name'].' to follow up.');
     }
 }

@@ -27,14 +27,23 @@ class AdminBrandingController extends Controller
         return response()->json(['data' => $this->branding->public()]);
     }
 
+    private function keyForVariant(string $variant): string
+    {
+        return match ($variant) {
+            'dark' => 'platform_logo_dark',
+            'favicon' => 'platform_favicon',
+            default => 'platform_logo',
+        };
+    }
+
     public function store(Request $request): JsonResponse
     {
         $request->validate([
             'file' => ['required', 'file', 'max:2048'],
-            'variant' => ['sometimes', 'in:light,dark'],
+            'variant' => ['sometimes', 'in:light,dark,favicon'],
         ]);
 
-        $key = $request->input('variant') === 'dark' ? 'platform_logo_dark' : 'platform_logo';
+        $key = $this->keyForVariant((string) $request->input('variant'));
 
         try {
             $this->branding->storeLogo($request->file('file'), $key);
@@ -49,7 +58,7 @@ class AdminBrandingController extends Controller
 
     public function destroy(Request $request): JsonResponse
     {
-        $key = $request->input('variant') === 'dark' ? 'platform_logo_dark' : 'platform_logo';
+        $key = $this->keyForVariant((string) $request->input('variant'));
         $this->branding->clearLogo($key);
 
         $this->audit->log('branding.logo_cleared', null, ['variant' => $key], null, $request->user());

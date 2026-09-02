@@ -7,6 +7,7 @@ use App\Models\BlogPost;
 use App\Models\Page;
 use App\Models\Site;
 use App\Services\BlogService;
+use App\Services\BrandingService;
 use App\Services\NavigationService;
 use App\Services\Rendering\SiteRenderService;
 use App\Services\SiteChromeService;
@@ -113,7 +114,7 @@ class SiteRenderController extends Controller
      * separate public endpoints would risk pages being rendered against
      * different versions of the theme or navigation.
      */
-    public function payload(Site $site, SeoService $seo, NavigationService $navigation, SiteChromeService $chrome, BlogService $blog): JsonResponse
+    public function payload(Site $site, SeoService $seo, NavigationService $navigation, SiteChromeService $chrome, BlogService $blog, BrandingService $branding): JsonResponse
     {
         Gate::authorize('view', $site);
 
@@ -166,6 +167,8 @@ class SiteRenderController extends Controller
                     'primary_hostname' => $primary?->hostname,
                     'redirect_to_primary' => false,
                     'branding_removed' => (bool) $site->workspace?->branding_removed,
+                    'platform_name' => $branding->public()['platform_name'],
+                    'platform_url' => rtrim((string) config('app.url'), '/'),
                     'settings' => $site->settings?->toArray(),
                     'theme' => $site->theme?->tokens ?? [],
                     // Published pages are static, so the widget has to be

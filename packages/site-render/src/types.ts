@@ -3,6 +3,8 @@ export type SiteSettings = {
   favicon?: string | null;
   social_image?: string | null;
   robots?: string | null;
+  google_analytics_id?: string | null;
+  google_site_verification?: string | null;
   locale?: string | null;
   redirect_secondary_to_primary?: boolean;
   branding?: Record<string, unknown> | null;
@@ -20,6 +22,9 @@ export type ResolvedSite = {
   settings?: SiteSettings | null;
   theme?: Record<string, unknown> | null;
   branding_removed?: boolean;
+  /** The platform's own name and URL, for the "Made with…" credit. */
+  platform_name?: string | null;
+  platform_url?: string | null;
   livechat?: {
     public_key: string;
     enabled: boolean;

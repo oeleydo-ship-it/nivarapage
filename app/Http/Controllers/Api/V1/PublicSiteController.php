@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Site;
+use App\Services\BrandingService;
 use App\Services\SiteChromeService;
 use App\Services\BlogService;
 use App\Services\NavigationService;
@@ -35,6 +36,7 @@ class PublicSiteController extends Controller
                 && $primary->status === 'active';
 
             $widget = $site->livechatWidget;
+            $branding = app(BrandingService::class)->public();
 
             return [
                 'site_id' => $site->id,
@@ -45,6 +47,8 @@ class PublicSiteController extends Controller
                 'primary_hostname' => $primary?->hostname,
                 'redirect_to_primary' => $shouldRedirect,
                 'branding_removed' => (bool) $site->workspace?->branding_removed,
+                'platform_name' => $branding['platform_name'],
+                'platform_url' => rtrim((string) config('app.url'), '/'),
                 'settings' => $site->settings?->toArray(),
                 'theme' => $site->theme?->tokens ?? [],
                 'livechat' => $widget && $widget->enabled ? [

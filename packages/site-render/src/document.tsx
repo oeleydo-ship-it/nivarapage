@@ -84,8 +84,8 @@ export function PublishedPage({
       {framed}
       {site.branding_removed ? null : (
         <div style={{ textAlign: "center", padding: "0.75rem 1rem 1.25rem", fontSize: 12, opacity: 0.7 }}>
-          <a href="https://uidesired.com" target="_blank" rel="noopener noreferrer">
-            Made with UiDesired
+          <a href={site.platform_url || "/"} target="_blank" rel="noopener noreferrer">
+            {`Made with ${site.platform_name || "this website builder"}`}
           </a>
         </div>
       )}

@@ -37,7 +37,7 @@ const serviceItems = [
   },
   {
     title: 'Build & launch',
-    text: 'Production websites on UiDesired, wired to your forms and analytics.',
+    text: 'Production websites wired to your forms and analytics.',
     icon: 'rocket',
     price: 'from $6,200',
     features: 'Page build\nForms and automations\nGo-live support',
