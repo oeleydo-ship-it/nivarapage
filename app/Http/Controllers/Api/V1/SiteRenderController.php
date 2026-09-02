@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\BlogPost;
 use App\Models\Page;
 use App\Models\Site;
+use App\Services\BlogService;
 use App\Services\NavigationService;
 use App\Services\Rendering\SiteRenderService;
 use App\Services\SiteChromeService;
@@ -81,14 +83,6 @@ class SiteRenderController extends Controller
     }
 
     /**
-     * Everything the builder needs to render this site's published pages.
-     *
-     * Deliberately one request rather than several: the builder renders every
-     * page in a single pass at publish time, and assembling this from the
-     * separate public endpoints would risk pages being rendered against
-     * different versions of the theme or navigation.
-     */
-    /**
      * The livechat widget a published page should boot, or null.
      *
      * The URL is absolute and points at this application: a published site is
@@ -111,7 +105,15 @@ class SiteRenderController extends Controller
         ];
     }
 
-    public function payload(Site $site, SeoService $seo, NavigationService $navigation, SiteChromeService $chrome): JsonResponse
+    /**
+     * Everything the builder needs to render this site's published addresses.
+     *
+     * Deliberately one request rather than several: the builder renders every
+     * page in a single pass at publish time, and assembling this from the
+     * separate public endpoints would risk pages being rendered against
+     * different versions of the theme or navigation.
+     */
+    public function payload(Site $site, SeoService $seo, NavigationService $navigation, SiteChromeService $chrome, BlogService $blog): JsonResponse
     {
         Gate::authorize('view', $site);
 
@@ -135,6 +137,24 @@ class SiteRenderController extends Controller
             ])
             ->values();
 
+        /**
+         * Published blog posts are addresses this site answers on, so they are
+         * rendered alongside the pages rather than separately. Without this a
+         * post is linked from the index and listed in the sitemap while having
+         * nothing to serve - a 404 on a link the site itself published.
+         */
+        $posts = $site->blogPosts()
+            ->live()
+            ->latest('published_at')
+            ->latest('id')
+            ->get()
+            ->map(fn (BlogPost $post) => [
+                'page_id' => null,
+                'revision_id' => null,
+                'path' => $blog->postPath($site, $post),
+                'page' => $seo->publicPostPage($site, $post),
+            ]);
+
         return response()->json([
             'data' => [
                 'site' => [
@@ -157,7 +177,7 @@ class SiteRenderController extends Controller
                 // composed into each page as it renders, so one edit reaches all
                 // of them and no page can be left holding an older copy.
                 'chrome' => $chrome->get($site),
-                'pages' => $pages,
+                'pages' => $pages->concat($posts)->values(),
             ],
         ]);
     }

@@ -6,6 +6,7 @@ import {
   CtaGroup,
   Grid,
   Media,
+  SafeRich,
   SafeText,
   SectionHead,
   SectionShell,
@@ -428,6 +429,77 @@ export const blogOverlay = defineBlock({
           ) : null}
         </Body>
         <CtaGroup props={props} primaryVariant="link" />
+      </SectionShell>
+    )
+  },
+  settings: null,
+})
+
+/* ------------------------------------------------------------- blog.post */
+
+/**
+ * One article, at its own address.
+ *
+ * A published site serves stored HTML, so every blog post needs a page of its
+ * own rendered at publish time. This is that page: the same block pipeline as
+ * everything else, which is what gives an article the site's theme, header and
+ * footer without a second renderer.
+ */
+export const blogPost = defineBlock({
+  type: 'blog.post',
+  version: 1,
+  category: 'blog',
+  label: 'Blog article',
+  icon: 'FileText',
+  defaultProps: {
+    eyebrow: 'Blog',
+    heading: 'Article title',
+    description: '',
+    date: '',
+    author: '',
+    image: '',
+    bodyHtml: '<p>The body of the article.</p>',
+    backLabel: 'All posts',
+    backUrl: '/blog',
+  },
+  schema: schema(
+    ...headFields,
+    text('date', 'Date'),
+    text('author', 'Author'),
+    image('image', 'Cover image'),
+    field('bodyHtml', 'richtext', 'Body', 'content'),
+    text('backLabel', 'Back link label'),
+    link('backUrl', 'Back link'),
+  ),
+  component: (props) => {
+    const edit = editOf(props)
+    const date = str(props.date)
+    const author = str(props.author)
+    const backLabel = str(props.backLabel)
+    const backUrl = str(props.backUrl, '/blog')
+    return (
+      <SectionShell props={props} tone="default">
+        <article className="ud-blog-article">
+          {/* level 1: this section is the whole page, so its heading is the
+              document heading rather than one of several on a landing page. */}
+          <SectionHead props={props} defaultHeading="Article" level={1} />
+          {date || author ? (
+            <p className="ud-small" style={{ margin: '0 0 8px', display: 'flex', gap: 10 }}>
+              <EditableText edit={edit} path={['date']} value={date} placeholder="Date" />
+              {date && author ? <span aria-hidden="true">·</span> : null}
+              <EditableText edit={edit} path={['author']} value={author} placeholder="Author" />
+            </p>
+          ) : null}
+          <Media src={props.image} alt={str(props.heading)} ratio="wide" edit={edit} path={['image']} />
+          <Body>
+            <SafeRich html={props.bodyHtml} edit={edit} path={['bodyHtml']} />
+          </Body>
+          {backLabel ? (
+            <p className="ud-small" style={{ marginTop: 28 }}>
+              <a href={backUrl}>{backLabel}</a>
+            </p>
+          ) : null}
+        </article>
       </SectionShell>
     )
   },

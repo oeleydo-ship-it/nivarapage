@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\BlogPostResource;
 use App\Models\BlogPost;
+use App\Models\Site;
+use App\Services\BlogIndexService;
 use App\Services\BlogService;
 use App\Support\CurrentWorkspace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class BlogPostController extends Controller
 {
@@ -72,6 +75,25 @@ class BlogPostController extends Controller
         $blog->delete($blogPost);
 
         return response()->json(['data' => ['ok' => true]]);
+    }
+
+    /**
+     * Gives a website the blog index page its posts link back to.
+     *
+     * Most templates ship without one, so a site can have published posts and
+     * nothing at /blog for them to sit under. Idempotent, and it never touches
+     * a blog page that already exists.
+     */
+    public function ensureIndex(Site $site, BlogIndexService $index, BlogService $blog, Request $request): JsonResponse
+    {
+        Gate::authorize('update', $site);
+
+        $page = $index->ensure($site, $request->user());
+
+        return response()->json(['data' => [
+            'page_id' => $page->id,
+            'path' => $blog->indexPath($site),
+        ]]);
     }
 
     /**

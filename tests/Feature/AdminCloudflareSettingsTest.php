@@ -3,14 +3,15 @@
 use App\Models\CloudflareSetting;
 use App\Services\Cloudflare\CloudflareClient;
 use App\Services\Cloudflare\CloudflareSettingsService;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\FakeCloudflareClient;
 
 function fakeCloudflare(): FakeCloudflareClient
 {
     $fake = new FakeCloudflareClient;
-    test()->app->instance(CloudflareClient::class, $fake);
-    test()->app->forgetInstance(CloudflareSettingsService::class);
+    app()->instance(CloudflareClient::class, $fake);
+    app()->forgetInstance(CloudflareSettingsService::class);
 
     return $fake;
 }
@@ -58,7 +59,7 @@ it('stores Cloudflare for SaaS settings without ever returning the token', funct
 
     // Stored encrypted, and readable back through the model cast.
     expect(CloudflareSetting::current()->api_token)->toBe('cf-secret-token-value');
-    expect(CloudflareSetting::query()->value('api_token'))->not->toBe('cf-secret-token-value');
+    expect(DB::table('cloudflare_settings')->value('api_token'))->not->toBe('cf-secret-token-value');
 
     // Omitting the token keeps it; sending "" clears it back to the environment.
     $this->putJson('/api/v1/admin/cloudflare', ['account_id' => 'acct_456'])->assertOk();

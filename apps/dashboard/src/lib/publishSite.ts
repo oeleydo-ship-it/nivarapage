@@ -23,16 +23,18 @@ export type PublishResult = {
 }
 
 /**
- * Publishes a site and rebuilds the HTML its visitors receive.
+ * Rebuilds the HTML a site's visitors receive, from what is already live.
  *
  * Block components are React and are shared with the editor, so the browser
- * that already has them loaded renders each published page here and uploads the
- * result. The server then serves stored HTML instead of rendering per request,
- * which is what lets the whole product run as one Laravel application.
+ * that already has them loaded renders each published address here and uploads
+ * the result. The server then serves stored HTML instead of rendering per
+ * request, which is what lets the whole product run as one Laravel application.
+ *
+ * This reads published revisions only, so it is safe to call on its own: it
+ * never promotes a draft. That is what lets a blog post go live without
+ * republishing whatever the owner happens to have half-edited in the builder.
  */
-export async function publishSiteWithRenders(siteId: string | number): Promise<PublishResult> {
-  await sitesApi.publish(siteId)
-
+export async function renderSiteHtml(siteId: string | number): Promise<PublishResult> {
   try {
     // http.get already unwraps the API's { data: ... } envelope.
     const { site, menus, pages, chrome } = await http.get<RenderPayload>(`/sites/${siteId}/render-payload`)
@@ -59,14 +61,21 @@ export async function publishSiteWithRenders(siteId: string | number): Promise<P
 
     return { rendered: renders.length }
   } catch (error) {
-    // Never fail the publish because the render failed. The publish itself is
-    // the durable act - the content is saved and the site is marked published.
+    // Never fail the caller because the render failed. Publishing is the
+    // durable act - the content is saved and the site is marked published.
     // Reporting the render problem separately keeps the two distinguishable.
     // It is logged rather than only returned: a silent render failure looks
     // exactly like a successful publish, and the pages quietly serve stale HTML.
     console.error('[publish] rendering the site HTML failed', error)
     return { rendered: 0, renderError: error instanceof Error ? error.message : String(error) }
   }
+}
+
+/** Publishes a site, then rebuilds the HTML its visitors receive. */
+export async function publishSiteWithRenders(siteId: string | number): Promise<PublishResult> {
+  await sitesApi.publish(siteId)
+
+  return renderSiteHtml(siteId)
 }
 
 type FunnelRenderPayload = RenderPayload & { site_id: number }

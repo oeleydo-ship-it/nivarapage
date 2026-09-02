@@ -6,7 +6,8 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { MediaPicker } from '../components/MediaLibrary'
 import { RichTextEditor } from '../components/RichTextEditor'
 import { relativeTime } from '../components/SiteCard'
-import { blogApi, sitesApi } from '../lib/endpoints'
+import { blogApi, pagesApi, sitesApi } from '../lib/endpoints'
+import { renderSiteHtml } from '../lib/publishSite'
 import { liveUrl } from '../lib/siteUrls'
 import { Badge, Button, Card, EmptyState, Input, Label, PageHeader, Select, type BadgeTone } from '../ui/primitives'
 
@@ -33,6 +34,30 @@ function hashHue(input: string): number {
 
 function postLiveUrl(post: BlogPost): string | null {
   return liveUrl(post.site as Site | undefined, post.path || `/blog/${post.slug}`)
+}
+
+/** A post is only reachable once the website it belongs to is published. */
+function siteIsPublished(site: Pick<Site, 'status'> | null | undefined): boolean {
+  return site?.status === 'published'
+}
+
+/**
+ * Rebuilds the HTML the site's visitors receive, so a post change reaches them.
+ *
+ * A published site serves HTML that was rendered when it was published, so a
+ * post saved only to the database has no page to serve - which is a 404 on the
+ * link its own blog index prints. This renders from the site's published
+ * revisions, so it publishes the post without pushing out whatever half-edited
+ * page happens to be open in the builder.
+ *
+ * @returns a warning to show the author, or null when the live site is current.
+ */
+async function syncSiteRenders(...sites: Array<Pick<Site, 'id' | 'status'> | null | undefined>): Promise<string | null> {
+  const ids = [...new Set(sites.filter(siteIsPublished).map((site) => site!.id))]
+  const results = await Promise.all(ids.map((siteId) => renderSiteHtml(siteId)))
+  const failed = results.find((result) => result.renderError)
+
+  return failed?.renderError ?? null
 }
 
 export function BlogPage() {
@@ -184,7 +209,9 @@ function PostCard({ post }: { post: BlogPost }) {
           {post.category ? <span>{post.category}</span> : null}
           {updated ? <span>Updated {updated}</span> : null}
         </div>
-        {post.status === 'published' && url ? (
+        {post.status !== 'published' ? null : !siteIsPublished(post.site) ? (
+          <p className="mt-2 text-xs text-amber-500">Waiting on the website to be published</p>
+        ) : url ? (
           <p className="mt-2 truncate text-xs text-zinc-600">{url.replace(/^https?:\/\//, '')}</p>
         ) : null}
       </Card>
@@ -292,6 +319,10 @@ export function BlogPostDetailPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [error, setError] = useState<string | null>(null)
+  // Saving the post and rebuilding the live site are two acts. When the second
+  // fails the post is still saved, so it is reported on its own rather than as
+  // a failed save the author would retry pointlessly.
+  const [liveWarning, setLiveWarning] = useState<string | null>(null)
   const postQuery = useQuery({
     queryKey: ['blog-post', id],
     queryFn: () => blogApi.get(id!),
@@ -341,33 +372,75 @@ export function BlogPostDetailPage() {
     status,
   }
 
-  const save = useMutation({
-    mutationFn: () => blogApi.update(id!, payload),
-    onSuccess: (updated) => {
-      qc.setQueryData(['blog-post', id], updated)
-      qc.invalidateQueries({ queryKey: ['blog-posts'] })
-      qc.invalidateQueries({ queryKey: ['overview'] })
-      setError(null)
+  /**
+   * The index a post sits under. Most templates ship without a blog page, so a
+   * site can have published posts and nothing at /blog holding them together.
+   */
+  const pagesQuery = useQuery({
+    queryKey: ['pages', siteId],
+    queryFn: () => pagesApi.list(siteId),
+    enabled: Boolean(siteId),
+  })
+  const indexSlug = (pagesQuery.data || []).some((page) => page.slug === 'journal') ? 'journal' : 'blog'
+  const indexPage = (pagesQuery.data || []).find((page) => page.slug === indexSlug)
+  const indexMissing = Boolean(pagesQuery.data) && !indexPage
+
+  const createIndex = useMutation({
+    mutationFn: async () => {
+      await blogApi.ensureIndex(siteId)
+
+      return syncSiteRenders(post?.site as Site | undefined)
     },
+    onSuccess: (warning) => {
+      qc.invalidateQueries({ queryKey: ['pages', siteId] })
+      setLiveWarning(warning)
+    },
+    onError: (err: Error) => setError(err.message),
+  })
+
+  /**
+   * Both sites the change touches. Moving a post to another website has to
+   * rebuild the one it left as well, or its old host keeps answering on the
+   * post's address with an article that is no longer there.
+   */
+  const affectedSites = (updated: BlogPost) => [updated.site as Site | undefined, post?.site as Site | undefined]
+
+  const afterWrite = (updated: BlogPost, warning: string | null) => {
+    qc.setQueryData(['blog-post', id], updated)
+    qc.invalidateQueries({ queryKey: ['blog-posts'] })
+    qc.invalidateQueries({ queryKey: ['overview'] })
+    setError(null)
+    setLiveWarning(warning)
+  }
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const updated = await blogApi.update(id!, payload)
+
+      return { updated, warning: await syncSiteRenders(...affectedSites(updated)) }
+    },
+    onSuccess: ({ updated, warning }) => afterWrite(updated, warning),
     onError: (err: Error) => setError(err.message),
   })
 
   const publish = useMutation({
     mutationFn: async () => {
       await blogApi.update(id!, { ...payload, status: undefined })
-      return blogApi.publish(id!)
+      const updated = await blogApi.publish(id!)
+
+      return { updated, warning: await syncSiteRenders(...affectedSites(updated)) }
     },
-    onSuccess: (updated) => {
-      qc.setQueryData(['blog-post', id], updated)
-      qc.invalidateQueries({ queryKey: ['blog-posts'] })
-      qc.invalidateQueries({ queryKey: ['overview'] })
-      setError(null)
-    },
+    onSuccess: ({ updated, warning }) => afterWrite(updated, warning),
     onError: (err: Error) => setError(err.message),
   })
 
   const remove = useMutation({
-    mutationFn: () => blogApi.remove(id!),
+    mutationFn: async () => {
+      await blogApi.remove(id!)
+      // Rebuild before leaving: the deleted post's page is dropped by the same
+      // pass, so it stops answering instead of outliving the post itself.
+      await syncSiteRenders(post?.site as Site | undefined)
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['blog-posts'] })
       qc.invalidateQueries({ queryKey: ['overview'] })
@@ -427,6 +500,42 @@ export function BlogPostDetailPage() {
           </div>
         }
       />
+
+      {liveWarning ? (
+        <p className="mb-4 rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2 text-sm text-amber-300">
+          The post was saved, but the live site could not be rebuilt: {liveWarning} Publishing the website again will
+          bring it up to date.
+        </p>
+      ) : post.status === 'published' && !siteIsPublished(selectedSite) ? (
+        <p className="mb-4 rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2 text-sm text-amber-300">
+          This post is published, but {selectedSite?.name || 'its website'} is not. Publish the website to put the post
+          online.
+        </p>
+      ) : post.status === 'published' && url ? (
+        <p className="mb-4 truncate text-sm text-zinc-500">
+          Live at{' '}
+          <a href={url} target="_blank" rel="noreferrer" className="text-blue-400">
+            {url.replace(/^https?:\/\//, '')}
+          </a>
+        </p>
+      ) : null}
+
+      {indexMissing ? (
+        <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 border-zinc-800">
+          <div>
+            <p className="text-sm text-zinc-200">
+              {selectedSite?.name || 'This website'} has no blog page yet.
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Posts get their own address either way, but without a page at /{indexSlug} there is nowhere listing them
+              and nowhere for a reader to go back to.
+            </p>
+          </div>
+          <Button variant="outline" disabled={createIndex.isPending} onClick={() => createIndex.mutate()}>
+            {createIndex.isPending ? 'Creating…' : 'Create the blog page'}
+          </Button>
+        </Card>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
         <Card className="space-y-4">

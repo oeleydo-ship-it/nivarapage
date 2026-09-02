@@ -401,6 +401,11 @@ export const blockCss = `
 .ud-media-box:hover .ud-edit-image,.ud-edit-image:focus{opacity:1;}
 
 .ud-blog-list{display:grid;gap:28px;}
+/* One article at its own address. Capped at a comfortable measure so long
+   prose does not run the full width of a wide container. */
+.ud-blog-article{max-width:min(72ch,100%);margin-inline:auto;}
+.ud-blog-article .ud-media{margin-block:28px;}
+
 .ud-blog-row{display:grid;grid-template-columns:minmax(0,240px) minmax(0,1fr);gap:24px;align-items:center;}
 .ud-blog-featured{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,.75fr);gap:clamp(24px,3cqi,40px);align-items:start;}
 .ud-blog-featured__side{display:grid;gap:0;}

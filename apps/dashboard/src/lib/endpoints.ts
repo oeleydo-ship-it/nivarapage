@@ -180,6 +180,9 @@ export const blogApi = {
   create: (body: Record<string, unknown>) => http.post<BlogPost>('/blog-posts', body),
   update: (id: string | number, body: Record<string, unknown>) => http.patch<BlogPost>(`/blog-posts/${id}`, body),
   publish: (id: string | number) => http.post<BlogPost>(`/blog-posts/${id}/publish`),
+  /** Creates the site's blog index page if it has none. Idempotent. */
+  ensureIndex: (siteId: string | number) =>
+    http.post<{ page_id: number; path: string }>(`/sites/${siteId}/blog-index`),
   remove: (id: string | number) => http.delete<{ ok: boolean }>(`/blog-posts/${id}`),
 }
 

@@ -108,8 +108,6 @@ class BlogService
      */
     public function publishedCards(Site $site): array
     {
-        $prefix = $this->indexPath($site);
-
         return $site->blogPosts()
             ->live()
             ->latest('published_at')
@@ -121,7 +119,7 @@ class BlogService
                 'date' => optional($post->published_at)->toFormattedDateString(),
                 'tag' => $post->category ?: 'Blog',
                 'image' => $post->cover_image,
-                'url' => $prefix.'/'.$post->slug,
+                'url' => $this->postPath($site, $post),
             ])
             ->values()
             ->all();
@@ -200,6 +198,18 @@ class BlogService
         return in_array($page?->slug, ['blog', 'journal'], true);
     }
 
+    /**
+     * The address a published post answers on.
+     *
+     * Every caller that needs it - the sitemap, the cards on the index, the
+     * page rendered at publish time - goes through here, so the link and the
+     * page it points at cannot disagree.
+     */
+    public function postPath(Site $site, BlogPost $post): string
+    {
+        return $this->indexPath($site).'/'.$post->slug;
+    }
+
     public function indexPath(Site $site): string
     {
         $hasJournal = $site->pages()->where('slug', 'journal')->exists();
@@ -207,11 +217,25 @@ class BlogService
         return $hasJournal ? '/journal' : '/blog';
     }
 
+    /**
+     * True when the index a post links back to is a page visitors can open.
+     *
+     * Most templates ship no blog page, so a site can have published posts and
+     * nothing at /blog. Printing a back link to it anyway sends the reader to a
+     * 404 from a page we produced ourselves.
+     */
+    public function hasIndexPage(Site $site): bool
+    {
+        return $site->pages()
+            ->where('slug', ltrim($this->indexPath($site), '/'))
+            ->whereNotNull('published_revision_id')
+            ->exists();
+    }
+
     public function publicPost(BlogPost $post): array
     {
         $post->loadMissing('site');
-        $prefix = $post->site ? $this->indexPath($post->site) : '/blog';
-        $path = $prefix.'/'.$post->slug;
+        $path = $post->site ? $this->postPath($post->site, $post) : '/blog/'.$post->slug;
 
         return [
             'id' => $post->id,

@@ -50,7 +50,7 @@ import { formAppointment, formContact, formLead, formNewsletter, formQuote } fro
 import { statsHighlight, statsRow } from './blocks/stats'
 import { teamCards, teamSpotlight } from './blocks/team'
 import { processSteps, processTimeline } from './blocks/process'
-import { blogFeatured, blogList, blogMagazine, blogOverlay } from './blocks/blog'
+import { blogFeatured, blogList, blogMagazine, blogOverlay, blogPost } from './blocks/blog'
 import { contentCapabilities, ctaBar, ctaGradient, galleryProjects, heroStudio, pricingDuo, testimonialsBento } from './blocks/studio'
 import { featuresMinimal, heroProduct, teamCircle, testimonialsCompact } from './blocks/chatdeck'
 import { featuresRail, heroGlow, processZigzag, testimonialsRail } from './blocks/genesis'
@@ -387,6 +387,7 @@ const blocks = [
   blogFeatured,
   blogMagazine,
   blogOverlay,
+  blogPost,
   galleryGrid,
   galleryMasonry,
   galleryCarousel,

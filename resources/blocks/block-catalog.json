@@ -54794,6 +54794,640 @@
       ]
     },
     {
+      "type": "blog.post",
+      "label": "Blog article",
+      "category": "blog",
+      "version": 1,
+      "defaultProps": {
+        "eyebrow": "Blog",
+        "heading": "Article title",
+        "description": "",
+        "date": "",
+        "author": "",
+        "image": "",
+        "bodyHtml": "<p>The body of the article.</p>",
+        "backLabel": "All posts",
+        "backUrl": "/blog"
+      },
+      "fields": [
+        {
+          "key": "eyebrow",
+          "type": "text",
+          "label": "Eyebrow",
+          "group": "content"
+        },
+        {
+          "key": "heading",
+          "type": "text",
+          "label": "Heading",
+          "group": "content"
+        },
+        {
+          "key": "description",
+          "type": "textarea",
+          "label": "Description",
+          "group": "content"
+        },
+        {
+          "key": "date",
+          "type": "text",
+          "label": "Date",
+          "group": "content"
+        },
+        {
+          "key": "author",
+          "type": "text",
+          "label": "Author",
+          "group": "content"
+        },
+        {
+          "key": "image",
+          "type": "image",
+          "label": "Cover image",
+          "group": "content"
+        },
+        {
+          "key": "bodyHtml",
+          "type": "richtext",
+          "label": "Body",
+          "group": "content"
+        },
+        {
+          "key": "backLabel",
+          "type": "text",
+          "label": "Back link label",
+          "group": "content"
+        },
+        {
+          "key": "backUrl",
+          "type": "link",
+          "label": "Back link",
+          "group": "content"
+        },
+        {
+          "key": "tone",
+          "type": "select",
+          "label": "Color scheme",
+          "group": "design",
+          "options": [
+            "default",
+            "surface",
+            "dark",
+            "primary",
+            "accent",
+            "gradient"
+          ]
+        },
+        {
+          "key": "eyebrowStyle",
+          "type": "select",
+          "label": "Eyebrow style",
+          "group": "design",
+          "options": [
+            "plain",
+            "pill"
+          ]
+        },
+        {
+          "key": "borderWidth",
+          "type": "slider",
+          "label": "Border width",
+          "group": "design"
+        },
+        {
+          "key": "borderColor",
+          "type": "color",
+          "label": "Border color",
+          "group": "design"
+        },
+        {
+          "key": "borderRadius",
+          "type": "slider",
+          "label": "Section corners",
+          "group": "design"
+        },
+        {
+          "key": "sectionShadow",
+          "type": "select",
+          "label": "Section shadow",
+          "group": "design",
+          "options": [
+            "none",
+            "soft",
+            "medium",
+            "strong"
+          ]
+        },
+        {
+          "key": "textAlign",
+          "type": "alignment",
+          "label": "Text alignment",
+          "group": "layout"
+        },
+        {
+          "key": "contentWidth",
+          "type": "select",
+          "label": "Content width",
+          "group": "layout",
+          "options": [
+            "narrow",
+            "default",
+            "wide",
+            "full"
+          ]
+        },
+        {
+          "key": "sectionMinHeight",
+          "type": "slider",
+          "label": "Minimum height",
+          "group": "layout"
+        },
+        {
+          "key": "overflow",
+          "type": "select",
+          "label": "Overflow",
+          "group": "layout",
+          "options": [
+            "visible",
+            "hidden"
+          ]
+        },
+        {
+          "key": "anchorId",
+          "type": "text",
+          "label": "Anchor ID",
+          "group": "layout"
+        },
+        {
+          "key": "headingColor",
+          "type": "color",
+          "label": "Heading color",
+          "group": "typography"
+        },
+        {
+          "key": "textColor",
+          "type": "color",
+          "label": "Text color",
+          "group": "typography"
+        },
+        {
+          "key": "accentColor",
+          "type": "color",
+          "label": "Accent color",
+          "group": "typography"
+        },
+        {
+          "key": "headingFont",
+          "type": "select",
+          "label": "Heading font",
+          "group": "typography",
+          "options": [
+            "",
+            "Inter, system-ui, sans-serif",
+            "Manrope, system-ui, sans-serif",
+            "Poppins, system-ui, sans-serif",
+            "DM Sans, system-ui, sans-serif",
+            "Plus Jakarta Sans, system-ui, sans-serif",
+            "Outfit, system-ui, sans-serif",
+            "Figtree, system-ui, sans-serif",
+            "Space Grotesk, system-ui, sans-serif",
+            "Urbanist, system-ui, sans-serif",
+            "Work Sans, system-ui, sans-serif",
+            "Lato, system-ui, sans-serif",
+            "Montserrat, system-ui, sans-serif",
+            "Open Sans, system-ui, sans-serif",
+            "Raleway, system-ui, sans-serif",
+            "Rubik, system-ui, sans-serif",
+            "Karla, system-ui, sans-serif",
+            "Nunito, system-ui, sans-serif",
+            "Nunito Sans, system-ui, sans-serif",
+            "Source Sans 3, system-ui, sans-serif",
+            "IBM Plex Sans, system-ui, sans-serif",
+            "Sora, system-ui, sans-serif",
+            "Albert Sans, system-ui, sans-serif",
+            "Mulish, system-ui, sans-serif",
+            "Barlow, system-ui, sans-serif",
+            "PT Sans, system-ui, sans-serif",
+            "Playfair Display, Georgia, serif",
+            "Fraunces, Georgia, serif",
+            "Merriweather, Georgia, serif",
+            "Lora, Georgia, serif",
+            "Source Serif 4, Georgia, serif",
+            "EB Garamond, Georgia, serif",
+            "Libre Baskerville, Georgia, serif",
+            "Cormorant Garamond, Georgia, serif",
+            "Newsreader, Georgia, serif",
+            "Instrument Serif, Georgia, serif",
+            "Spectral, Georgia, serif",
+            "DM Serif Display, Georgia, serif",
+            "Libre Caslon Text, Georgia, serif",
+            "Syne, system-ui, sans-serif",
+            "Oswald, system-ui, sans-serif",
+            "Bebas Neue, system-ui, sans-serif",
+            "Anton, system-ui, sans-serif",
+            "Archivo, system-ui, sans-serif",
+            "Yeseva One, system-ui, sans-serif",
+            "Cinzel, system-ui, sans-serif",
+            "JetBrains Mono, ui-monospace, monospace",
+            "IBM Plex Mono, ui-monospace, monospace",
+            "Space Mono, ui-monospace, monospace",
+            "Source Code Pro, ui-monospace, monospace",
+            "Georgia, serif",
+            "ui-monospace, SFMono-Regular, monospace"
+          ]
+        },
+        {
+          "key": "bodyFont",
+          "type": "select",
+          "label": "Body font",
+          "group": "typography",
+          "options": [
+            "",
+            "Inter, system-ui, sans-serif",
+            "Manrope, system-ui, sans-serif",
+            "Poppins, system-ui, sans-serif",
+            "DM Sans, system-ui, sans-serif",
+            "Plus Jakarta Sans, system-ui, sans-serif",
+            "Outfit, system-ui, sans-serif",
+            "Figtree, system-ui, sans-serif",
+            "Space Grotesk, system-ui, sans-serif",
+            "Urbanist, system-ui, sans-serif",
+            "Work Sans, system-ui, sans-serif",
+            "Lato, system-ui, sans-serif",
+            "Montserrat, system-ui, sans-serif",
+            "Open Sans, system-ui, sans-serif",
+            "Raleway, system-ui, sans-serif",
+            "Rubik, system-ui, sans-serif",
+            "Karla, system-ui, sans-serif",
+            "Nunito, system-ui, sans-serif",
+            "Nunito Sans, system-ui, sans-serif",
+            "Source Sans 3, system-ui, sans-serif",
+            "IBM Plex Sans, system-ui, sans-serif",
+            "Sora, system-ui, sans-serif",
+            "Albert Sans, system-ui, sans-serif",
+            "Mulish, system-ui, sans-serif",
+            "Barlow, system-ui, sans-serif",
+            "PT Sans, system-ui, sans-serif",
+            "Playfair Display, Georgia, serif",
+            "Fraunces, Georgia, serif",
+            "Merriweather, Georgia, serif",
+            "Lora, Georgia, serif",
+            "Source Serif 4, Georgia, serif",
+            "EB Garamond, Georgia, serif",
+            "Libre Baskerville, Georgia, serif",
+            "Cormorant Garamond, Georgia, serif",
+            "Newsreader, Georgia, serif",
+            "Instrument Serif, Georgia, serif",
+            "Spectral, Georgia, serif",
+            "DM Serif Display, Georgia, serif",
+            "Libre Caslon Text, Georgia, serif",
+            "Syne, system-ui, sans-serif",
+            "Oswald, system-ui, sans-serif",
+            "Bebas Neue, system-ui, sans-serif",
+            "Anton, system-ui, sans-serif",
+            "Archivo, system-ui, sans-serif",
+            "Yeseva One, system-ui, sans-serif",
+            "Cinzel, system-ui, sans-serif",
+            "JetBrains Mono, ui-monospace, monospace",
+            "IBM Plex Mono, ui-monospace, monospace",
+            "Space Mono, ui-monospace, monospace",
+            "Source Code Pro, ui-monospace, monospace",
+            "Georgia, serif",
+            "ui-monospace, SFMono-Regular, monospace"
+          ]
+        },
+        {
+          "key": "headingSize",
+          "type": "slider",
+          "label": "Heading size",
+          "group": "typography"
+        },
+        {
+          "key": "bodySize",
+          "type": "slider",
+          "label": "Body size",
+          "group": "typography"
+        },
+        {
+          "key": "headingWeight",
+          "type": "select",
+          "label": "Heading weight",
+          "group": "typography",
+          "options": [
+            "",
+            "300",
+            "400",
+            "500",
+            "600",
+            "700",
+            "800",
+            "900"
+          ]
+        },
+        {
+          "key": "bodyWeight",
+          "type": "select",
+          "label": "Body weight",
+          "group": "typography",
+          "options": [
+            "",
+            "300",
+            "400",
+            "500",
+            "600",
+            "700",
+            "800",
+            "900"
+          ]
+        },
+        {
+          "key": "animation",
+          "type": "select",
+          "label": "Animation",
+          "group": "animation",
+          "options": [
+            "none",
+            "fade",
+            "fade-up",
+            "fade-down",
+            "fade-left",
+            "fade-right",
+            "zoom-in",
+            "slide-up"
+          ]
+        },
+        {
+          "key": "animationDuration",
+          "type": "slider",
+          "label": "Duration",
+          "group": "animation"
+        },
+        {
+          "key": "animationDelay",
+          "type": "slider",
+          "label": "Delay",
+          "group": "animation"
+        },
+        {
+          "key": "animationTrigger",
+          "type": "select",
+          "label": "Play when",
+          "group": "animation",
+          "options": [
+            "scroll",
+            "load"
+          ]
+        },
+        {
+          "key": "textAnimation",
+          "type": "select",
+          "label": "Text load animation",
+          "group": "animation",
+          "options": [
+            "none",
+            "fade",
+            "fade-up",
+            "blur-in",
+            "reveal",
+            "slide-up"
+          ]
+        },
+        {
+          "key": "textAnimationDuration",
+          "type": "slider",
+          "label": "Text duration",
+          "group": "animation"
+        },
+        {
+          "key": "textAnimationDelay",
+          "type": "slider",
+          "label": "Text delay",
+          "group": "animation"
+        },
+        {
+          "key": "paddingTop",
+          "type": "spacing",
+          "label": "Padding top",
+          "group": "spacing"
+        },
+        {
+          "key": "paddingBottom",
+          "type": "spacing",
+          "label": "Padding bottom",
+          "group": "spacing"
+        },
+        {
+          "key": "paddingInline",
+          "type": "spacing",
+          "label": "Side padding",
+          "group": "spacing"
+        },
+        {
+          "key": "backgroundType",
+          "type": "background",
+          "label": "Background",
+          "group": "background",
+          "options": [
+            "tone",
+            "color",
+            "gradient",
+            "image",
+            "video"
+          ]
+        },
+        {
+          "key": "backgroundColor",
+          "type": "color",
+          "label": "Background color",
+          "group": "background"
+        },
+        {
+          "key": "gradientFrom",
+          "type": "color",
+          "label": "Gradient from",
+          "group": "background"
+        },
+        {
+          "key": "gradientTo",
+          "type": "color",
+          "label": "Gradient to",
+          "group": "background"
+        },
+        {
+          "key": "gradientAngle",
+          "type": "slider",
+          "label": "Gradient angle",
+          "group": "background"
+        },
+        {
+          "key": "backgroundImage",
+          "type": "image",
+          "label": "Background image",
+          "group": "background"
+        },
+        {
+          "key": "backgroundVideo",
+          "type": "video",
+          "label": "Background video upload",
+          "group": "background"
+        },
+        {
+          "key": "backgroundVideoUrl",
+          "type": "text",
+          "label": "Background video URL",
+          "group": "background"
+        },
+        {
+          "key": "videoPoster",
+          "type": "image",
+          "label": "Video poster",
+          "group": "background"
+        },
+        {
+          "key": "videoAutoplay",
+          "type": "toggle",
+          "label": "Autoplay video",
+          "group": "background"
+        },
+        {
+          "key": "videoLoop",
+          "type": "toggle",
+          "label": "Loop video",
+          "group": "background"
+        },
+        {
+          "key": "videoMuted",
+          "type": "toggle",
+          "label": "Mute video",
+          "group": "background"
+        },
+        {
+          "key": "overlayColor",
+          "type": "color",
+          "label": "Overlay color",
+          "group": "background"
+        },
+        {
+          "key": "overlayOpacity",
+          "type": "slider",
+          "label": "Overlay opacity",
+          "group": "background"
+        },
+        {
+          "key": "lightText",
+          "type": "toggle",
+          "label": "Light text",
+          "group": "background"
+        },
+        {
+          "key": "imageFit",
+          "type": "select",
+          "label": "Fit",
+          "group": "image",
+          "options": [
+            "",
+            "cover",
+            "contain",
+            "fill",
+            "scale-down"
+          ]
+        },
+        {
+          "key": "imageFocusX",
+          "type": "slider",
+          "label": "Focal point - across",
+          "group": "image"
+        },
+        {
+          "key": "imageFocusY",
+          "type": "slider",
+          "label": "Focal point - down",
+          "group": "image"
+        },
+        {
+          "key": "imageAspect",
+          "type": "select",
+          "label": "Aspect ratio",
+          "group": "image",
+          "options": [
+            "",
+            "16 / 9",
+            "3 / 2",
+            "4 / 3",
+            "1 / 1",
+            "3 / 4",
+            "9 / 16"
+          ]
+        },
+        {
+          "key": "imageMaxHeight",
+          "type": "number",
+          "label": "Maximum height",
+          "group": "image"
+        },
+        {
+          "key": "imageRadius",
+          "type": "slider",
+          "label": "Corner radius",
+          "group": "image"
+        },
+        {
+          "key": "imageBorderWidth",
+          "type": "slider",
+          "label": "Border width",
+          "group": "image"
+        },
+        {
+          "key": "imageBorderColor",
+          "type": "color",
+          "label": "Border color",
+          "group": "image"
+        },
+        {
+          "key": "imageBrightness",
+          "type": "slider",
+          "label": "Brightness",
+          "group": "image"
+        },
+        {
+          "key": "imageContrast",
+          "type": "slider",
+          "label": "Contrast",
+          "group": "image"
+        },
+        {
+          "key": "imageSaturation",
+          "type": "slider",
+          "label": "Saturation",
+          "group": "image"
+        },
+        {
+          "key": "imageGrayscale",
+          "type": "slider",
+          "label": "Grayscale",
+          "group": "image"
+        },
+        {
+          "key": "imageBlur",
+          "type": "slider",
+          "label": "Blur",
+          "group": "image"
+        },
+        {
+          "key": "imageTintColor",
+          "type": "color",
+          "label": "Tint color",
+          "group": "image"
+        },
+        {
+          "key": "imageTintOpacity",
+          "type": "slider",
+          "label": "Tint strength",
+          "group": "image"
+        }
+      ]
+    },
+    {
       "type": "gallery.grid",
       "label": "Gallery grid",
       "category": "gallery",

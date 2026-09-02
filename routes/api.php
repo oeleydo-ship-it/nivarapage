@@ -235,6 +235,7 @@ Route::prefix('v1')->group(function () {
             Route::patch('/blog-posts/{blogPost}', [BlogPostController::class, 'update']);
             Route::post('/blog-posts/{blogPost}/publish', [BlogPostController::class, 'publish']);
             Route::delete('/blog-posts/{blogPost}', [BlogPostController::class, 'destroy']);
+            Route::post('/sites/{site}/blog-index', [BlogPostController::class, 'ensureIndex']);
 
             Route::get('/activities', [ActivityController::class, 'index']);
             Route::get('/activities/actions', [ActivityController::class, 'actions']);

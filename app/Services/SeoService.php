@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\BlogPost;
 use App\Models\Page;
 use App\Models\Site;
 use App\Services\BlogService;
@@ -109,6 +110,68 @@ class SeoService
             'robots_index' => $site ? $this->pageAllowsIndexing($site, $page) : false,
             'robots' => $site ? $this->robotsMeta($site, $page) : ['index' => false, 'follow' => false],
             'content' => $this->boundPublicContent($page),
+        ];
+    }
+
+    /**
+     * A published blog post, in the shape the renderer draws a page from.
+     *
+     * A published site serves stored HTML, so a post is only reachable if a
+     * page was rendered for it. Handing the article to the renderer as a single
+     * blog.post section is what puts it through the same pipeline as every
+     * other page, so it arrives with the site's theme, header and footer and
+     * there is no second way of drawing an article to keep in step.
+     *
+     * @return array<string, mixed>
+     */
+    public function publicPostPage(Site $site, BlogPost $post): array
+    {
+        $site->loadMissing(['domains', 'settings']);
+        $path = $this->blog->postPath($site, $post);
+        $title = $post->seo_title ?: $post->title;
+        $description = $post->seo_description ?: $post->excerpt;
+        $image = $post->cover_image ?: $site->settings?->social_image;
+
+        return [
+            'id' => 0,
+            'name' => $post->title,
+            'slug' => ltrim($path, '/'),
+            'is_homepage' => false,
+            'seo_title' => $title,
+            'seo_description' => $description,
+            'seo_image' => $image,
+            'canonical_url' => null,
+            'canonical' => rtrim($this->origin($site), '/').$path,
+            'og_title' => $title,
+            'og_description' => $description,
+            'og_image' => $image,
+            'robots_index' => $this->siteAllowsIndexing($site),
+            'robots' => $this->robotsMeta($site),
+            'content' => [
+                'schemaVersion' => 1,
+                'sections' => [[
+                    'id' => 'post-'.$post->id,
+                    'type' => 'blog.post',
+                    'version' => 1,
+                    'hidden' => false,
+                    'props' => [
+                        'eyebrow' => $post->category ?: 'Blog',
+                        'heading' => $post->title,
+                        'description' => (string) $post->excerpt,
+                        'date' => optional($post->published_at)->toFormattedDateString() ?: '',
+                        'author' => (string) $post->author_name,
+                        'image' => (string) $post->cover_image,
+                        // The cover is drawn by the block, so it is deliberately
+                        // not baked into the body as well.
+                        'bodyHtml' => $this->blog->bodyHtml((string) $post->body),
+                        // Only when there is an index to go back to: most
+                        // templates ship no blog page, and a link we printed
+                        // ourselves must not land the reader on a 404.
+                        'backLabel' => $this->blog->hasIndexPage($site) ? 'All posts' : '',
+                        'backUrl' => $this->blog->indexPath($site),
+                    ],
+                ]],
+            ],
         ];
     }
 
