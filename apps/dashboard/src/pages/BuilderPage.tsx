@@ -64,6 +64,7 @@ import { AiPanel } from '../components/AiPanel'
 import { BlockPalette } from '../components/BlockPalette'
 import { FieldControl, fieldVisible } from '../components/FieldControls'
 import { GoogleFonts } from '../components/GoogleFonts'
+import { InlineAiToolbar } from '../components/InlineAiToolbar'
 import { MediaPicker } from '../components/MediaLibrary'
 import { PageMenu } from '../components/PageMenu'
 import { HistoryPanel } from '../components/HistoryPanel'
@@ -1370,6 +1371,9 @@ export function BuilderPage() {
             }}
           />
         ) : null}
+
+        {/* Follows whatever text is being edited on the canvas. */}
+        <InlineAiToolbar siteId={id} onApply={commitInline} />
       </div>
 
       <DragOverlay dropAnimation={null}>
