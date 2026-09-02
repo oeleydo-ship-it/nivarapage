@@ -427,7 +427,7 @@ export type AiChatRequest = {
 }
 
 export type AiStreamEvent =
-  | { type: 'start' | 'progress'; stage?: string; message?: string; progress?: number; code?: string; action?: AiChatAction }
+  | { type: 'start' | 'progress'; stage?: string; message?: string; progress?: number; code?: string; action?: AiChatAction; heartbeat?: boolean }
   | { type: 'plan'; action: AiChatAction; pages: number; sections: number; theme?: Record<string, unknown>; progress?: number }
   | { type: 'page'; index: number; total: number; page: { name: string; slug: string; is_homepage?: boolean }; blocks: number; code?: string }
   | { type: 'block'; page_index: number | null; page_slug: string; page_home?: boolean; index: number; total: number; section: PageSection }

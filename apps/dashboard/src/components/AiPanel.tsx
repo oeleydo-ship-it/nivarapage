@@ -272,7 +272,9 @@ export function AiPanel({
 
     const onStreamEvent = (event: AiStreamEvent) => {
       if ('progress' in event && typeof event.progress === 'number') setProgress(event.progress)
-      if ((event.type === 'start' || event.type === 'progress') && event.message) {
+      // Heartbeats exist to keep the connection from being cut while the model
+      // writes. They carry no news, so they stay out of the log.
+      if ((event.type === 'start' || event.type === 'progress') && event.message && !event.heartbeat) {
         addLine('status', event.code || `// ${event.message}`)
       }
       if (event.type === 'plan') {

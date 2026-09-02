@@ -29,6 +29,14 @@ class AiGenerator
     ) {}
 
     /**
+     * Called while a provider request is in flight, so a streaming caller can
+     * keep the connection warm. Null outside a streamed generation.
+     *
+     * @var (callable(): void)|null
+     */
+    private $heartbeat = null;
+
+    /**
      * Stamps the site's own design conventions onto anything the model wrote.
      *
      * The prompt asks for these, but a section that arrives without them would
@@ -304,6 +312,27 @@ class AiGenerator
                 $progress($stage, $message, $meta);
             }
         };
+
+        // While the model writes, nothing is sent and every proxy between here
+        // and the browser treats the connection as idle. This keeps a trickle
+        // going for as long as the request takes.
+        $this->heartbeat = $progress === null ? null : static function () use ($progress): void {
+            $progress('generating', 'Still writing the site.', ['heartbeat' => true]);
+        };
+
+        try {
+            return $this->chatTurn($site, $input, $emit);
+        } finally {
+            $this->heartbeat = null;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    private function chatTurn(Site $site, array $input, callable $emit): array
+    {
 
         $emit('analyzing', 'Reading the brief and current site structure.', [
             'code' => 'const brief = analyze(request, currentSite);',
@@ -763,6 +792,10 @@ class AiGenerator
     {
         $config = $this->config();
         $this->allowLongRunning($config->timeout);
+
+        if ($this->heartbeat !== null) {
+            $options['on_progress'] = $this->heartbeat;
+        }
 
         try {
             return $this->factory->make($config)->complete($system, $prompt, $options + ['json' => true]);
