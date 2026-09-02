@@ -9,6 +9,7 @@ use App\Models\Site;
 use App\Services\Ai\AiGenerator;
 use App\Services\Ai\AiSettingsService;
 use App\Services\AuditService;
+use App\Services\PageService;
 use App\Services\PlanLimitService;
 use App\Services\SiteService;
 use App\Support\BlockCatalog;
@@ -91,6 +92,82 @@ class AiController extends Controller
             'pages' => $result['pages'],
             'theme' => $result['theme'],
             'report' => $result['report'],
+            'usage' => $this->usage($site),
+        ]]);
+    }
+
+    /**
+     * Writes a site's copy for it, keeping the template it was built from.
+     *
+     * Run straight after a template is applied. Generation here is deliberately
+     * narrower than generate-page: the customer chose that design, so only the
+     * words change. Every page of the site is rewritten in one pass, because a
+     * site whose home page talks about one business and whose about page talks
+     * about another is worse than one nobody rewrote.
+     */
+    public function generateTemplateCopy(Request $request, PageService $pages): JsonResponse
+    {
+        $data = $request->validate([
+            'site_id' => ['required'],
+            'prompt' => ['nullable', 'string', 'max:2000'],
+            'tone' => ['nullable', 'string', 'max:60'],
+        ]);
+
+        $site = $this->site($data['site_id']);
+        $this->authorize('update', $site);
+        $this->assertQuota($site);
+        @set_time_limit(max(240, (int) config('ai.timeout', 180) + 60));
+
+        $site->loadMissing('pages.draftRevision');
+        $rewrittenPages = 0;
+        $slots = 0;
+        $rewritten = 0;
+        $failed = [];
+
+        foreach ($site->pages as $page) {
+            $content = $page->draftRevision?->content_json ?? [];
+            $sections = is_array($content['sections'] ?? null) ? $content['sections'] : [];
+            if ($sections === []) {
+                continue;
+            }
+
+            try {
+                $result = $this->generator->generateTemplateCopy($site, $sections, $data);
+            } catch (AiException $exception) {
+                // One page failing must not lose the pages already rewritten,
+                // and a half-written site is reported rather than hidden.
+                $failed[] = $page->slug ?: (string) $page->id;
+
+                continue;
+            }
+
+            if ($result['report']['rewritten'] === 0) {
+                continue;
+            }
+
+            $pages->saveDraft($page, $request->user(), ['schemaVersion' => 1, 'sections' => $result['sections']]);
+            $rewrittenPages++;
+            $slots += $result['report']['slots'];
+            $rewritten += $result['report']['rewritten'];
+        }
+
+        if ($rewrittenPages === 0) {
+            throw AiException::invalidOutput('The AI could not rewrite this site. Try again, or edit the copy by hand.');
+        }
+
+        $this->audit->log('ai.template_copy_generated', $site, [
+            'pages' => $rewrittenPages,
+            'slots' => $slots,
+            'rewritten' => $rewritten,
+            'failed_pages' => $failed,
+            'provider' => $this->settings->config()->provider,
+        ], $site->workspace, $request->user());
+
+        return response()->json(['data' => [
+            'pages' => $rewrittenPages,
+            'slots' => $slots,
+            'rewritten' => $rewritten,
+            'failed_pages' => $failed,
             'usage' => $this->usage($site),
         ]]);
     }

@@ -7,6 +7,7 @@ use App\Models\Site;
 use App\Support\AiGeneratedSite;
 use App\Support\AiSectionRepair;
 use App\Support\PageSchemaValidator;
+use App\Support\TemplateCopySlots;
 use InvalidArgumentException;
 
 /**
@@ -56,6 +57,70 @@ class AiGenerator
         );
 
         return $this->assembleSite($raw);
+    }
+
+    /**
+     * Rewrites the copy of a site's pages without touching their structure.
+     *
+     * Used straight after a template is applied: the customer picked that
+     * design, so generation must not be free to produce another one. Only the
+     * strings the blocks declare as copy are sent and only strings come back -
+     * see TemplateCopySlots - so the block types, their order and every design
+     * prop survive untouched.
+     *
+     * @param  list<array<string, mixed>>  $sections
+     * @param  array<string, mixed>  $input
+     * @return array{sections: list<array<string, mixed>>, report: array{slots: int, rewritten: int}}
+     */
+    public function generateTemplateCopy(Site $site, array $sections, array $input = []): array
+    {
+        $slots = TemplateCopySlots::collect($sections);
+        if ($slots === []) {
+            return ['sections' => $sections, 'report' => ['slots' => 0, 'rewritten' => 0]];
+        }
+
+        $raw = $this->complete(
+            $this->prompts->templateCopySystemPrompt(),
+            $this->prompts->templateCopyPrompt($site, $slots, $input),
+            ['max_tokens' => (int) config('ai.site_max_tokens', 8000)],
+        );
+
+        $decoded = AiJson::object($raw);
+        $rows = is_array($decoded['slots'] ?? null) ? $decoded['slots'] : [];
+
+        $values = [];
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $index = $row['i'] ?? null;
+            $text = $row['text'] ?? null;
+            // Anything outside the list we sent is discarded rather than
+            // guessed at: an index we did not issue addresses no known slot.
+            if (! is_numeric($index) || ! is_string($text) || ! isset($slots[(int) $index])) {
+                continue;
+            }
+            $text = trim($text);
+            if ($text === '') {
+                continue;
+            }
+            $values[$slots[(int) $index]['path']] = $text;
+        }
+
+        if ($values === []) {
+            throw AiException::invalidOutput('The AI did not return any usable copy. Try again.');
+        }
+
+        $rewritten = TemplateCopySlots::apply($sections, $values);
+
+        // The same validator every page save goes through, so generated copy
+        // cannot carry markup into a published page.
+        $validated = $this->validate(['schemaVersion' => 1, 'sections' => $rewritten]);
+
+        return [
+            'sections' => $validated['sections'],
+            'report' => ['slots' => count($slots), 'rewritten' => count($values)],
+        ];
     }
 
     /**

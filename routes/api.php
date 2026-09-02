@@ -242,6 +242,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/ai/status', [AiController::class, 'status']);
             Route::middleware('throttle:ai')->group(function () {
                 Route::post('/ai/generate-page', [AiController::class, 'generatePage']);
+                Route::post('/ai/generate-template-copy', [AiController::class, 'generateTemplateCopy']);
                 Route::post('/ai/chat', [AiController::class, 'chat']);
                 Route::post('/ai/chat-stream', [AiController::class, 'chatStream']);
                 Route::post('/ai/generate-block', [AiController::class, 'generateBlock']);

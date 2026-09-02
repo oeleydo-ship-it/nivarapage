@@ -404,6 +404,15 @@ export const aiApi = {
     tone?: string
     sections?: string[]
   }) => http.post<AiGeneratePageResult>('/ai/generate-page', body),
+  /**
+   * Rewrites a site's copy for its business while keeping the template it was
+   * built from. Only the words change - block types, order and design do not.
+   */
+  generateTemplateCopy: (body: { site_id: string | number; prompt?: string; tone?: string }) =>
+    http.post<{ pages: number; slots: number; rewritten: number; failed_pages: string[] }>(
+      '/ai/generate-template-copy',
+      body,
+    ),
   chat: (body: AiChatRequest) => http.post<AiChatResult>('/ai/chat', body),
   chatStream: async (body: AiChatRequest, onEvent: (event: AiStreamEvent) => void, signal?: AbortSignal) => {
     let result: AiChatResult | undefined

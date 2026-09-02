@@ -8,7 +8,7 @@ import { TEMPLATE_PREVIEW_HEIGHT, TemplateLivePreview, TemplatePreviewAssets } f
 import { TemplateSearchBar } from '../components/TemplateSearchBar'
 import { TemplateSelectModal } from '../components/TemplateSelectModal'
 import { templatePreviewPath } from '../lib/templatePreview'
-import { sitesApi, subdomainsApi, templatesApi } from '../lib/endpoints'
+import { aiApi, sitesApi, subdomainsApi, templatesApi } from '../lib/endpoints'
 import { atCap, featureEnabled, useSubscription } from '../lib/plan'
 import { useBranding } from '../lib/useBranding'
 import { blankTemplateMatches, filterTemplates, templateCategoryNames } from '../lib/templateSearch'
@@ -280,6 +280,11 @@ export function CreateSitePage() {
   const [subdomain, setSubdomain] = useState('')
   const [subdomainTouched, setSubdomainTouched] = useState(false)
   const [check, setCheck] = useState<{ available?: boolean; name?: string } | null>(null)
+  // Opt-in: the template's own copy is a sensible default, so this is a choice
+  // rather than something that happens to every new site.
+  const [writeCopy, setWriteCopy] = useState(false)
+  const [copyError, setCopyError] = useState<string | null>(null)
+  const aiStatus = useQuery({ queryKey: ['ai-status'], queryFn: aiApi.status })
   const [checking, setChecking] = useState(false)
   const templates = useQuery({ queryKey: ['templates'], queryFn: templatesApi.list })
   const sub = useSubscription()
@@ -296,6 +301,11 @@ export function CreateSitePage() {
     if (!name.trim()) setName(match.name)
     setStep(2)
   }, [presetSlug, templates.data, template_id, name])
+
+  /** Message from an error, whatever shape it arrived in. */
+  function errorText(error: unknown, fallback: string): string {
+    return error instanceof Error && error.message ? error.message : fallback
+  }
 
   const create = useMutation({
     mutationFn: async () => {
@@ -317,10 +327,27 @@ export function CreateSitePage() {
       // Applying is idempotent: existing slugs are updated, missing template
       // pages are created. This is an explicit import guarantee before the
       // builder opens, even if site creation returned after a blank fallback.
-      if (selectedTemplateId) {
-        return sitesApi.applyTemplate(site.id, selectedTemplateId)
+      const created = selectedTemplateId ? await sitesApi.applyTemplate(site.id, selectedTemplateId) : site
+
+      /**
+       * Rewrite the template's copy for this business, once the template is in
+       * place. Deliberately after and separate: the site already exists and is
+       * usable, so a model that is slow, rate-limited or misconfigured costs
+       * the customer nothing but the copy they can still write themselves.
+       */
+      if (writeCopy && selectedTemplateId) {
+        try {
+          await aiApi.generateTemplateCopy({
+            site_id: site.id,
+            prompt: description || undefined,
+            tone: undefined,
+          })
+        } catch (error) {
+          setCopyError(errorText(error, 'The website was created, but the AI could not write its copy.'))
+        }
       }
-      return site
+
+      return created
     },
     onSuccess: (site) => navigate(`/sites/${site.id}/builder`),
   })
@@ -632,6 +659,25 @@ export function CreateSitePage() {
               <dd className="text-zinc-200">{subdomain || 'auto'}.{platformDomain}</dd>
             </dl>
           </div>
+          {selectedTemplate && aiStatus.data?.available ? (
+            <label className="flex items-start gap-2 rounded-lg border border-zinc-800 bg-zinc-950/50 p-3 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={writeCopy}
+                onChange={(event) => setWriteCopy(event.target.checked)}
+                disabled={create.isPending}
+              />
+              <span>
+                <span className="block text-zinc-200">Write the copy for my business</span>
+                <span className="block text-xs text-zinc-500">
+                  Rewrites {selectedTemplate.name}&rsquo;s words for {business_name || name || 'this business'}. The
+                  design, the blocks and their order stay exactly as the template has them.
+                </span>
+              </span>
+            </label>
+          ) : null}
+          {copyError ? <p className="text-sm text-amber-400">{copyError}</p> : null}
           {create.isError ? (
             <p className="text-sm text-red-400">{create.error instanceof Error ? create.error.message : 'Could not create website.'}</p>
           ) : null}
@@ -643,7 +689,7 @@ export function CreateSitePage() {
               {create.isPending ? (
                 <>
                   <Loader2 size={15} className="animate-spin" />
-                  Creating…
+                  {writeCopy && selectedTemplate ? 'Writing your copy…' : 'Creating…'}
                 </>
               ) : (
                 'Create website'

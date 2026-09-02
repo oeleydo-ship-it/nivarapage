@@ -74,6 +74,57 @@ class AiPromptBuilder
     }
 
     /**
+     * Rewriting a template's copy, slot by slot.
+     *
+     * The model is never shown sections and never returns any: it sees a
+     * numbered list of the strings a template ships with and answers with
+     * replacements. Keeping it to strings is what guarantees the generated site
+     * is still the template the customer picked.
+     */
+    public function templateCopySystemPrompt(): string
+    {
+        return implode("\n", [
+            'You write website copy. You are given the existing copy of a template, one numbered slot at a time.',
+            'You return ONLY JSON: {"slots":[{"i":<number>,"text":"<replacement>"}]}.',
+            'Rewrite every slot for the business described. Keep each replacement the same kind of thing and about the same length as the original: a two-word button label stays a two-word button label, a heading stays one line.',
+            'Never invent prices, statistics, awards, addresses or contact details. If the original holds a number you cannot know, keep the original.',
+            'Write plain text. No markdown, no HTML.',
+            'Answer in the language of the business description.',
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @param  list<array{path: string, label: string, text: string}>  $slots
+     */
+    public function templateCopyPrompt(Site $site, array $slots, array $input): string
+    {
+        $lines = ['Business name: '.($site->business_name ?: $site->name)];
+        if ($site->category) {
+            $lines[] = 'Industry: '.$site->category;
+        }
+        if ($site->description) {
+            $lines[] = 'What it does: '.$site->description;
+        }
+        if (! empty($input['prompt'])) {
+            $lines[] = 'Extra brief: '.$input['prompt'];
+        }
+        if (! empty($input['tone'])) {
+            $lines[] = 'Tone of voice: '.$input['tone'];
+        }
+
+        $lines[] = '';
+        $lines[] = 'Rewrite each slot below. The label says which block and which field it belongs to - use it to judge what the string is for.';
+        $lines[] = '';
+
+        foreach ($slots as $index => $slot) {
+            $lines[] = $index.'. ['.$slot['label'].'] '.$slot['text'];
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
      * @param  array<string, mixed>  $input
      */
     public function pagePrompt(Site $site, array $input): string
