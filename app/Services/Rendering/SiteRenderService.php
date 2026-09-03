@@ -43,14 +43,25 @@ class SiteRenderService
      * itself. A funnel that does belong to a site keeps answering from the
      * site's rows, which is where anything published before this was written.
      */
-    public function findForFunnel(Funnel $funnel, string $path): ?PageRender
+    public function findForFunnel(Funnel $funnel, string $path, ?int $variantId = null): ?PageRender
     {
         $path = $this->normalizePath($path);
 
         $render = PageRender::query()
             ->where('funnel_id', $funnel->id)
             ->where('path', $path)
+            ->where('variant_id', $variantId)
             ->first();
+
+        // A variant that was never published falls back to the control, so an
+        // experiment started but not yet built shows the page rather than a 404.
+        if (! $render && $variantId !== null) {
+            $render = PageRender::query()
+                ->where('funnel_id', $funnel->id)
+                ->where('path', $path)
+                ->whereNull('variant_id')
+                ->first();
+        }
 
         if ($render || ! $funnel->site_id) {
             return $render;
@@ -62,7 +73,7 @@ class SiteRenderService
             ->first();
     }
 
-    public function storeForFunnel(Funnel $funnel, string $path, string $html): PageRender
+    public function storeForFunnel(Funnel $funnel, string $path, string $html, ?int $variantId = null): PageRender
     {
         $path = $this->normalizePath($path);
         $hash = hash('sha256', $html);
@@ -70,6 +81,7 @@ class SiteRenderService
         $existing = PageRender::query()
             ->where('funnel_id', $funnel->id)
             ->where('path', $path)
+            ->where('variant_id', $variantId)
             ->first();
 
         // An unchanged republish must not bump updated_at: it becomes the
@@ -80,7 +92,7 @@ class SiteRenderService
         }
 
         return PageRender::updateOrCreate(
-            ['funnel_id' => $funnel->id, 'path' => $path],
+            ['funnel_id' => $funnel->id, 'path' => $path, 'variant_id' => $variantId],
             ['site_id' => $funnel->site_id, 'html' => $html, 'hash' => $hash],
         );
     }

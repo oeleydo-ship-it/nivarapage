@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Funnel;
+use App\Services\Funnels\FunnelExperimentService;
 use App\Services\PublicSiteResolver;
 use App\Services\Rendering\SiteRenderService;
 use Illuminate\Http\Request;
@@ -22,7 +23,25 @@ class PublishedFunnelController extends Controller
     public function __construct(
         private readonly PublicSiteResolver $resolver,
         private readonly SiteRenderService $renders,
+        private readonly FunnelExperimentService $experiments,
     ) {}
+
+    /** Name of the cookie the visitor's experiment identity lives in. */
+    private const VISITOR_COOKIE = 'ud_fv';
+
+    /**
+     * A stable identifier for this visitor, made once and then remembered.
+     *
+     * Not personal data and not used for anything but choosing a bucket, so it
+     * needs no consent - without it there is no way to show somebody the same
+     * version twice.
+     */
+    private function visitorKey(Request $request): string
+    {
+        $existing = (string) $request->cookie(self::VISITOR_COOKIE, '');
+
+        return preg_match('/^[a-f0-9]{32}$/', $existing) ? $existing : bin2hex(random_bytes(16));
+    }
 
     public function show(Request $request, string $funnelKey, ?string $step = null): Response
     {
@@ -50,10 +69,26 @@ class PublishedFunnelController extends Controller
             return $this->missing();
         }
 
+        // Which version of this step this visitor gets. Decided from an id that
+        // is kept in a cookie, so the same person sees the same page every time
+        // - somebody shown a different version on each visit tells you nothing
+        // about either of them.
+        $stepModel = $model->steps()->where('slug', $step)->where('status', 'published')->first();
+        $visitorKey = $this->visitorKey($request);
+        $assigned = null;
+        $assignedKey = null;
+
+        if ($stepModel) {
+            $pool = $this->experiments->pool($stepModel);
+            $chosen = $this->experiments->assign($pool, $visitorKey.'|'.$stepModel->id);
+            $assigned = $chosen['id'];
+            $assignedKey = $chosen['id'] === null ? null : $chosen['key'];
+        }
+
         // Keyed by the funnel, not its site: a standalone funnel has no site,
         // and asking for one is what made every published funnel answer with a
         // type error instead of a page.
-        $render = $this->renders->findForFunnel($model, "/f/{$model->public_id}/{$step}");
+        $render = $this->renders->findForFunnel($model, "/f/{$model->public_id}/{$step}", $assigned);
 
         if (! $render) {
             return $this->missing();
@@ -68,6 +103,19 @@ class PublishedFunnelController extends Controller
             'Cache-Control' => 'private, no-store',
             'X-Robots-Tag' => 'noindex, follow',
         ]);
+
+        // Remembered for a year, so the split holds across visits. The value is
+        // only an identifier; the bucket is worked out from it each time, so a
+        // changed experiment reshuffles nobody who is already in one.
+        // Defaults are right here: http-only, so nothing on the page can read
+        // or rewrite which bucket somebody is in.
+        $response->withCookie(cookie()->forever(self::VISITOR_COOKIE, $visitorKey));
+
+        if ($assignedKey !== null) {
+            // The key, because that is what the events API takes. A conversion
+            // has to be credited to the version the visitor actually saw.
+            $response->headers->set('X-Funnel-Variant', $assignedKey);
+        }
 
         return $response;
     }

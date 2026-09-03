@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\CouponController;
 use App\Http\Controllers\Api\V1\DomainController;
 use App\Http\Controllers\Api\V1\FormController;
 use App\Http\Controllers\Api\V1\FunnelController;
+use App\Http\Controllers\Api\V1\FunnelExperimentController;
 use App\Http\Controllers\Api\V1\FunnelRenderController;
 use App\Http\Controllers\Api\V1\FunnelRenderStoreController;
 use App\Http\Controllers\Api\V1\HealthController;
@@ -200,6 +201,12 @@ Route::prefix('v1')->group(function () {
             Route::post('/sites/{site}/renders', [SiteRenderController::class, 'store']);
             // A funnel need not have a site, so its steps upload separately.
             Route::post('/funnels/{funnel}/renders', [FunnelRenderStoreController::class, 'store']);
+            // A/B testing one step. The step's own content is the control.
+            Route::get('/funnels/{funnel}/steps/{step}/variants', [FunnelExperimentController::class, 'index']);
+            Route::post('/funnels/{funnel}/steps/{step}/variants', [FunnelExperimentController::class, 'store']);
+            Route::patch('/funnels/{funnel}/steps/{step}/variants/{variant}', [FunnelExperimentController::class, 'update']);
+            Route::delete('/funnels/{funnel}/steps/{step}/variants/{variant}', [FunnelExperimentController::class, 'destroy']);
+            Route::post('/funnels/{funnel}/steps/{step}/winner', [FunnelExperimentController::class, 'winner']);
             Route::get('/sites/{site}/render-payload', [SiteRenderController::class, 'payload']);
             Route::post('/sites/{site}/preview-token', [PreviewController::class, 'token']);
             Route::post('/sites/{site}/apply-template', [TemplateController::class, 'apply']);

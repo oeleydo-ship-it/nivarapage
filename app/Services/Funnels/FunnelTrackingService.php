@@ -63,7 +63,7 @@ class FunnelTrackingService
         $lead = $this->recordLead($funnel, $step, $data, $visitor->id, $location['country'], $source, $campaign);
 
         $currency = strtoupper((string) ($metadata['currency'] ?? ''));
-        $eventPayload = ['workspace_id' => $funnel->workspace_id, 'funnel_id' => $funnel->id, 'step_id' => $step->id, 'visitor_id' => $visitor->id, 'session_id' => $session->id, 'lead_id' => $lead?->id, 'idempotency_key' => $data['idempotency_key'] ?? null, 'event_type' => $data['event_type'], 'source' => $source, 'medium' => $medium, 'campaign' => $campaign, 'device' => $agent['device'] ?? null, 'browser' => $agent['browser'] ?? null, 'country' => $location['country'], 'revenue' => in_array($data['event_type'], ['purchase', 'conversion'], true) ? (float) ($metadata['amount'] ?? 0) : 0, 'currency' => $currency !== '' ? $currency : null, 'is_bot' => $isBot, 'event_data' => $metadata, 'url' => $data['url'] ?? null, 'referrer' => $referrer, 'occurred_at' => $now];
+        $eventPayload = ['workspace_id' => $funnel->workspace_id, 'funnel_id' => $funnel->id, 'step_id' => $step->id, 'variant_id' => $this->variantId($step, $data), 'visitor_id' => $visitor->id, 'session_id' => $session->id, 'lead_id' => $lead?->id, 'idempotency_key' => $data['idempotency_key'] ?? null, 'event_type' => $data['event_type'], 'source' => $source, 'medium' => $medium, 'campaign' => $campaign, 'device' => $agent['device'] ?? null, 'browser' => $agent['browser'] ?? null, 'country' => $location['country'], 'revenue' => in_array($data['event_type'], ['purchase', 'conversion'], true) ? (float) ($metadata['amount'] ?? 0) : 0, 'currency' => $currency !== '' ? $currency : null, 'is_bot' => $isBot, 'event_data' => $metadata, 'url' => $data['url'] ?? null, 'referrer' => $referrer, 'occurred_at' => $now];
         $event = ! empty($data['idempotency_key'])
             ? FunnelEvent::query()->firstOrCreate(['workspace_id' => $funnel->workspace_id, 'idempotency_key' => $data['idempotency_key']], $eventPayload)
             : FunnelEvent::query()->create($eventPayload);
@@ -132,6 +132,25 @@ class FunnelTrackingService
         }
 
         return FunnelLead::query()->create($payload);
+    }
+
+    /**
+     * Which version of the step this event belongs to.
+     *
+     * Sent by the page, which was told when it was served. Anything that does
+     * not name a variant of this step is treated as the control rather than
+     * trusted, so an event cannot be credited to somebody else's experiment.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function variantId(FunnelStep $step, array $data): ?int
+    {
+        $key = $data['variant'] ?? null;
+        if (! is_string($key) || $key === '') {
+            return null;
+        }
+
+        return $step->variants()->where('key', $key)->value('id');
     }
 
     public function nextStep(Funnel $funnel, FunnelStep $step): ?FunnelStep
