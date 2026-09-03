@@ -3,6 +3,7 @@
 namespace App\Services\Funnels;
 
 use App\Jobs\ProcessFunnelEvent;
+use App\Jobs\RunFunnelAutomation;
 use App\Models\Funnel;
 use App\Models\FunnelEvent;
 use App\Models\FunnelLead;
@@ -15,7 +16,10 @@ use Illuminate\Support\Str;
 
 class FunnelTrackingService
 {
-    public function __construct(private readonly FunnelBotDetector $bots) {}
+    public function __construct(
+        private readonly FunnelBotDetector $bots,
+        private readonly FunnelAutomationService $automations,
+    ) {}
 
     /** @param array<string, mixed> $data */
     public function track(Funnel $funnel, FunnelStep $step, Request $request, array $data): array
@@ -69,6 +73,7 @@ class FunnelTrackingService
             : FunnelEvent::query()->create($eventPayload);
         if ($event->wasRecentlyCreated || empty($data['idempotency_key'])) {
             ProcessFunnelEvent::dispatch($event->id);
+            $this->fireAutomations($event);
         }
         if (in_array($data['event_type'], ['conversion', 'purchase', 'booking', 'form_submission', 'lead_created'], true) && ! $session->converted_at) {
             $session->update(['converted_at' => $now]);
@@ -151,6 +156,27 @@ class FunnelTrackingService
         }
 
         return $step->variants()->where('key', $key)->value('id');
+    }
+
+    /**
+     * Books whatever this event was supposed to set off.
+     *
+     * The delay is handed to the queue rather than kept here, so a rule that
+     * fires an hour later needs nothing polling in the meantime.
+     */
+    private function fireAutomations(FunnelEvent $event): void
+    {
+        foreach ($this->automations->matching($event) as $automation) {
+            $run = $this->automations->schedule($automation, $event);
+            if (! $run) {
+                continue;
+            }
+
+            $job = RunFunnelAutomation::dispatch($run->id);
+            if ($automation->delay_minutes > 0) {
+                $job->delay(now()->addMinutes($automation->delay_minutes));
+            }
+        }
     }
 
     public function nextStep(Funnel $funnel, FunnelStep $step): ?FunnelStep

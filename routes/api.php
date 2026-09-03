@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\ClientController;
 use App\Http\Controllers\Api\V1\CouponController;
 use App\Http\Controllers\Api\V1\DomainController;
 use App\Http\Controllers\Api\V1\FormController;
+use App\Http\Controllers\Api\V1\FunnelAutomationController;
 use App\Http\Controllers\Api\V1\FunnelController;
 use App\Http\Controllers\Api\V1\FunnelExperimentController;
 use App\Http\Controllers\Api\V1\FunnelRenderController;
@@ -207,6 +208,12 @@ Route::prefix('v1')->group(function () {
             Route::patch('/funnels/{funnel}/steps/{step}/variants/{variant}', [FunnelExperimentController::class, 'update']);
             Route::delete('/funnels/{funnel}/steps/{step}/variants/{variant}', [FunnelExperimentController::class, 'destroy']);
             Route::post('/funnels/{funnel}/steps/{step}/winner', [FunnelExperimentController::class, 'winner']);
+            // Rules a funnel runs by itself: triggers, delays, email, webhooks.
+            Route::get('/funnels/{funnel}/automations', [FunnelAutomationController::class, 'index']);
+            Route::post('/funnels/{funnel}/automations', [FunnelAutomationController::class, 'store']);
+            Route::patch('/funnels/{funnel}/automations/{automation}', [FunnelAutomationController::class, 'update']);
+            Route::delete('/funnels/{funnel}/automations/{automation}', [FunnelAutomationController::class, 'destroy']);
+            Route::get('/funnels/{funnel}/automations/{automation}/runs', [FunnelAutomationController::class, 'runs']);
             Route::get('/sites/{site}/render-payload', [SiteRenderController::class, 'payload']);
             Route::post('/sites/{site}/preview-token', [PreviewController::class, 'token']);
             Route::post('/sites/{site}/apply-template', [TemplateController::class, 'apply']);

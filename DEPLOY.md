@@ -146,7 +146,7 @@ almost always the thing to look at first.
 Run one worker, via systemd or Supervisor:
 
 ```
-php /var/www/uidesired/artisan queue:work --queue=livechat,publishing,domains,media,notifications,analytics,default
+php /var/www/uidesired/artisan queue:work --queue=livechat,publishing,domains,media,notifications,analytics,automations,default
 ```
 
 ## Re-rendering published sites
