@@ -661,6 +661,8 @@ export interface Order {
   customer_name?: string | null
   paid_at?: string | null
   created_at?: string
+  /** Loaded alongside the order so the table can name what was bought. */
+  product?: { id: number; name: string } | null
 }
 
 /** A workspace's own Stripe connection. Secrets never travel in this shape. */

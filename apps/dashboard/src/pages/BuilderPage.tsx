@@ -57,7 +57,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { blogApi, formsApi, menusApi, pagesApi, sitesApi } from '../lib/endpoints'
+import { blogApi, formsApi, menusApi, pagesApi, productsApi, sitesApi } from '../lib/endpoints'
 import { setAtPath } from '../lib/props'
 import { liveUrl, pagePath, previewUrl } from '../lib/siteUrls'
 import { AiPanel } from '../components/AiPanel'
@@ -416,6 +416,9 @@ export function BuilderPage() {
   const pages = useQuery({ queryKey: ['pages', id], queryFn: () => pagesApi.list(id!) })
   const menus = useQuery({ queryKey: ['menus', id], queryFn: () => menusApi.get(id!) })
   const siteForms = useQuery({ queryKey: ['forms', id], queryFn: () => formsApi.list(id!), enabled: Boolean(id) })
+  // Products belong to the workspace rather than the site, so a buy button can
+  // be pointed at anything the shop sells from any of its pages.
+  const products = useQuery({ queryKey: ['products'], queryFn: () => productsApi.list() })
   const site = useQuery({ queryKey: ['site', id], queryFn: () => sitesApi.get(id!) })
   const sitePosts = useQuery({
     queryKey: ['blog-posts', id, 'published'],
@@ -1274,6 +1277,7 @@ export function BuilderPage() {
                       }}
                       context={{
                         forms: siteForms.data,
+                        products: products.data,
                         pages: pages.data,
                         theme,
                         siteId: id,

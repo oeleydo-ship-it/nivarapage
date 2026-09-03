@@ -99,6 +99,15 @@ export const productsApi = {
 }
 
 /**
+ * What the workspace has sold. Read only: a webhook decides what is paid, so
+ * there is nothing here a person should be able to change.
+ */
+export const ordersApi = {
+  list: (params?: { status?: string; q?: string }) =>
+    http.get<Order[]>(`/orders${queryString({ ...params })}`),
+}
+
+/**
  * The workspace's own Stripe account.
  *
  * Secrets are write-only: they go up, and only a four-character hint comes

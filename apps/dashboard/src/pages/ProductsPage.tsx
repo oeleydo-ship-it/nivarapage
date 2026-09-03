@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, CreditCard, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Product } from '@uidesired/types'
-import { paymentsApi, productsApi } from '../lib/endpoints'
+import { ordersApi, paymentsApi, productsApi } from '../lib/endpoints'
 import { Badge, Button, Card, DataTable, EmptyState, Input, Label, PageHeader, Select } from '../ui/primitives'
 
 /**
@@ -233,7 +233,72 @@ function StripePanel() {
   )
 }
 
+/**
+ * What has actually been sold.
+ *
+ * Read only, on purpose: an order is opened by a checkout and settled by a
+ * webhook from Stripe, so nothing here should be editable by hand - least of
+ * all whether something was paid for.
+ */
+function OrdersTab() {
+  const orders = useQuery({ queryKey: ['orders'], queryFn: () => ordersApi.list() })
+  const list = orders.data || []
+  const paid = list.filter((order) => order.status === 'paid')
+  // Only settled money counts. A pending row is a checkout somebody opened and
+  // may never have come back to.
+  const total = paid.reduce((sum, order) => sum + order.amount, 0)
+  const currency = list[0]?.currency || 'USD'
+
+  if (orders.isLoading) return <Card>Loading…</Card>
+
+  if (list.length === 0) {
+    return (
+      <EmptyState
+        title="No orders yet"
+        description="Orders appear here the moment Stripe tells us a checkout was paid."
+      />
+    )
+  }
+
+  return (
+    <>
+      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+        <Card>
+          <p className="text-xs text-zinc-500">Paid orders</p>
+          <p className="text-xl font-semibold">{paid.length}</p>
+        </Card>
+        <Card>
+          <p className="text-xs text-zinc-500">Taken</p>
+          <p className="text-xl font-semibold">{money(total, currency)}</p>
+        </Card>
+      </div>
+
+      <Card>
+        <DataTable headers={['Reference', 'Product', 'Customer', 'Amount', 'Status', 'Paid']}>
+          {list.map((order) => (
+            <tr key={order.id} className="border-t border-zinc-100">
+              <td className="px-3 py-2 font-mono text-[11px]">{order.reference}</td>
+              <td className="px-3 py-2">{order.product?.name || '—'}</td>
+              <td className="px-3 py-2">{order.customer_email || '—'}</td>
+              <td className="px-3 py-2">{money(order.amount, order.currency)}</td>
+              <td className="px-3 py-2">
+                <Badge tone={order.status === 'paid' ? 'success' : order.status === 'failed' ? 'danger' : 'neutral'}>
+                  {order.status}
+                </Badge>
+              </td>
+              <td className="px-3 py-2 text-zinc-500">
+                {order.paid_at ? new Date(order.paid_at).toLocaleDateString() : '—'}
+              </td>
+            </tr>
+          ))}
+        </DataTable>
+      </Card>
+    </>
+  )
+}
+
 export function ProductsPage() {
+  const [tab, setTab] = useState<'products' | 'orders'>('products')
   const qc = useQueryClient()
   const settings = useQuery({ queryKey: ['payments'], queryFn: paymentsApi.get })
   const products = useQuery({ queryKey: ['products'], queryFn: () => productsApi.list() })
@@ -302,9 +367,26 @@ export function ProductsPage() {
         }
       />
 
-      <StripePanel />
+      <div className="mb-4 flex gap-1 border-b border-zinc-200">
+        {(['products', 'orders'] as const).map((id) => (
+          <button
+            key={id}
+            type="button"
+            className={`px-3 py-2 text-sm capitalize ${
+              tab === id ? 'border-b-2 border-blue-600 font-medium text-blue-700' : 'text-zinc-500 hover:text-zinc-800'
+            }`}
+            onClick={() => setTab(id)}
+          >
+            {id}
+          </button>
+        ))}
+      </div>
 
-      {open ? (
+      {tab === 'orders' ? <OrdersTab /> : null}
+
+      {tab === 'products' ? <StripePanel /> : null}
+
+      {tab === 'products' && open ? (
         <Card className="mb-6">
           <h2 className="mb-3 text-sm font-semibold">{editing ? `Edit ${editing.name}` : 'New product'}</h2>
           <div className="grid gap-3 md:grid-cols-2">
@@ -402,7 +484,7 @@ export function ProductsPage() {
         </Card>
       ) : null}
 
-      {list.length === 0 ? (
+      {tab !== 'products' ? null : list.length === 0 ? (
         <EmptyState
           title="Nothing for sale yet"
           description="Add a product, then drop a Buy button onto a page or a funnel step."

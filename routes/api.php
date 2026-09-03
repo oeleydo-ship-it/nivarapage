@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\LivechatController;
 use App\Http\Controllers\Api\V1\MediaController;
 use App\Http\Controllers\Api\V1\MenuController;
+use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\OverviewController;
 use App\Http\Controllers\Api\V1\PageController;
 use App\Http\Controllers\Api\V1\PreviewController;
@@ -173,6 +174,7 @@ Route::prefix('v1')->group(function () {
             Route::put('/sites/{site}/settings', [SiteController::class, 'updateSettings']);
             // A workspace's own product catalogue and its own Stripe account.
             // Nothing here touches the platform gateway the super admin owns.
+            Route::get('/orders', [OrderController::class, 'index']);
             Route::get('/products', [ProductController::class, 'index']);
             Route::post('/products', [ProductController::class, 'store']);
             Route::get('/products/{product}', [ProductController::class, 'show']);
