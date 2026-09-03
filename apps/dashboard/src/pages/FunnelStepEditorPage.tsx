@@ -99,14 +99,20 @@ export function FunnelStepEditorPage() {
       )
     },
   })
+  const [renderError, setRenderError] = useState<string | null>(null)
   const publish = useMutation({
     mutationFn: async () => {
       if (dirty) await funnelsApi.saveStepContent(id!, stepId!, content)
       return publishFunnelWithRenders(id!)
     },
-    onSuccess: (saved) => {
-      qc.setQueryData(['funnel', id], saved)
+    onSuccess: (result) => {
       setDirty(false)
+      // This returns how many pages were rendered, not the funnel. Writing it
+      // into the funnel cache replaced the funnel with {rendered: n}, which has
+      // no steps, and the editor then reported the step it was showing as
+      // missing. Refetch instead, so the cache holds a funnel.
+      setRenderError(result.renderError ?? null)
+      void qc.invalidateQueries({ queryKey: ['funnel', id] })
     },
   })
   const update = (sections: PageSection[]) => {
@@ -120,7 +126,10 @@ export function FunnelStepEditorPage() {
   const activeTab = groups.some((group) => group.id === tab) ? tab : groups[0]?.id || 'content'
   const visibleFields = fields.filter((field) => (field.group || 'content') === activeTab)
   const publicUrl = standaloneFunnelUrl(funnel.data?.public_id, step?.slug)
-  const error = (save.error || publish.error) instanceof Error ? ((save.error || publish.error) as Error).message : null
+  const mutationError = (save.error || publish.error) instanceof Error ? ((save.error || publish.error) as Error).message : null
+  // A publish that succeeded but could not build the HTML is worth saying out
+  // loud: the funnel is live and its pages still serve the previous render.
+  const error = mutationError || renderError
   const cssVars = themeToCssVars(defaultThemeTokens) as CSSProperties
   const add = (type: string) => {
     const block = getBlock(type)
