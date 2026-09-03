@@ -60,6 +60,7 @@ export const TEMPLATE_KITS: TemplateKit[] = [
   { id: 'voltera', label: 'Voltera', matches: (type) => type.includes('.voltera') },
   { id: 'halcyon', label: 'Halcyon', matches: (type) => type.includes('.halcyon') },
   { id: 'meridian', label: 'Meridian', matches: (type) => type.includes('.meridian') },
+  { id: 'anchorline', label: 'Anchorline', matches: (type) => type.includes('.anchor') },
   {
     id: 'studio',
     label: 'Studio',

@@ -332,6 +332,16 @@ class TemplateSeeder extends Seeder
             theme: TemplateMeridian::theme(),
             pages: TemplateMeridian::pages(),
         );
+
+        $this->publish(
+            category: ['slug' => 'logistics', 'name' => 'Logistics'],
+            slug: 'anchorline',
+            name: 'Anchorline',
+            description: 'An editorial freight-forwarding and logistics kit: a wide near-white sheet ruled by hairlines, Newsreader serif headlines over Poppins body copy, a utility bar above a sticky navbar, a photographic hero cut by a diagonal brand wedge, ruled service grids, a vision and mission panel, shipment tracking, an offices and branches list and a split contact panel, across seven fully editable pages.',
+            featured: true,
+            theme: TemplateAnchorline::theme(),
+            pages: TemplateAnchorline::pages(),
+        );
     }
 
     /**
