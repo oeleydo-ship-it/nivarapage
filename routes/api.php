@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\V1\PageController;
 use App\Http\Controllers\Api\V1\PreviewController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\PublicBrandingController;
+use App\Http\Controllers\Api\V1\PublicCheckoutController;
 use App\Http\Controllers\Api\V1\PublicFunnelController;
 use App\Http\Controllers\Api\V1\PublicLivechatController;
 use App\Http\Controllers\Api\V1\PublicSiteController;
@@ -98,6 +99,11 @@ Route::prefix('v1')->group(function () {
 
     Route::post('/billing/webhook', [StripeWebhookController::class, 'handle'])
         ->middleware('throttle:60,1');
+
+    // A buy button on a published page. Public, because the person clicking is
+    // the workspace's customer, not a user of the platform.
+    Route::post('/public/products/{product}/checkout', [PublicCheckoutController::class, 'start'])
+        ->middleware('throttle:public-checkout');
 
     // Stripe posts here with no session; the signature is the authentication.
     // Throttled by endpoint token so one workspace cannot drown out another.

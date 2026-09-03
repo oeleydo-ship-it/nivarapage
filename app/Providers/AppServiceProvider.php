@@ -106,6 +106,12 @@ class AppServiceProvider extends ServiceProvider
         // Stripe retries with backoff and a busy shop can burst, so this is
         // generous - and keyed by endpoint token, so one workspace's traffic
         // cannot throttle another's payments.
+        // Opening a checkout costs a Stripe call and writes a row, so it is
+        // kept per-IP rather than per-product: one shopper, not one shop.
+        RateLimiter::for('public-checkout', function (Request $request) {
+            return Limit::perMinute(20)->by($request->ip());
+        });
+
         RateLimiter::for('stripe-webhook', function (Request $request) {
             return Limit::perMinute(300)->by((string) $request->route('token'));
         });
