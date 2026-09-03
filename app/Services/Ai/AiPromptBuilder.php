@@ -458,6 +458,8 @@ class AiPromptBuilder
             '- update_theme: only change theme tokens. Fill theme with the keys that change.',
             '- reply: ask a clarifying question. No pages/sections/theme.',
             'Prefer rewrite_copy over replace_page whenever the request is about wording. Rewriting words is not a reason to rebuild a page.',
+            'The current page blocks, their copy and the other pages are given below when they exist. Treat them as the established voice, brand and vocabulary: reuse the same product names, service names and tone, and do not contradict or duplicate what a page already says.',
+            'reply is only for a genuinely ambiguous request. If the brief names a business, an industry, a page or a section, you have enough to build - produce the content rather than asking a question back.',
             'When Generation mode is supplied in the user prompt, obey it: full_site uses apply_site, current_page uses replace_page, copy uses rewrite_copy, and blocks uses insert_blocks.',
             'Follow-ups: honour the conversation. Do not regenerate the whole site unless asked. "Add an About page" is create_page. "Rewrite the content" is rewrite_copy. "Make the hero shorter" is rewrite_copy. "Swap the hero for a video hero" is replace_page. "Add a FAQ" is insert_blocks. "Use navy and gold" is update_theme.',
             'Theme keys allowed: primary, secondary, accent, background, surface, text, muted, headingFont, bodyFont, headingWeight, bodyWeight, buttonRadius, cardRadius, containerWidth, sectionSpacing.',
@@ -493,6 +495,10 @@ class AiPromptBuilder
         }
         if ($site->category) {
             $lines[] = 'Category: '.$site->category;
+        }
+        $description = trim((string) ($site->settings?->default_description ?? ''));
+        if ($description !== '') {
+            $lines[] = 'How the site describes itself: '.mb_substr($description, 0, 300);
         }
 
         $pageName = trim((string) ($input['page_name'] ?? 'Home'));
@@ -542,6 +548,15 @@ class AiPromptBuilder
             $lines[] = 'Selected block: '.$input['selected_type'].(! empty($input['selected_heading']) ? ' — '.$input['selected_heading'] : '');
         }
 
+        // The rest of the site, so a new or rewritten page joins what is already
+        // there instead of inventing a second brand alongside it.
+        $siblings = $this->siblingOutlines($site, (string) ($input['page_slug'] ?? ''));
+        if ($siblings !== '') {
+            $lines[] = '';
+            $lines[] = 'Other pages on this site (for voice, naming and consistency):';
+            $lines[] = $siblings;
+        }
+
         $history = is_array($input['messages'] ?? null) ? $input['messages'] : [];
         $lines[] = '';
         $lines[] = 'Conversation:';
@@ -580,7 +595,48 @@ class AiPromptBuilder
     /**
      * @param  array<string, mixed>  $content
      */
-    private function pageOutline(array $content): string
+    /**
+     * A short outline of the site's other pages.
+     *
+     * Only the block shapes and headings, not their body copy: the point is
+     * that a new About page uses the same service names and brand voice as the
+     * pages beside it, and the full text of five pages would crowd out the
+     * catalogue the model actually has to pick blocks from.
+     */
+    private function siblingOutlines(Site $site, string $currentSlug): string
+    {
+        $pages = $site->relationLoaded('pages')
+            ? $site->pages
+            : $site->pages()->with('draftRevision')->limit(8)->get();
+
+        $out = [];
+        foreach ($pages as $page) {
+            if (count($out) >= 5) {
+                break;
+            }
+            if ($currentSlug !== '' && $page->slug === $currentSlug) {
+                continue;
+            }
+            $content = $page->draftRevision?->content_json;
+            if (! is_array($content)) {
+                continue;
+            }
+            $outline = $this->pageOutline($content, false);
+            if ($outline === '') {
+                continue;
+            }
+            $out[] = $page->name.' (/'.$page->slug.')';
+            foreach (explode("
+", $outline) as $row) {
+                $out[] = '  '.$row;
+            }
+        }
+
+        return implode("
+", $out);
+    }
+
+    private function pageOutline(array $content, bool $withCopy = true): string
     {
         $sections = is_array($content['sections'] ?? null) ? $content['sections'] : [];
         $lines = [];
@@ -590,17 +646,89 @@ class AiPromptBuilder
             }
             $type = (string) ($section['type'] ?? 'unknown');
             $props = is_array($section['props'] ?? null) ? $section['props'] : [];
-            $heading = '';
-            foreach (['heading', 'title', 'logo', 'question'] as $key) {
-                if (is_string($props[$key] ?? null) && trim($props[$key]) !== '') {
-                    $heading = mb_substr(trim($props[$key]), 0, 80);
-                    break;
+            $heading = self::firstText($props, ['heading', 'title', 'logo', 'question'], 90);
+            $line = ($index + 1).'. '.$type.($heading !== '' ? ' — '.$heading : '');
+
+            if ($withCopy) {
+                // The words already on the page, not just its shape. Without these
+                // the model cannot match the site's voice, reuse its terminology, or
+                // avoid repeating a claim the page already makes two sections down -
+                // which is exactly what "make this sound like the rest of the site"
+                // and "rewrite the copy" need in order to mean anything.
+                $eyebrow = self::firstText($props, ['eyebrow', 'kicker', 'label'], 40);
+                $body = self::firstText($props, ['description', 'subheading', 'text', 'body', 'answer', 'tagline'], 220);
+                if ($eyebrow !== '') {
+                    $line .= "
+   eyebrow: ".$eyebrow;
+                }
+                if ($body !== '') {
+                    $line .= "
+   copy: ".$body;
+                }
+                $items = self::itemTitles($props);
+                if ($items !== '') {
+                    $line .= "
+   items: ".$items;
                 }
             }
-            $lines[] = ($index + 1).'. '.$type.($heading !== '' ? ' — '.$heading : '');
+
+            $lines[] = $line;
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * First non-empty string among the given prop keys, flattened to one line.
+     *
+     * @param  array<string, mixed>  $props
+     * @param  list<string>  $keys
+     */
+    private static function firstText(array $props, array $keys, int $limit): string
+    {
+        foreach ($keys as $key) {
+            $value = $props[$key] ?? null;
+            if (! is_string($value) || trim($value) === '') {
+                continue;
+            }
+            $text = trim((string) preg_replace('/\s+/', ' ', strip_tags($value)));
+            if ($text !== '') {
+                return mb_substr($text, 0, $limit);
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Titles from the first few repeater items, so the model can see what a
+     * services grid or FAQ already covers instead of proposing it again.
+     *
+     * @param  array<string, mixed>  $props
+     */
+    private static function itemTitles(array $props): string
+    {
+        foreach (['items', 'cards', 'features', 'services', 'plans', 'columns'] as $key) {
+            $items = $props[$key] ?? null;
+            if (! is_array($items) || $items === []) {
+                continue;
+            }
+            $titles = [];
+            foreach (array_slice($items, 0, 6) as $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+                $title = self::firstText($item, ['title', 'heading', 'name', 'question', 'label'], 50);
+                if ($title !== '') {
+                    $titles[] = $title;
+                }
+            }
+            if ($titles !== []) {
+                return implode('; ', $titles);
+            }
+        }
+
+        return '';
     }
 
     public function catalogIndex(): string
