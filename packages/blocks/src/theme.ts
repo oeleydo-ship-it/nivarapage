@@ -221,6 +221,23 @@ const TOKEN_TO_VAR: Record<string, string> = {
   sectionSpacing: "--section-spacing",
 };
 
+/**
+ * "110%" -> 1.1. Also accepts a bare multiplier ("1.1") so a theme written by
+ * hand or by the AI is not silently dropped.
+ *
+ * Clamped: past these bounds the type scale stops being a design and starts
+ * being a layout bug, and there is no undo on a published site.
+ */
+export function textScaleMultiplier(value: unknown): number | null {
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  const text = String(value).trim();
+  if (text === "") return null;
+  const numeric = Number.parseFloat(text.replace(/[^\d.]/g, ""));
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  const ratio = text.includes("%") || numeric > 5 ? numeric / 100 : numeric;
+  return Math.round(Math.min(Math.max(ratio, 0.75), 1.6) * 1000) / 1000;
+}
+
 export function themeTokensToCssVars(tokens: ThemeTokens | null | undefined): Record<string, string> {
   const vars: Record<string, string> = {};
   if (!tokens) {
@@ -232,6 +249,13 @@ export function themeTokensToCssVars(tokens: ThemeTokens | null | undefined): Re
     if (typeof value === "string" && value.trim()) {
       vars[`--color-${key}`] = value.trim();
     }
+  }
+
+  // Text size is authored as a percentage because that is what reads well in
+  // the Theme panel, but CSS has to multiply lengths by a plain number.
+  const scale = textScaleMultiplier(tokens.textScale);
+  if (scale !== null) {
+    vars["--ud-font-scale"] = String(scale);
   }
 
   for (const [key, cssVar] of Object.entries(TOKEN_TO_VAR)) {

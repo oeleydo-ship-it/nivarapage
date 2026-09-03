@@ -62,6 +62,7 @@ export const defaultThemeTokens: ThemeTokens = {
   serifFont: 'Georgia, serif',
   headingWeight: 700,
   bodyWeight: 400,
+  textScale: '100%',
   buttonRadius: '8px',
   cardRadius: '12px',
   containerWidth: '1120px',

@@ -99,6 +99,11 @@ export interface ThemeTokens {
   serifFont: string
   headingWeight: number
   bodyWeight: number
+  /**
+   * Site-wide text size as a percentage, e.g. "100%" or "110%". Emitted as the
+   * unitless `--ud-font-scale` multiplier that block type scales are built on.
+   */
+  textScale: string
   buttonRadius: string
   cardRadius: string
   containerWidth: string

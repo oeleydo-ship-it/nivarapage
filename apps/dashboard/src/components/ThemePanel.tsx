@@ -213,6 +213,14 @@ export function ThemePanel({
                 </div>
               ))}
             </div>
+            <Numberish
+              label="Text size"
+              value={value('textScale') || '100%'}
+              suffix="%"
+              min={80}
+              max={140}
+              onChange={(next) => onChange({ textScale: next })}
+            />
           </section>
 
           <section className="space-y-3">

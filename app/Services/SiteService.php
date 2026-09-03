@@ -309,6 +309,10 @@ class SiteService
             'bodyFont' => 'Inter, system-ui, sans-serif',
             'headingWeight' => 700,
             'bodyWeight' => 400,
+            // Site-wide text size. Every key here is also the allow-list
+            // sanitizeTheme() filters incoming themes against, so a token
+            // missing from this list is silently dropped on save.
+            'textScale' => '100%',
             'buttonRadius' => '8px',
             'cardRadius' => '12px',
             'containerWidth' => '1120px',
