@@ -241,58 +241,105 @@ function StripePanel() {
  * all whether something was paid for.
  */
 function OrdersTab() {
-  const orders = useQuery({ queryKey: ['orders'], queryFn: () => ordersApi.list() })
+  const [status, setStatus] = useState('')
+  const [q, setQ] = useState('')
+  // Debounced so a search is one request per pause, not one per keystroke.
+  const [search, setSearch] = useState('')
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(q.trim()), 300)
+    return () => clearTimeout(timer)
+  }, [q])
+
+  const orders = useQuery({
+    queryKey: ['orders', status, search],
+    queryFn: () => ordersApi.list({ status: status || undefined, q: search || undefined }),
+    placeholderData: (previous) => previous,
+  })
+
   const list = orders.data || []
   const paid = list.filter((order) => order.status === 'paid')
-  // Only settled money counts. A pending row is a checkout somebody opened and
-  // may never have come back to.
-  const total = paid.reduce((sum, order) => sum + order.amount, 0)
-  const currency = list[0]?.currency || 'USD'
-
-  if (orders.isLoading) return <Card>Loading…</Card>
-
-  if (list.length === 0) {
-    return (
-      <EmptyState
-        title="No orders yet"
-        description="Orders appear here the moment Stripe tells us a checkout was paid."
-      />
-    )
+  // Kept apart by currency. A shop selling in two of them has two totals, and
+  // adding the numbers together would print one that means nothing.
+  const totals = new Map<string, number>()
+  for (const order of paid) {
+    totals.set(order.currency, (totals.get(order.currency) || 0) + order.amount)
   }
+
+  const filtered = Boolean(status || search)
 
   return (
     <>
-      <div className="mb-4 grid gap-3 sm:grid-cols-2">
-        <Card>
-          <p className="text-xs text-zinc-500">Paid orders</p>
-          <p className="text-xl font-semibold">{paid.length}</p>
-        </Card>
-        <Card>
-          <p className="text-xs text-zinc-500">Taken</p>
-          <p className="text-xl font-semibold">{money(total, currency)}</p>
-        </Card>
+      <div className="mb-4 flex flex-wrap items-end gap-2">
+        <div className="max-w-xs flex-1">
+          <Label>Search</Label>
+          <Input placeholder="Reference or email" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <div className="w-44">
+          <Label>Status</Label>
+          <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="">Every order</option>
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+            <option value="failed">Failed</option>
+            <option value="refunded">Refunded</option>
+          </Select>
+        </div>
       </div>
 
-      <Card>
-        <DataTable headers={['Reference', 'Product', 'Customer', 'Amount', 'Status', 'Paid']}>
-          {list.map((order) => (
-            <tr key={order.id} className="border-t border-zinc-100">
-              <td className="px-3 py-2 font-mono text-[11px]">{order.reference}</td>
-              <td className="px-3 py-2">{order.product?.name || '—'}</td>
-              <td className="px-3 py-2">{order.customer_email || '—'}</td>
-              <td className="px-3 py-2">{money(order.amount, order.currency)}</td>
-              <td className="px-3 py-2">
-                <Badge tone={order.status === 'paid' ? 'success' : order.status === 'failed' ? 'danger' : 'neutral'}>
-                  {order.status}
-                </Badge>
-              </td>
-              <td className="px-3 py-2 text-zinc-500">
-                {order.paid_at ? new Date(order.paid_at).toLocaleDateString() : '—'}
-              </td>
-            </tr>
-          ))}
-        </DataTable>
-      </Card>
+      {orders.isLoading ? (
+        <Card>Loading…</Card>
+      ) : list.length === 0 ? (
+        <EmptyState
+          title={filtered ? 'Nothing matches' : 'No orders yet'}
+          description={
+            filtered
+              ? 'No order matches that search.'
+              : 'Orders appear here the moment Stripe tells us a checkout was paid.'
+          }
+        />
+      ) : (
+        <>
+          <div className="mb-4 grid gap-3 sm:grid-cols-2">
+            <Card>
+              <p className="text-xs text-zinc-500">Paid orders</p>
+              <p className="text-xl font-semibold">{paid.length}</p>
+            </Card>
+            <Card>
+              <p className="text-xs text-zinc-500">Taken</p>
+              {totals.size === 0 ? (
+                <p className="text-xl font-semibold">—</p>
+              ) : (
+                [...totals].map(([currency, amount]) => (
+                  <p key={currency} className="text-xl font-semibold">
+                    {money(amount, currency)}
+                  </p>
+                ))
+              )}
+            </Card>
+          </div>
+
+          <Card>
+            <DataTable headers={['Reference', 'Product', 'Customer', 'Amount', 'Status', 'Paid']}>
+              {list.map((order) => (
+                <tr key={order.id} className="border-t border-zinc-100">
+                  <td className="px-3 py-2 font-mono text-[11px]">{order.reference}</td>
+                  <td className="px-3 py-2">{order.product?.name || '—'}</td>
+                  <td className="px-3 py-2">{order.customer_email || '—'}</td>
+                  <td className="px-3 py-2">{money(order.amount, order.currency)}</td>
+                  <td className="px-3 py-2">
+                    <Badge tone={order.status === 'paid' ? 'success' : order.status === 'failed' ? 'danger' : 'neutral'}>
+                      {order.status}
+                    </Badge>
+                  </td>
+                  <td className="px-3 py-2 text-zinc-500">
+                    {order.paid_at ? new Date(order.paid_at).toLocaleDateString() : '—'}
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
+          </Card>
+        </>
+      )}
     </>
   )
 }
