@@ -51,4 +51,36 @@ class SiteChromeController extends Controller
             throw ValidationException::withMessages(['header' => $e->getMessage()]);
         }
     }
+
+    /**
+     * Makes one page's header or footer the whole site's.
+     *
+     * A template puts a navbar on every page, and the renderer leaves a page's
+     * own navbar alone rather than stacking the shared one above it. So until
+     * the per-page copies are gone the pages share nothing, and editing the
+     * header on one changes only that one. This is the switch.
+     */
+    public function adopt(Request $request, Site $site): JsonResponse
+    {
+        Gate::authorize('update', $site);
+
+        $data = $request->validate([
+            'slot' => ['required', 'in:header,footer'],
+            'page_id' => ['nullable'],
+        ]);
+
+        $source = null;
+        if (! empty($data['page_id'])) {
+            $source = $site->pages()->whereKey($data['page_id'])->first();
+            abort_unless($source, 404, 'That page is not part of this site.');
+        }
+
+        try {
+            $result = $this->chrome->adopt($site, $data['slot'], $request->user(), $source);
+        } catch (InvalidArgumentException $e) {
+            throw ValidationException::withMessages(['slot' => $e->getMessage()]);
+        }
+
+        return response()->json(['data' => $result]);
+    }
 }

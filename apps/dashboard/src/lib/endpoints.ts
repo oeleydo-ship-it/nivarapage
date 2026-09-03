@@ -139,6 +139,12 @@ export const sitesApi = {
   /** Send only the slot being edited; the other is left as it is. */
   updateChrome: (id: string | number, body: Partial<SiteChrome>) =>
     http.put<SiteChrome>(`/sites/${id}/chrome`, body),
+  /**
+   * Makes one page's header or footer the site's, and takes the per-page copies
+   * away so the shared one is what every page renders.
+   */
+  adoptChrome: (id: string | number, body: { slot: 'header' | 'footer'; page_id?: string | number }) =>
+    http.post<{ chrome: SiteChrome; adopted: number; pages: number }>(`/sites/${id}/chrome/adopt`, body),
   applyTemplate: (id: string | number, template_id: number) =>
     http.post<Site>(`/sites/${id}/apply-template`, { template_id }),
   previewToken: (id: string | number) =>

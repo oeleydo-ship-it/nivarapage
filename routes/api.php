@@ -159,6 +159,7 @@ Route::prefix('v1')->group(function () {
             Route::put('/sites/{site}/settings', [SiteController::class, 'updateSettings']);
             Route::get('/sites/{site}/chrome', [SiteChromeController::class, 'show']);
             Route::put('/sites/{site}/chrome', [SiteChromeController::class, 'update']);
+            Route::post('/sites/{site}/chrome/adopt', [SiteChromeController::class, 'adopt']);
             Route::get('/sites/{site}/theme', [SiteController::class, 'theme']);
             Route::put('/sites/{site}/theme', [SiteController::class, 'updateTheme']);
             Route::post('/sites/{site}/publish', [SiteController::class, 'publish']);

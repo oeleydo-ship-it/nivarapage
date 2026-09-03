@@ -175,6 +175,20 @@ function errorText(error: unknown, fallback: string): string {
   return fallback
 }
 
+/**
+ * Which shared slot a block belongs in, if any.
+ *
+ * Same families the renderer uses to decide whether a page has chrome of its
+ * own, so the offer to share only appears on blocks that would actually be
+ * replaced by the shared one.
+ */
+function chromeSlotOf(type: string): 'header' | 'footer' | null {
+  const family = type.split('.')[0]
+  if (family === 'navbar' || family === 'nav' || family === 'header') return 'header'
+  if (family === 'footer') return 'footer'
+  return null
+}
+
 
 function SectionFrame({
   section,
@@ -568,6 +582,7 @@ export function BuilderPage() {
 
   const [imageEdit, setImageEdit] = useState<{ sectionId: string; path: EditPath; current: string } | null>(null)
 
+
   const bindings = useMemo(() => {
     const cache = new Map<string, EditBinding>()
     return (sectionId: string): EditBinding => {
@@ -680,6 +695,37 @@ export function BuilderPage() {
     setToast(result.ok ? 'Draft saved' : result.error || 'Could not save the draft', result.ok ? undefined : { tone: 'err' })
     return result.ok
   }, [persistDraft])
+
+  const [adopting, setAdopting] = useState(false)
+
+  /**
+   * Lifts this page's header or footer into the site, and strips the per-page
+   * copies so every page renders the shared one from here on.
+   */
+  const adoptChrome = useCallback(
+    async (slot: 'header' | 'footer') => {
+      if (!id || adopting) return
+      setAdopting(true)
+      try {
+        // Anything unsaved on this page is part of what is being shared.
+        await persistDraft()
+        const result = await sitesApi.adoptChrome(id, { slot, page_id: currentPage?.id })
+        // The page just lost its copy on the server, so the canvas has to be
+        // reloaded or it keeps showing a block the draft no longer has.
+        await qc.invalidateQueries({ queryKey: ['pages', id] })
+        setToast(
+          result.pages > 1
+            ? `That ${slot} is now on every page. Removed it from ${result.pages} pages. Publish to put it live.`
+            : `That ${slot} is now the site ${slot}. Publish to put it live.`,
+        )
+      } catch (error) {
+        setToast(errorText(error, `Could not share this ${slot}.`), { tone: 'err' })
+      } finally {
+        setAdopting(false)
+      }
+    },
+    [adopting, currentPage?.id, id, persistDraft, qc, setToast],
+  )
 
   const openPreview = useCallback(async () => {
     // Open the tab synchronously so the popup blocker keeps it: it would drop a
@@ -1176,6 +1222,23 @@ export function BuilderPage() {
                       </button>
                     </div>
                   </div>
+                  {/* A page's own navbar overrides the shared one, so while it
+                      is here this header belongs to this page alone. */}
+                  {!chromeSlot && chromeSlotOf(selected.type) ? (
+                    <div className="mb-2 rounded-md bg-amber-500/10 px-2 py-2 text-[11px] leading-snug text-amber-200">
+                      <p>
+                        This {chromeSlotOf(selected.type)} is only on this page. Editing it will not change the others.
+                      </p>
+                      <button
+                        type="button"
+                        disabled={adopting}
+                        className="mt-1.5 rounded bg-amber-500/20 px-2 py-1 font-medium text-amber-100 hover:bg-amber-500/30 disabled:opacity-50"
+                        onClick={() => adoptChrome(chromeSlotOf(selected.type)!)}
+                      >
+                        {adopting ? 'Applying…' : `Use this ${chromeSlotOf(selected.type)} on every page`}
+                      </button>
+                    </div>
+                  ) : null}
                   <div className="flex flex-wrap gap-1">
                     {usedGroups.map((entry) => (
                       <button
