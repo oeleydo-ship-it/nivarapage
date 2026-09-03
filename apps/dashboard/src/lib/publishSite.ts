@@ -96,7 +96,7 @@ export async function publishFunnelWithRenders(funnelId: string | number): Promi
 
   try {
     const payload = await http.get<FunnelRenderPayload>(`/funnels/${funnelId}/render-payload`)
-    const { site, menus, pages, site_id: siteId } = payload
+    const { site, menus, pages } = payload
 
     if (!pages.length) return { rendered: 0 }
 
@@ -114,7 +114,9 @@ export async function publishFunnelWithRenders(funnelId: string | number): Promi
       }),
     }))
 
-    await http.post(`/sites/${siteId}/renders`, { renders, prune: false })
+    // Stored against the funnel rather than a site: a standalone funnel has
+    // no site, which is where its HTML used to be sent and never arrived.
+    await http.post(`/funnels/${funnelId}/renders`, { renders })
 
     return { rendered: renders.length }
   } catch (error) {

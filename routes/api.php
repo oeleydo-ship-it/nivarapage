@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\DomainController;
 use App\Http\Controllers\Api\V1\FormController;
 use App\Http\Controllers\Api\V1\FunnelController;
 use App\Http\Controllers\Api\V1\FunnelRenderController;
+use App\Http\Controllers\Api\V1\FunnelRenderStoreController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\LivechatController;
 use App\Http\Controllers\Api\V1\MediaController;
@@ -192,6 +193,8 @@ Route::prefix('v1')->group(function () {
             Route::put('/sites/{site}/theme', [SiteController::class, 'updateTheme']);
             Route::post('/sites/{site}/publish', [SiteController::class, 'publish']);
             Route::post('/sites/{site}/renders', [SiteRenderController::class, 'store']);
+            // A funnel need not have a site, so its steps upload separately.
+            Route::post('/funnels/{funnel}/renders', [FunnelRenderStoreController::class, 'store']);
             Route::get('/sites/{site}/render-payload', [SiteRenderController::class, 'payload']);
             Route::post('/sites/{site}/preview-token', [PreviewController::class, 'token']);
             Route::post('/sites/{site}/apply-template', [TemplateController::class, 'apply']);

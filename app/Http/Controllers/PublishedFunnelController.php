@@ -50,7 +50,10 @@ class PublishedFunnelController extends Controller
             return $this->missing();
         }
 
-        $render = $this->renders->find($model->site, "/f/{$model->public_id}/{$step}");
+        // Keyed by the funnel, not its site: a standalone funnel has no site,
+        // and asking for one is what made every published funnel answer with a
+        // type error instead of a page.
+        $render = $this->renders->findForFunnel($model, "/f/{$model->public_id}/{$step}");
 
         if (! $render) {
             return $this->missing();

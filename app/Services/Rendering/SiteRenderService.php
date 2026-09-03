@@ -2,6 +2,7 @@
 
 namespace App\Services\Rendering;
 
+use App\Models\Funnel;
 use App\Models\Page;
 use App\Models\PageRender;
 use App\Models\Site;
@@ -33,6 +34,55 @@ class SiteRenderService
             ->where('site_id', $site->id)
             ->where('path', $this->normalizePath($path))
             ->first();
+    }
+
+    /**
+     * The stored HTML for one funnel step.
+     *
+     * A standalone funnel has no site, so its renders are keyed by the funnel
+     * itself. A funnel that does belong to a site keeps answering from the
+     * site's rows, which is where anything published before this was written.
+     */
+    public function findForFunnel(Funnel $funnel, string $path): ?PageRender
+    {
+        $path = $this->normalizePath($path);
+
+        $render = PageRender::query()
+            ->where('funnel_id', $funnel->id)
+            ->where('path', $path)
+            ->first();
+
+        if ($render || ! $funnel->site_id) {
+            return $render;
+        }
+
+        return PageRender::query()
+            ->where('site_id', $funnel->site_id)
+            ->where('path', $path)
+            ->first();
+    }
+
+    public function storeForFunnel(Funnel $funnel, string $path, string $html): PageRender
+    {
+        $path = $this->normalizePath($path);
+        $hash = hash('sha256', $html);
+
+        $existing = PageRender::query()
+            ->where('funnel_id', $funnel->id)
+            ->where('path', $path)
+            ->first();
+
+        // An unchanged republish must not bump updated_at: it becomes the
+        // Last-Modified header, and moving it invalidates caches for HTML that
+        // did not change.
+        if ($existing && $existing->hash === $hash) {
+            return $existing;
+        }
+
+        return PageRender::updateOrCreate(
+            ['funnel_id' => $funnel->id, 'path' => $path],
+            ['site_id' => $funnel->site_id, 'html' => $html, 'hash' => $hash],
+        );
     }
 
     public function store(Site $site, string $path, string $html, ?Page $page = null, ?int $revisionId = null): PageRender
