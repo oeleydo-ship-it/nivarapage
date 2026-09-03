@@ -213,7 +213,7 @@ class FunnelService
             $slug = $base.'-'.$i++;
         }
 
-return $slug;
+        return $slug;
     }
 
     private function page(array $sections): array
@@ -259,6 +259,22 @@ return $slug;
                 'buttonLabel' => 'Continue',
                 'successMessage' => 'Thanks — that is everything we need.',
                 'footnote' => 'We will only use these details to get back to you.',
+            ])]);
+        }
+
+        // A step whose job is to take money starts with something that can.
+        // The product is left for the customer to choose - the button says so
+        // on the canvas, and refuses to sell until one is picked.
+        if (in_array($type, ['checkout', 'upsell', 'order_bump'], true)) {
+            return $this->page([$this->section('buy', 'commerce.buy', [
+                'productId' => '',
+                'heading' => $name,
+                'description' => $type === 'upsell'
+                    ? 'Add this to your order before you go.'
+                    : 'Confirm your order below.',
+                'buttonLabel' => $type === 'upsell' ? 'Yes, add it' : 'Pay now',
+                'askForEmail' => $type !== 'upsell',
+                'footnote' => 'Secure checkout by Stripe.',
             ])]);
         }
 

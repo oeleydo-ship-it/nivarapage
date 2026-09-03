@@ -201,7 +201,7 @@ export function FunnelSettingsPage() {
   const phases = [
     ['Phase 1 — Core', 'done', 'CRUD, steps, connections, page editor, publish, public URL, leads, basic tracking'],
     ['Phase 2 — Analytics', 'done', 'Sessions, UTMs, devices, geo, drop-off, revenue attribution, live aggregates'],
-    ['Phase 3 — Conversion tools', 'partial', 'Checkout/upsell step types & analytics hooks exist; live payments/orders/coupons not wired'],
+    ['Phase 3 — Conversion tools', 'partial', 'Checkout and upsell steps sell through your own Stripe, with orders recorded; coupons not built yet'],
     ['Phase 4 — Experiments', 'later', 'A/B testing, variants, winner selection'],
     ['Phase 5 — Automation', 'later', 'Triggers, delays, email, webhooks'],
     ['Phase 6 — Advanced tools', 'partial', 'Starter templates shipped; quizzes, import/export, version history later'],

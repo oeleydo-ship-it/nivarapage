@@ -145,3 +145,36 @@ it('keeps the visitor on a lead when a later signup has no consent', function ()
     expect($lead->company)->toBe('Northwind');
     expect($lead->visitor_id)->toBe($before);
 });
+
+it('gives a checkout step something that can take money', function () {
+    ['funnel' => $funnel] = optinFunnel('Launch', ['template' => 'product_launch']);
+
+    $checkout = collect($funnel['steps'])->firstWhere('slug', 'checkout');
+    $section = $checkout['draft_content']['sections'][0];
+
+    expect($section['type'])->toBe('commerce.buy');
+    expect($section['props']['buttonLabel'])->toBe('Pay now');
+    // Left blank on purpose: the shop picks which product this sells, and the
+    // button says so on the canvas until one is chosen.
+    expect($section['props']['productId'])->toBe('');
+});
+
+it('asks an upsell to add to the order rather than start a new one', function () {
+    ['funnel' => $funnel] = optinFunnel('Launch two', ['template' => 'product_launch']);
+
+    $upsell = collect($funnel['steps'])->firstWhere('slug', 'upsell');
+    $props = $upsell['draft_content']['sections'][0]['props'];
+
+    expect($upsell['draft_content']['sections'][0]['type'])->toBe('commerce.buy');
+    expect($props['buttonLabel'])->toBe('Yes, add it');
+    // Their email was taken at checkout; asking again is friction.
+    expect($props['askForEmail'])->toBeFalse();
+});
+
+it('leaves a thank you step as a plain page', function () {
+    ['funnel' => $funnel] = optinFunnel('Launch three', ['template' => 'product_launch']);
+
+    $thanks = collect($funnel['steps'])->firstWhere('slug', 'thanks');
+
+    expect($thanks['draft_content']['sections'][0]['type'])->toBe('hero.centered');
+});
