@@ -32,6 +32,10 @@ import type {
   LivechatKnowledge,
   LivechatMessage,
   LivechatWidget,
+  Coupon,
+  FunnelAutomation,
+  FunnelAutomationRun,
+  FunnelExperiment,
   Order,
   Product,
   WorkspacePaymentSettings,
@@ -102,6 +106,39 @@ export const productsApi = {
  * What the workspace has sold. Read only: a webhook decides what is paid, so
  * there is nothing here a person should be able to change.
  */
+/** Discount codes. Redemptions are counted by payments, never typed here. */
+export const couponsApi = {
+  list: () => http.get<Coupon[]>('/coupons'),
+  create: (body: Partial<Coupon>) => http.post<Coupon>('/coupons', body),
+  update: (id: string | number, body: Partial<Coupon>) => http.patch<Coupon>(`/coupons/${id}`, body),
+  remove: (id: string | number) => http.delete<{ ok: boolean }>(`/coupons/${id}`),
+}
+
+/** A/B testing one funnel step. The step's own content is the control. */
+export const experimentsApi = {
+  results: (funnelId: string | number, stepId: string | number) =>
+    http.get<FunnelExperiment>(`/funnels/${funnelId}/steps/${stepId}/variants`),
+  create: (funnelId: string | number, stepId: string | number, body: { name: string; weight?: number }) =>
+    http.post<{ id: number; key: string }>(`/funnels/${funnelId}/steps/${stepId}/variants`, body),
+  remove: (funnelId: string | number, stepId: string | number, variantId: string | number) =>
+    http.delete(`/funnels/${funnelId}/steps/${stepId}/variants/${variantId}`),
+  winner: (funnelId: string | number, stepId: string | number, key: string) =>
+    http.post<FunnelExperiment>(`/funnels/${funnelId}/steps/${stepId}/winner`, { key }),
+}
+
+/** Rules a funnel runs by itself. */
+export const automationsApi = {
+  list: (funnelId: string | number) => http.get<FunnelAutomation[]>(`/funnels/${funnelId}/automations`),
+  create: (funnelId: string | number, body: Record<string, unknown>) =>
+    http.post<FunnelAutomation>(`/funnels/${funnelId}/automations`, body),
+  update: (funnelId: string | number, id: string | number, body: Record<string, unknown>) =>
+    http.patch<FunnelAutomation>(`/funnels/${funnelId}/automations/${id}`, body),
+  remove: (funnelId: string | number, id: string | number) =>
+    http.delete<{ ok: boolean }>(`/funnels/${funnelId}/automations/${id}`),
+  runs: (funnelId: string | number, id: string | number) =>
+    http.get<FunnelAutomationRun[]>(`/funnels/${funnelId}/automations/${id}/runs`),
+}
+
 export const ordersApi = {
   list: (params?: { status?: string; q?: string }) =>
     http.get<Order[]>(`/orders${queryString({ ...params })}`),

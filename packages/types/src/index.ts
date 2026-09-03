@@ -683,6 +683,63 @@ export interface WorkspacePaymentSettings {
   last_error?: string | null
 }
 
+/** A discount code. Percent is whole points; fixed is minor units. */
+export interface Coupon {
+  id: number
+  code: string
+  type: 'percent' | 'fixed'
+  value: number
+  currency?: string | null
+  product_id?: number | null
+  max_redemptions?: number | null
+  redeemed_count: number
+  starts_at?: string | null
+  expires_at?: string | null
+  status: 'active' | 'disabled'
+}
+
+/** One version of a funnel step in an A/B test. */
+export interface FunnelVariantResult {
+  id: number | null
+  key: string
+  name: string
+  status: string
+  weight: number
+  views: number
+  conversions: number
+  rate: number
+}
+
+export interface FunnelExperiment {
+  step_id: number
+  total_views: number
+  total_conversions: number
+  variants: FunnelVariantResult[]
+}
+
+/** A rule a funnel runs by itself. The webhook secret never travels. */
+export interface FunnelAutomation {
+  id: number
+  name: string
+  trigger_event: string
+  trigger_step_id?: number | null
+  delay_minutes: number
+  action: 'email' | 'webhook'
+  status: 'active' | 'paused'
+  run_count: number
+  last_run_at?: string | null
+  runs_count?: number
+  config: { to?: string; subject?: string; body?: string; url?: string }
+}
+
+export interface FunnelAutomationRun {
+  id: number
+  status: 'pending' | 'waiting' | 'done' | 'failed' | 'skipped'
+  detail?: string | null
+  ran_at?: string | null
+  created_at?: string
+}
+
 export interface SiteForm {
   id: number
   site_id: number

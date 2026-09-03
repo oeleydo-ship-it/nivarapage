@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, CreditCard, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import type { Product } from '@uidesired/types'
-import { ordersApi, paymentsApi, productsApi } from '../lib/endpoints'
+import type { Coupon, Product } from '@uidesired/types'
+import { couponsApi, ordersApi, paymentsApi, productsApi } from '../lib/endpoints'
 import { Badge, Button, Card, DataTable, EmptyState, Input, Label, PageHeader, Select } from '../ui/primitives'
 
 /**
@@ -297,8 +297,176 @@ function OrdersTab() {
   )
 }
 
+/**
+ * Discount codes.
+ *
+ * How many times a code has been used is shown but never editable: that number
+ * is counted when money actually arrives, and typing it would hand a spent
+ * code back out.
+ */
+function CouponsTab() {
+  const qc = useQueryClient()
+  const coupons = useQuery({ queryKey: ['coupons'], queryFn: couponsApi.list })
+  const products = useQuery({ queryKey: ['products'], queryFn: () => productsApi.list() })
+  const [draft, setDraft] = useState({
+    code: '',
+    type: 'percent' as Coupon['type'],
+    value: '10',
+    product_id: '',
+    max_redemptions: '',
+    expires_at: '',
+  })
+  const [error, setError] = useState<string | null>(null)
+
+  const create = useMutation({
+    mutationFn: () =>
+      couponsApi.create({
+        code: draft.code,
+        type: draft.type,
+        // Percent is whole points; a fixed discount is minor units, like a
+        // price. Both have to be whole numbers, so 10.5% is rounded here rather
+        // than bounced back as a validation error.
+        value: draft.type === 'percent' ? Math.round(Number(draft.value)) : toMinor(draft.value),
+        product_id: draft.product_id ? Number(draft.product_id) : null,
+        max_redemptions: draft.max_redemptions ? Number(draft.max_redemptions) : null,
+        expires_at: draft.expires_at || null,
+      }),
+    onSuccess: () => {
+      setDraft({ code: '', type: 'percent', value: '10', product_id: '', max_redemptions: '', expires_at: '' })
+      setError(null)
+      void qc.invalidateQueries({ queryKey: ['coupons'] })
+    },
+    onError: (err: Error) => setError(err.message),
+  })
+
+  const toggle = useMutation({
+    mutationFn: (coupon: Coupon) =>
+      couponsApi.update(coupon.id, { status: coupon.status === 'active' ? 'disabled' : 'active' }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['coupons'] }),
+  })
+
+  const remove = useMutation({
+    mutationFn: (id: number) => couponsApi.remove(id),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['coupons'] }),
+  })
+
+  const list = coupons.data || []
+  const named = new Map((products.data || []).map((product) => [product.id, product.name]))
+
+  return (
+    <>
+      <Card className="mb-6">
+        <h2 className="mb-3 text-sm font-semibold">New code</h2>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div>
+            <Label>Code</Label>
+            <Input placeholder="SAVE20" value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} />
+            <p className="mt-1 text-[11px] text-zinc-500">Capitals do not matter to a shopper.</p>
+          </div>
+          <div>
+            <Label>Takes off</Label>
+            <Select value={draft.type} onChange={(e) => setDraft({ ...draft, type: e.target.value as Coupon['type'] })}>
+              <option value="percent">A percentage</option>
+              <option value="fixed">A fixed amount</option>
+            </Select>
+          </div>
+          <div>
+            <Label>{draft.type === 'percent' ? 'Percent off' : 'Amount off'}</Label>
+            <Input
+              type="number"
+              min="0"
+              max={draft.type === 'percent' ? '100' : undefined}
+              step={draft.type === 'percent' ? '1' : '0.01'}
+              value={draft.value}
+              onChange={(e) => setDraft({ ...draft, value: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label>Applies to</Label>
+            <Select value={draft.product_id} onChange={(e) => setDraft({ ...draft, product_id: e.target.value })}>
+              <option value="">Anything you sell</option>
+              {(products.data || []).map((product) => (
+                <option key={product.id} value={product.id}>
+                  {product.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>Limit</Label>
+            <Input
+              type="number"
+              min="1"
+              placeholder="Unlimited"
+              value={draft.max_redemptions}
+              onChange={(e) => setDraft({ ...draft, max_redemptions: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label>Expires</Label>
+            <Input type="date" value={draft.expires_at} onChange={(e) => setDraft({ ...draft, expires_at: e.target.value })} />
+          </div>
+        </div>
+
+        {error ? <p className="mt-3 text-xs text-red-600">{error}</p> : null}
+
+        <div className="mt-4">
+          <Button onClick={() => create.mutate()} disabled={create.isPending || !draft.code.trim()}>
+            {create.isPending ? 'Creating...' : 'Create code'}
+          </Button>
+        </div>
+      </Card>
+
+      {list.length === 0 ? (
+        <EmptyState
+          title="No codes yet"
+          description="A shopper types a code at checkout and the discount is worked out here, not on the page."
+        />
+      ) : (
+        <Card>
+          <DataTable headers={['Code', 'Discount', 'Applies to', 'Used', 'Expires', 'Status', '']}>
+            {list.map((coupon) => (
+              <tr key={coupon.id} className="border-t border-zinc-100">
+                <td className="px-3 py-2 font-mono text-xs font-medium">{coupon.code}</td>
+                <td className="px-3 py-2">
+                  {coupon.type === 'percent' ? `${coupon.value}%` : money(coupon.value, coupon.currency || 'USD')}
+                </td>
+                <td className="px-3 py-2 text-zinc-500">
+                  {coupon.product_id ? named.get(coupon.product_id) || `Product ${coupon.product_id}` : 'Anything'}
+                </td>
+                <td className="px-3 py-2 text-zinc-500">
+                  {coupon.redeemed_count}
+                  {coupon.max_redemptions ? ` / ${coupon.max_redemptions}` : ''}
+                </td>
+                <td className="px-3 py-2 text-zinc-500">
+                  {coupon.expires_at ? new Date(coupon.expires_at).toLocaleDateString() : '—'}
+                </td>
+                <td className="px-3 py-2">
+                  <button type="button" title="Switch this code on or off" onClick={() => toggle.mutate(coupon)}>
+                    <Badge tone={coupon.status === 'active' ? 'success' : 'neutral'}>{coupon.status}</Badge>
+                  </button>
+                </td>
+                <td className="px-3 py-2 text-right">
+                  <button
+                    type="button"
+                    title="Delete this code"
+                    className="p-1 text-zinc-400 hover:text-red-500"
+                    onClick={() => remove.mutate(coupon.id)}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </DataTable>
+        </Card>
+      )}
+    </>
+  )
+}
+
 export function ProductsPage() {
-  const [tab, setTab] = useState<'products' | 'orders'>('products')
+  const [tab, setTab] = useState<'products' | 'orders' | 'coupons'>('products')
   const qc = useQueryClient()
   const settings = useQuery({ queryKey: ['payments'], queryFn: paymentsApi.get })
   const products = useQuery({ queryKey: ['products'], queryFn: () => productsApi.list() })
@@ -368,7 +536,7 @@ export function ProductsPage() {
       />
 
       <div className="mb-4 flex gap-1 border-b border-zinc-200">
-        {(['products', 'orders'] as const).map((id) => (
+        {(['products', 'orders', 'coupons'] as const).map((id) => (
           <button
             key={id}
             type="button"
@@ -383,6 +551,8 @@ export function ProductsPage() {
       </div>
 
       {tab === 'orders' ? <OrdersTab /> : null}
+
+      {tab === 'coupons' ? <CouponsTab /> : null}
 
       {tab === 'products' ? <StripePanel /> : null}
 
