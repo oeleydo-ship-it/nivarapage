@@ -2,6 +2,7 @@ import type { PageSection } from '@uidesired/types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { History, RotateCcw, X } from 'lucide-react'
 import { useState } from 'react'
+import type { ThemeTokens } from '@uidesired/types'
 import { pagesApi, type PageRevision } from '../lib/endpoints'
 import { timeAgo } from '../lib/timeAgo'
 import { Badge, Button } from '../ui/primitives'
@@ -39,7 +40,7 @@ export function HistoryPanel({
   currentVersion?: number | null
   onPreview: (sections: PageSection[], revision: PageRevision) => void
   onCancelPreview: () => void
-  onRestored: (sections: PageSection[]) => void
+  onRestored: (sections: PageSection[], theme: Partial<ThemeTokens> | null) => void
   onClose: () => void
 }) {
   const qc = useQueryClient()
@@ -71,7 +72,9 @@ export function HistoryPanel({
       setPreviewing(null)
       setError('')
       void qc.invalidateQueries({ queryKey: ['page-revisions', pageId] })
-      onRestored((full?.content?.sections ?? []) as PageSection[])
+      // The theme travels with the version, so the editor is handed both
+      // halves rather than showing restored sections in the current colours.
+      onRestored((full?.content?.sections ?? []) as PageSection[], full?.theme_tokens ?? null)
     },
     onError: () => setError('The restore failed. Nothing was changed.'),
   })

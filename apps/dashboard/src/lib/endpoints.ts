@@ -24,6 +24,7 @@ import type {
   SiteSettings,
   Subscription,
   Template,
+  ThemeTokens,
   User,
   Workspace,
   WorkspaceInvitation,
@@ -309,10 +310,14 @@ export type PageRevision = {
   /** created | draft | published | restore */
   reason?: string | null
   section_count?: number
+  /** Whether this version also restores the site theme. */
+  has_theme?: boolean
   author?: string | null
   created_at?: string | null
   /** Only present when a single revision is fetched. */
   content?: { schemaVersion?: number; sections?: unknown[] } | null
+  /** The theme as it stood when this version was saved. Single fetches only. */
+  theme_tokens?: Partial<ThemeTokens> | null
 }
 
 export type SiteBackup = {

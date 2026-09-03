@@ -36,6 +36,7 @@ class PageRevisionResource extends JsonResource
     {
         $content = is_array($this->content_json) ? $this->content_json : [];
         $sections = is_array($content['sections'] ?? null) ? $content['sections'] : [];
+        $theme = is_array($this->theme_tokens) ? $this->theme_tokens : [];
 
         return array_filter([
             'id' => $this->id,
@@ -43,9 +44,14 @@ class PageRevisionResource extends JsonResource
             'version_number' => $this->version_number,
             'reason' => $this->reason,
             'section_count' => count($sections),
+            // Listings show this so it is clear which versions restore the
+            // design as well as the content. Revisions saved before theme
+            // snapshots existed report false and restore content only.
+            'has_theme' => $theme !== [],
             'author' => $this->whenLoaded('user', fn () => $this->user?->name),
             'created_at' => $this->created_at,
             'content' => $this->withContent ? $content : null,
+            'theme_tokens' => $this->withContent && $theme !== [] ? $theme : null,
         ], fn ($value) => $value !== null);
     }
 }

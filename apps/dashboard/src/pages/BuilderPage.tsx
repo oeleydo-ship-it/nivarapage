@@ -365,6 +365,9 @@ export function BuilderPage() {
   // Content held aside while an older version is shown on the canvas, so
   // cancelling a preview puts the editor back exactly as it was.
   const [preHistorySections, setPreHistorySections] = useState<PageSection[] | null>(null)
+  // The theme is part of a version too, so stepping through history has to
+  // be able to put the working copy's theme back the same way.
+  const [preHistoryTheme, setPreHistoryTheme] = useState<ThemeTokens | null>(null)
   const [aiOpen, setAiOpen] = useState(false)
   const [leftOpen, setLeftOpen] = useState(() => {
     if (typeof window === 'undefined') return true
@@ -1362,24 +1365,35 @@ export function BuilderPage() {
         {historyOpen && storePageId ? (
           <HistoryPanel
             pageId={storePageId}
-            onPreview={(older) => {
+            onPreview={(older, revision) => {
               // Remember the working copy the first time only, so stepping
               // through several versions still returns to the real draft.
               setPreHistorySections((current) => current ?? sections)
+              setPreHistoryTheme((current) => current ?? theme)
               setSections(older)
+              if (revision.theme_tokens) setTheme({ ...theme, ...revision.theme_tokens })
             }}
             onCancelPreview={() => {
               if (preHistorySections) setSections(preHistorySections)
+              if (preHistoryTheme) setTheme(preHistoryTheme)
               setPreHistorySections(null)
+              setPreHistoryTheme(null)
             }}
-            onRestored={(restored) => {
+            onRestored={(restored, restoredTheme) => {
               setPreHistorySections(null)
+              setPreHistoryTheme(null)
               setSections(restored)
-              setToast('Version restored')
+              // Already persisted by the restore; this catches the editor up so
+              // the canvas is not left showing the theme that was replaced.
+              if (restoredTheme) setTheme({ ...theme, ...restoredTheme })
+              void qc.invalidateQueries({ queryKey: ['theme', id] })
+              setToast(restoredTheme ? 'Version and theme restored' : 'Version restored')
             }}
             onClose={() => {
               if (preHistorySections) setSections(preHistorySections)
+              if (preHistoryTheme) setTheme(preHistoryTheme)
               setPreHistorySections(null)
+              setPreHistoryTheme(null)
               setHistoryOpen(false)
             }}
           />

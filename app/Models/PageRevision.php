@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['page_id', 'user_id', 'version_number', 'content_json', 'reason'])]
+#[Fillable(['page_id', 'user_id', 'version_number', 'content_json', 'theme_tokens', 'reason'])]
 class PageRevision extends Model
 {
     /**
@@ -16,6 +16,7 @@ class PageRevision extends Model
     {
         return [
             'content_json' => 'array',
+            'theme_tokens' => 'array',
             'version_number' => 'integer',
         ];
     }

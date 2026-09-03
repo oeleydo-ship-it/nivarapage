@@ -92,6 +92,7 @@ class PageService
             // a row per keystroke.
             $draft->update([
                 'content_json' => $validated,
+                'theme_tokens' => $this->themeSnapshot($page),
                 'user_id' => $user->id,
                 'reason' => 'draft',
             ]);
@@ -176,8 +177,28 @@ class PageService
             'user_id' => $user?->id,
             'version_number' => $version,
             'content_json' => $content,
+            'theme_tokens' => $this->themeSnapshot($page),
             'reason' => $reason,
         ]);
+    }
+
+    /**
+     * The site's theme as it stands, stored alongside the content it was
+     * written with.
+     *
+     * The theme belongs to the site rather than the page, so without a copy
+     * here a restore returns the old sections dressed in today's colours -
+     * a combination that never existed. Null when the site has no theme row
+     * yet, which restore reads as "leave the theme alone".
+     *
+     * @return array<string, mixed>|null
+     */
+    private function themeSnapshot(Page $page): ?array
+    {
+        $page->loadMissing('site.theme');
+        $tokens = $page->site?->theme?->tokens;
+
+        return is_array($tokens) && $tokens !== [] ? $tokens : null;
     }
 
     public function pruneRevisions(Page $page): void

@@ -189,11 +189,14 @@ class SiteService
         if ($template->slug === 'lumen-lane') {
             $this->forms->ensureLumenLaneFields($site);
         }
-        $this->pages->cloneFromTemplate($site->fresh('forms'), $template, $user);
+        // Theme first: every revision written below snapshots the site's theme,
+        // and a snapshot of the theme being replaced would make a later restore
+        // bring back the template's pages in the previous template's colours.
         $site->theme()->updateOrCreate(
             ['site_id' => $site->id],
             ['tokens' => self::themeFromTemplate($template)],
         );
+        $this->pages->cloneFromTemplate($site->fresh(['forms', 'theme']), $template, $user);
         $this->cache->invalidateSite($site->fresh(['domains', 'pages.publishedRevision']));
         $this->audit->log('site.template_applied', $site, ['template_id' => $template->id]);
 
@@ -211,6 +214,19 @@ class SiteService
     {
         $existing = $site->pages()->get();
         $site->loadMissing('theme');
+
+        // Applied before the pages are written, so the revision each page saves
+        // below snapshots the theme the generation was designed around rather
+        // than the one it is replacing.
+        if ($theme !== []) {
+            $merged = array_replace(self::defaultThemeTokens(), is_array($site->theme?->tokens) ? $site->theme->tokens : [], $theme);
+            $site->theme()->updateOrCreate(
+                ['site_id' => $site->id],
+                ['tokens' => $merged],
+            );
+            $site->load('theme');
+        }
+
         $bySlug = $existing->keyBy('slug');
         $homepage = $existing->firstWhere('is_homepage', true) ?? $existing->first();
         $current = $currentPageId ? $existing->firstWhere('id', $currentPageId) : null;
@@ -252,14 +268,6 @@ class SiteService
             } catch (PlanQuotaException) {
                 $skipped[] = $name;
             }
-        }
-
-        if ($theme !== []) {
-            $merged = array_replace(self::defaultThemeTokens(), is_array($site->theme?->tokens) ? $site->theme->tokens : [], $theme);
-            $site->theme()->updateOrCreate(
-                ['site_id' => $site->id],
-                ['tokens' => $merged],
-            );
         }
 
         $this->cache->invalidateSite($site->fresh(['domains', 'pages.publishedRevision']));
@@ -307,6 +315,8 @@ class SiteService
             'muted' => '#64748b',
             'headingFont' => 'Inter, system-ui, sans-serif',
             'bodyFont' => 'Inter, system-ui, sans-serif',
+            'monoFont' => 'ui-monospace, SFMono-Regular, Menlo, monospace',
+            'serifFont' => 'Georgia, serif',
             'headingWeight' => 700,
             'bodyWeight' => 400,
             // Site-wide text size. Every key here is also the allow-list
