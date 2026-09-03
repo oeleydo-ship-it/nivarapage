@@ -19,6 +19,8 @@ type FunnelContext = {
   step_id: number | string
   step_slug: string
   next_step?: string | null
+  /** Which version of the step this page is; absent on the control. */
+  variant?: string | null
 }
 
 function funnelContext(): FunnelContext | null {
@@ -137,6 +139,9 @@ export const funnelOptin = defineBlock({
             body: JSON.stringify({
               event_type: 'lead_created',
               consent: 'essential',
+              // So the conversion is credited to the version actually seen,
+              // rather than to whichever one happens to be the control.
+              variant: context.variant || undefined,
               url: typeof window === 'undefined' ? undefined : window.location.href,
               metadata: { contact },
             }),

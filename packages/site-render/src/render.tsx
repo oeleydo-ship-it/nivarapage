@@ -35,6 +35,8 @@ export type FunnelStepContext = {
   step_id: number | string;
   step_slug: string;
   next_step?: string | null;
+  /** Which version of the step this HTML is; absent on the control. */
+  variant?: string | null;
 };
 
 /** Turns a style object into an inline style attribute value. */

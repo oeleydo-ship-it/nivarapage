@@ -1,16 +1,19 @@
 <?php
 
+use App\Http\Middleware\AllowPublicEmbedCors;
+use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureUserNotBlocked;
 use App\Http\Middleware\EnsureWorkspace;
-use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\NeverCache;
 use App\Http\Middleware\RequestId;
 use App\Http\Middleware\SecurityHeaders;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -46,7 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // customer domains that can never be enumerated in config/cors.php,
         // so this answers their CORS itself before that allow-list gets a
         // chance to reject the origin and swallow the preflight.
-        $middleware->prepend(\App\Http\Middleware\AllowPublicEmbedCors::class);
+        $middleware->prepend(AllowPublicEmbedCors::class);
 
         // TrustHosts is deliberately not armed. This application answers on
         // every customer's custom domain, so the set of valid Host headers is
@@ -62,6 +65,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->statefulApi();
 
+        // The funnel experiment identity. It is a random opaque id, carries
+        // nothing about the person, and has to survive a round trip to keep a
+        // visitor in the same bucket - encrypting it adds no secrecy and makes
+        // the value the browser holds unusable to anything else.
+        $middleware->encryptCookies(except: ['ud_fv']);
+
         $middleware->validateCsrfTokens(except: [
             'api/v1/billing/webhook',
             'api/v1/public/preview',
@@ -72,7 +81,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->throttleApi('api');
 
         $middleware->prependToPriorityList(
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            SubstituteBindings::class,
             EnsureWorkspace::class,
         );
     })
@@ -84,8 +93,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Error", which reads like an application bug and sends operators
         // hunting in the wrong place. Name it, and point at the readiness
         // endpoint that says which dependency is down.
-        $exceptions->render(function (\Throwable $exception, Request $request) {
-            if (! $exception instanceof \PDOException && ! $exception instanceof \Illuminate\Database\QueryException) {
+        $exceptions->render(function (Throwable $exception, Request $request) {
+            if (! $exception instanceof PDOException && ! $exception instanceof QueryException) {
                 return null;
             }
             if (! $request->is('api/*') && ! $request->expectsJson()) {
@@ -98,7 +107,7 @@ return Application::configure(basePath: dirname(__DIR__))
             ], 503);
         });
 
-        $exceptions->render(function (\Throwable $exception, Request $request) {
+        $exceptions->render(function (Throwable $exception, Request $request) {
             if (! $request->is('api/*') && ! $request->expectsJson()) {
                 return null;
             }

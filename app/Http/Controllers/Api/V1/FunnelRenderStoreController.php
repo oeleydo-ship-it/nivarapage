@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Funnel;
+use App\Models\FunnelStepVariant;
 use App\Services\Rendering\SiteRenderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,6 +28,8 @@ class FunnelRenderStoreController extends Controller
             'renders' => ['required', 'array', 'min:1', 'max:200'],
             'renders.*.path' => ['required', 'string', 'max:512'],
             'renders.*.html' => ['required', 'string', 'max:5242880'],
+            // Which version this HTML is. Absent means the control.
+            'renders.*.variant_key' => ['nullable', 'string', 'max:32'],
         ]);
 
         $stored = 0;
@@ -39,11 +42,32 @@ class FunnelRenderStoreController extends Controller
                     continue;
                 }
 
-                $renders->storeForFunnel($funnel, $entry['path'], $entry['html']);
+                // Resolved against the step the path names, so one funnel
+                // cannot store HTML under another's variant.
+                $variantId = $this->variantId($funnel, $entry['path'], $entry['variant_key'] ?? null);
+                $renders->storeForFunnel($funnel, $entry['path'], $entry['html'], $variantId);
                 $stored++;
             }
         });
 
         return response()->json(['data' => ['stored' => $stored]]);
+    }
+
+    /**
+     * The variant a key names on the step this path belongs to.
+     *
+     * Unknown keys store as the control rather than being invented, so a stale
+     * publish cannot create a version nobody configured.
+     */
+    private function variantId(Funnel $funnel, string $path, ?string $key): ?int
+    {
+        if ($key === null || $key === '' || $key === FunnelStepVariant::CONTROL) {
+            return null;
+        }
+
+        $slug = basename(parse_url($path, PHP_URL_PATH) ?: '');
+        $step = $funnel->steps()->where('slug', $slug)->first();
+
+        return $step?->variants()->where('key', $key)->value('id');
     }
 }

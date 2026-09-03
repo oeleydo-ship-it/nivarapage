@@ -81,7 +81,13 @@ export async function publishSiteWithRenders(siteId: string | number): Promise<P
 /** Funnel steps carry the ids an opt-in on the page needs at runtime. */
 type FunnelRenderPayload = Omit<RenderPayload, 'pages'> & {
   site_id: number
-  pages: Array<RenderPayload['pages'][number] & { context?: FunnelStepContext }>
+  pages: Array<
+    RenderPayload['pages'][number] & {
+      context?: FunnelStepContext
+      /** Set on a variant's entry; absent on the control. */
+      variant_key?: string | null
+    }
+  >
 }
 
 /**
@@ -112,6 +118,9 @@ export async function publishFunnelWithRenders(funnelId: string | number): Promi
         // its lead and send the visitor to the next step.
         funnel: entry.context,
       }),
+      // Each version is stored separately: the page a visitor gets has to be
+      // the one they were assigned, not the control with something swapped in.
+      variant_key: entry.variant_key ?? null,
     }))
 
     // Stored against the funnel rather than a site: a standalone funnel has

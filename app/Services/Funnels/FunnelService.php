@@ -147,8 +147,19 @@ class FunnelService
             throw ValidationException::withMessages(['steps' => ['Add at least one step before publishing.']]);
         }
         DB::transaction(function () use ($funnel, $user) {
-            foreach ($funnel->steps()->get() as $step) {
+            foreach ($funnel->steps()->with('variants')->get() as $step) {
                 $step->update(['published_content' => $this->validator->validate($step->draft_content ?? ['schemaVersion' => 1, 'sections' => []]), 'status' => 'published']);
+
+                // A variant that is still a draft would be assigned traffic and
+                // then have nothing of its own to serve, so it goes live with
+                // the step it belongs to.
+                foreach ($step->variants as $variant) {
+                    $variant->update([
+                        'published_content' => $this->validator->validate(
+                            $variant->draft_content ?? $step->draft_content ?? ['schemaVersion' => 1, 'sections' => []],
+                        ),
+                    ]);
+                }
             }
             $funnel->update(['status' => 'published', 'published_at' => now()]);
             $this->audit->log('funnel.published', $funnel, [], $funnel->workspace, $user);

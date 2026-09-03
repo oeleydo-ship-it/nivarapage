@@ -2,6 +2,7 @@
 
 use App\Models\FunnelStep;
 use App\Models\FunnelStepVariant;
+use App\Models\PageRender;
 use App\Services\Funnels\FunnelExperimentService;
 use Laravel\Sanctum\Sanctum;
 
@@ -254,4 +255,106 @@ it('does not let another workspace read or change an experiment', function () {
     test()->withHeaders($otherHeaders)
         ->postJson("/api/v1/funnels/{$fx['funnel']['id']}/steps/{$fx['step']['id']}/variants", ['name' => 'Theirs'])
         ->assertNotFound();
+});
+
+it('publishes a variant with the step it belongs to', function () {
+    $fx = experimentFunnel();
+    $variant = addVariant($fx);
+
+    test()->withHeaders($fx['headers'])->postJson("/api/v1/funnels/{$fx['funnel']['id']}/publish")->assertOk();
+
+    // Assigned traffic with nothing of its own to serve would fall back to the
+    // control, which is an experiment that quietly tests nothing.
+    expect(FunnelStepVariant::query()->findOrFail($variant['id'])->published_content)->toBeArray();
+});
+
+it('offers one render entry per version, each knowing which it is', function () {
+    $fx = experimentFunnel();
+    $variant = addVariant($fx);
+    test()->withHeaders($fx['headers'])->postJson("/api/v1/funnels/{$fx['funnel']['id']}/publish")->assertOk();
+
+    $pages = test()->withHeaders($fx['headers'])
+        ->getJson("/api/v1/funnels/{$fx['funnel']['id']}/render-payload")
+        ->assertOk()
+        ->json('data.pages');
+
+    $forStep = collect($pages)->where('context.step_id', $fx['step']['id'])->values();
+
+    expect($forStep)->toHaveCount(2);
+    expect($forStep[0]['variant_key'])->toBeNull();
+    expect($forStep[1]['variant_key'])->toBe($variant['key']);
+    // Written into the page so an event can say which version was seen.
+    expect($forStep[1]['context']['variant'])->toBe($variant['key']);
+});
+
+it('serves each visitor the version they were assigned', function () {
+    $fx = experimentFunnel();
+    $variant = addVariant($fx);
+    test()->withHeaders($fx['headers'])->postJson("/api/v1/funnels/{$fx['funnel']['id']}/publish")->assertOk();
+    $publicId = $fx['funnel']['public_id'];
+
+    test()->withHeaders($fx['headers'])
+        ->postJson("/api/v1/funnels/{$fx['funnel']['id']}/renders", [
+            'renders' => [
+                ['path' => "/f/{$publicId}/start", 'html' => 'CONTROL PAGE'],
+                ['path' => "/f/{$publicId}/start", 'html' => 'VARIANT PAGE', 'variant_key' => $variant['key']],
+            ],
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.stored', 2);
+
+    // Walk enough visitors to land in both buckets, and check each is served
+    // whole HTML rather than a mixture of the two.
+    $bodies = [];
+    for ($i = 0; $i < 40; $i++) {
+        $bodies[test()->get("/f/{$publicId}/start")->getContent()] = true;
+    }
+
+    expect(array_keys($bodies))->toContain('CONTROL PAGE');
+    expect(array_keys($bodies))->toContain('VARIANT PAGE');
+});
+
+it('keeps sending the same visitor the same version', function () {
+    $fx = experimentFunnel();
+    $variant = addVariant($fx);
+    test()->withHeaders($fx['headers'])->postJson("/api/v1/funnels/{$fx['funnel']['id']}/publish")->assertOk();
+    $publicId = $fx['funnel']['public_id'];
+
+    test()->withHeaders($fx['headers'])
+        ->postJson("/api/v1/funnels/{$fx['funnel']['id']}/renders", [
+            'renders' => [
+                ['path' => "/f/{$publicId}/start", 'html' => 'CONTROL PAGE'],
+                ['path' => "/f/{$publicId}/start", 'html' => 'VARIANT PAGE', 'variant_key' => $variant['key']],
+            ],
+        ])
+        ->assertOk();
+
+    $first = test()->get("/f/{$publicId}/start");
+    // Read raw: this cookie is exempt from encryption precisely so the value
+    // the browser holds is the value the server reads back.
+    $identity = $first->getCookie('ud_fv', false)?->getValue();
+    expect($identity)->not->toBeNull();
+
+    // Coming back with the same identity must not reshuffle the bucket.
+    for ($i = 0; $i < 5; $i++) {
+        $again = test()->withUnencryptedCookie('ud_fv', $identity)->get("/f/{$publicId}/start");
+        expect($again->getContent())->toBe($first->getContent());
+    }
+});
+
+it('will not store one funnel HTML under another funnel variant', function () {
+    $fx = experimentFunnel();
+    $publicId = $fx['funnel']['public_id'];
+    test()->withHeaders($fx['headers'])->postJson("/api/v1/funnels/{$fx['funnel']['id']}/publish")->assertOk();
+
+    // A key nobody configured stores as the control rather than inventing a
+    // version out of a stale publish.
+    test()->withHeaders($fx['headers'])
+        ->postJson("/api/v1/funnels/{$fx['funnel']['id']}/renders", [
+            'renders' => [['path' => "/f/{$publicId}/start", 'html' => 'MADE UP', 'variant_key' => 'no-such-variant']],
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.stored', 1);
+
+    expect(PageRender::query()->where('html', 'MADE UP')->value('variant_id'))->toBeNull();
 });
