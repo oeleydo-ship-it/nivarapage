@@ -23,6 +23,7 @@ use App\Models\Template;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\AuditService;
+use App\Services\DomainService;
 use App\Services\PlatformSettingsService;
 use App\Services\StripeGateway;
 use App\Support\AiGeneratedSite;
@@ -222,6 +223,23 @@ class AdminController extends Controller
                 ->paginate($this->perPage($request))
                 ->withQueryString()
         );
+    }
+
+    /**
+     * Removes a domain from the platform entirely.
+     *
+     * The escape hatch for a hostname stuck on a site nobody can reach: a
+     * customer cannot connect a name the system still holds, and until this
+     * existed the only way out was a query against the database by hand. The
+     * row is erased rather than soft deleted, because a tombstone keeps the
+     * unique index occupied and the name stays unusable.
+     */
+    public function destroyDomain(Domain $domain, DomainService $domains): JsonResponse
+    {
+        $hostname = $domain->hostname;
+        $domains->delete($domain);
+
+        return response()->json(['data' => ['ok' => true, 'hostname' => $hostname]]);
     }
 
     public function templates()

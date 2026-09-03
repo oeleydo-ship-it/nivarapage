@@ -345,6 +345,8 @@ Route::prefix('v1')->group(function () {
             });
             Route::post('/workspaces/{id}/suspend', [AdminController::class, 'suspendWorkspace']);
             Route::get('/domains/lookup', [AdminController::class, 'lookupDomain']);
+            // The way out when a hostname is stuck on a site nobody can reach.
+            Route::delete('/domains/{domain}', [AdminController::class, 'destroyDomain']);
             Route::get('/health', [AdminController::class, 'health']);
             Route::get('/diagnostics', [AdminDiagnosticsController::class, 'show']);
             Route::get('/diagnostics/host', [AdminDiagnosticsController::class, 'host']);

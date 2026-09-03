@@ -626,6 +626,61 @@ export interface FormFieldDef {
   sort_order?: number
 }
 
+/**
+ * Something a workspace sells.
+ *
+ * `price` is minor units - pence or cents - the way Stripe counts, so money
+ * never passes through a float on its way anywhere.
+ */
+export interface Product {
+  id: number
+  workspace_id: number
+  name: string
+  slug: string
+  description?: string | null
+  image?: string | null
+  price: number
+  currency: string
+  type: 'one_time' | 'subscription'
+  interval?: 'day' | 'week' | 'month' | 'year' | null
+  status: 'draft' | 'active' | 'archived'
+  success_url?: string | null
+  inventory?: number | null
+  created_at?: string
+}
+
+/** One attempt to buy something. */
+export interface Order {
+  id: number
+  reference: string
+  product_id?: number | null
+  status: 'pending' | 'paid' | 'failed'
+  amount: number
+  currency: string
+  customer_email?: string | null
+  customer_name?: string | null
+  paid_at?: string | null
+  created_at?: string
+}
+
+/** A workspace's own Stripe connection. Secrets never travel in this shape. */
+export interface WorkspacePaymentSettings {
+  provider: string
+  enabled: boolean
+  mode: 'test' | 'live'
+  currency: string
+  publishable_key?: string | null
+  account_name?: string | null
+  connected: boolean
+  /** Last four characters of the stored key, so it can be recognised. */
+  secret_hint?: string | null
+  secret_unreadable: boolean
+  webhook_set: boolean
+  webhook_url: string
+  verified_at?: string | null
+  last_error?: string | null
+}
+
 export interface SiteForm {
   id: number
   site_id: number

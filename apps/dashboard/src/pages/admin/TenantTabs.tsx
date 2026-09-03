@@ -1,5 +1,6 @@
 import type { Domain, Site, User, Workspace } from '@uidesired/types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { getToken, getWorkspaceId, setImpersonation } from '../../lib/api'
 import { persistAuth } from '../../lib/auth'
@@ -244,17 +245,29 @@ export function SitesTab() {
 }
 
 export function DomainsTab() {
+  const qc = useQueryClient()
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
+  const [error, setError] = useState<string | null>(null)
   const domains = useQuery({
     queryKey: ['admin-domains', query],
     queryFn: () => adminApi.domains({ q: query || undefined }),
   })
 
+  const remove = useMutation({
+    mutationFn: (id: number) => adminApi.deleteDomain(id),
+    onSuccess: () => {
+      setError(null)
+      void qc.invalidateQueries({ queryKey: ['admin-domains'] })
+    },
+    onError: (err: Error) => setError(err.message),
+  })
+
   return (
     <Card>
       <AdminSearch value={search} onChange={setSearch} onSubmit={() => setQuery(search)} placeholder="Search hostname…" />
-      <DataTable headers={['ID', 'Hostname', 'Site', 'Type', 'Status', 'SSL', 'Primary']}>
+      {error ? <p className="mb-3 text-xs text-red-400">{error}</p> : null}
+      <DataTable headers={['ID', 'Hostname', 'Site', 'Type', 'Status', 'SSL', 'Primary', '']}>
         {(domains.data?.data || []).map((domain: Domain) => (
           <tr key={domain.id}>
             <td className="py-3 pr-4 text-zinc-500">{domain.id}</td>
@@ -266,6 +279,24 @@ export function DomainsTab() {
             </td>
             <td className="py-3 pr-4 text-zinc-400">{domain.ssl_status ?? '—'}</td>
             <td className="py-3 pr-4 text-zinc-400">{domain.is_primary ? 'yes' : 'no'}</td>
+            <td className="py-3 text-right">
+              <button
+                type="button"
+                title="Remove this domain from the platform"
+                className="p-1 text-zinc-500 hover:text-red-400 disabled:opacity-40"
+                disabled={remove.isPending}
+                onClick={() => {
+                  // Irreversible and it takes a live site off its hostname, so
+                  // the name has to be typed rather than clicked past.
+                  const typed = window.prompt(
+                    `Remove ${domain.hostname} from the platform? This frees the name so it can be connected again. Type the hostname to confirm.`,
+                  )
+                  if (typed?.trim().toLowerCase() === domain.hostname.toLowerCase()) remove.mutate(domain.id)
+                }}
+              >
+                <Trash2 size={14} />
+              </button>
+            </td>
           </tr>
         ))}
       </DataTable>

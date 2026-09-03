@@ -136,12 +136,27 @@ class DomainService
         return $domain->fresh();
     }
 
+    /**
+     * Removes a domain and gives the hostname back straight away.
+     *
+     * Erased rather than soft deleted. A tombstone still occupies the unique
+     * index, so a name that looks gone everywhere in the product could not be
+     * connected again - not to this site and not to any other - and there was
+     * nothing on screen to explain why. The audit trail keeps the history, so
+     * nothing worth reading is lost with the row.
+     */
     public function delete(Domain $domain): void
     {
+        // Queued while the row still exists, since the job looks the domain up
+        // to find what to remove at the provider.
         DeleteCustomHostname::dispatch($domain->id)->onQueue('domains');
         $this->cache->invalidateDomain($domain);
-        $this->audit->log('domain.deleted', $domain, ['site_id' => $domain->site_id], $domain->workspace);
-        $domain->delete();
+        $this->audit->log('domain.deleted', $domain, [
+            'site_id' => $domain->site_id,
+            'hostname' => $domain->hostname,
+        ], $domain->workspace);
+
+        $domain->forceDelete();
     }
 
     /**

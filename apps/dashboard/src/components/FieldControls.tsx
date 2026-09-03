@@ -1,4 +1,4 @@
-import type { BlockField, Page, SiteForm, ThemeTokens } from '@uidesired/types'
+import type { BlockField, Page, Product, SiteForm, ThemeTokens } from '@uidesired/types'
 import { ICON_NAMES, Icon, pathId, type EditPath, type ElementStyleMap, type ElementTextStyle } from '@uidesired/blocks'
 import { fontCatalogGroups, quoteFontStack } from '@uidesired/blocks/theme'
 import { EditorContent, useEditor } from '@tiptap/react'
@@ -27,6 +27,8 @@ type Props = Record<string, unknown>
 
 export type FieldContext = {
   forms?: SiteForm[]
+  /** The workspace's products, so a buy button can be pointed at one. */
+  products?: Product[]
   pages?: Page[]
   theme?: ThemeTokens
   siteId?: string | number
@@ -799,6 +801,24 @@ function FieldControlFields({
   const asString = typeof value === 'string' ? value : value === undefined || value === null ? '' : String(value)
   const elementPath: EditPath = [...(context.pathPrefix || []), field.key]
   const showElementStyle = (field.group || 'content') === 'content'
+
+  if (field.key === 'productId' && context.products) {
+    return (
+      <Row label={field.label} help="The price and what is charged come from the product, not from this page.">
+        <Select
+          value={asString}
+          onChange={onChange as (v: string) => void}
+          options={[
+            { label: 'Choose a product…', value: '' },
+            ...context.products.map((product) => ({
+              label: `${product.name}${product.status === 'active' ? '' : ` (${product.status})`}`,
+              value: String(product.id),
+            })),
+          ]}
+        />
+      </Row>
+    )
+  }
 
   if (field.key === 'formId' && context.forms) {
     return (

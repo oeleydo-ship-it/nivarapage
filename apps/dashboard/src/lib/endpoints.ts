@@ -32,6 +32,9 @@ import type {
   LivechatKnowledge,
   LivechatMessage,
   LivechatWidget,
+  Order,
+  Product,
+  WorkspacePaymentSettings,
 } from '@uidesired/types'
 import { apiNdjson, apiPaginated, getToken, getWorkspaceId, http } from './api'
 
@@ -83,6 +86,36 @@ export const livechatApi = {
     http.post<LivechatKnowledge>(`/sites/${siteId}/livechat/knowledge/sync`),
   removeKnowledge: (id: string | number) => http.delete<{ ok: boolean }>(`/livechat/knowledge/${id}`),
   widgets: () => http.get<LivechatWidget[]>('/livechat/widgets'),
+}
+
+/** A workspace's product catalogue. */
+export const productsApi = {
+  list: (params?: { status?: string; q?: string }) =>
+    http.get<Product[]>(`/products${queryString({ ...params })}`),
+  get: (id: string | number) => http.get<Product>(`/products/${id}`),
+  create: (body: Partial<Product>) => http.post<Product>('/products', body),
+  update: (id: string | number, body: Partial<Product>) => http.patch<Product>(`/products/${id}`, body),
+  remove: (id: string | number) => http.delete<{ ok: boolean }>(`/products/${id}`),
+}
+
+/**
+ * The workspace's own Stripe account.
+ *
+ * Secrets are write-only: they go up, and only a four-character hint comes
+ * back. Sending a blank key means "keep the one you have".
+ */
+export const paymentsApi = {
+  get: () => http.get<WorkspacePaymentSettings>('/payments/stripe'),
+  update: (body: {
+    enabled?: boolean
+    currency?: string
+    publishable_key?: string | null
+    secret_key?: string
+    webhook_secret?: string
+  }) => http.put<WorkspacePaymentSettings>('/payments/stripe', body),
+  verify: () =>
+    http.post<{ ok: boolean; message: string; settings: WorkspacePaymentSettings }>('/payments/stripe/verify'),
+  disconnect: () => http.delete<WorkspacePaymentSettings>('/payments/stripe'),
 }
 
 export const overviewApi = {
@@ -524,6 +557,14 @@ export const adminApi = {
     apiPaginated<Workspace>(`/admin/workspaces${queryString({ ...params })}`),
   sites: (params?: { page?: number; q?: string }) => apiPaginated<Site>(`/admin/sites${queryString({ ...params })}`),
   domains: (params?: { page?: number; q?: string }) => apiPaginated<Domain>(`/admin/domains${queryString({ ...params })}`),
+  /**
+   * Removes a domain from the platform entirely.
+   *
+   * The way out when a hostname is stuck on a site nobody can reach: until it
+   * is gone, nobody can connect that name anywhere.
+   */
+  deleteDomain: (id: string | number) =>
+    http.delete<{ ok: boolean; hostname: string }>(`/admin/domains/${id}`),
   templates: () => http.get<Template[]>('/admin/templates'),
   updateTemplate: (
     id: number,

@@ -9,6 +9,7 @@ import { ActivityPage } from './pages/ActivityPage'
 import { AdminPage } from './pages/AdminPage'
 import { BillingPage } from './pages/BillingPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { ProductsPage } from './pages/ProductsPage'
 import { TeamPage } from './pages/TeamPage'
 import { FormsInboxPage, SiteFormsPage } from './pages/FormsPages'
 import { OverviewPage } from './pages/OverviewPage'
@@ -104,6 +105,7 @@ export default function App() {
         <Route path="/sites/:id/theme" element={<ThemePage />} />
         <Route path="/templates" element={<TemplatesPage />} />
         <Route path="/media" element={<MediaPage />} />
+        <Route path="/products" element={<ProductsPage />} />
         <Route path="/forms" element={<FormsInboxPage />} />
         <Route path="/sites/:id/forms" element={<SiteFormsPage />} />
         <Route path="/sites/:id/livechat" element={<SiteLivechatPage />} />
