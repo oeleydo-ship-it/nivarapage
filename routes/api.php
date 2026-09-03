@@ -18,8 +18,6 @@ use App\Http\Controllers\Api\V1\BlockPresetController;
 use App\Http\Controllers\Api\V1\BlogPostController;
 use App\Http\Controllers\Api\V1\ClientController;
 use App\Http\Controllers\Api\V1\DomainController;
-use App\Http\Controllers\Api\V1\ProductController;
-use App\Http\Controllers\Api\V1\WorkspacePaymentController;
 use App\Http\Controllers\Api\V1\FormController;
 use App\Http\Controllers\Api\V1\FunnelController;
 use App\Http\Controllers\Api\V1\FunnelRenderController;
@@ -30,6 +28,7 @@ use App\Http\Controllers\Api\V1\MenuController;
 use App\Http\Controllers\Api\V1\OverviewController;
 use App\Http\Controllers\Api\V1\PageController;
 use App\Http\Controllers\Api\V1\PreviewController;
+use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\PublicBrandingController;
 use App\Http\Controllers\Api\V1\PublicFunnelController;
 use App\Http\Controllers\Api\V1\PublicLivechatController;
@@ -41,6 +40,8 @@ use App\Http\Controllers\Api\V1\SiteRenderController;
 use App\Http\Controllers\Api\V1\StripeWebhookController;
 use App\Http\Controllers\Api\V1\TemplateController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
+use App\Http\Controllers\Api\V1\WorkspacePaymentController;
+use App\Http\Controllers\Api\V1\WorkspaceStripeWebhookController;
 use App\Http\Middleware\VerifyRendererSecret;
 use App\Models\Site;
 use Illuminate\Support\Facades\Route;
@@ -97,6 +98,11 @@ Route::prefix('v1')->group(function () {
 
     Route::post('/billing/webhook', [StripeWebhookController::class, 'handle'])
         ->middleware('throttle:60,1');
+
+    // Stripe posts here with no session; the signature is the authentication.
+    // Throttled by endpoint token so one workspace cannot drown out another.
+    Route::post('/public/payments/stripe/{token}/webhook', [WorkspaceStripeWebhookController::class, 'handle'])
+        ->middleware('throttle:stripe-webhook');
 
     Route::middleware([VerifyRendererSecret::class, 'feature:funnels'])->get('/public/funnels/resolve', [PublicFunnelController::class, 'resolve']);
     Route::middleware(['feature:funnels', 'throttle:funnel-tracking'])->post('/public/funnels/{publicFunnel}/steps/{publicFunnelStep}/events', [PublicFunnelController::class, 'event']);

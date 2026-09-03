@@ -103,6 +103,13 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(40)->by($request->ip().'|'.$request->route('publicKey'));
         });
 
+        // Stripe retries with backoff and a busy shop can burst, so this is
+        // generous - and keyed by endpoint token, so one workspace's traffic
+        // cannot throttle another's payments.
+        RateLimiter::for('stripe-webhook', function (Request $request) {
+            return Limit::perMinute(300)->by((string) $request->route('token'));
+        });
+
         RateLimiter::for('funnel-tracking', function (Request $request) {
             return Limit::perMinute(180)->by($request->ip().'|'.$request->route('publicFunnel'));
         });

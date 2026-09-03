@@ -24,6 +24,7 @@ class WorkspacePaymentSetting extends Model
         'mode',
         'secret_key',
         'webhook_secret',
+        'webhook_token',
         'publishable_key',
         'account_name',
         'currency',

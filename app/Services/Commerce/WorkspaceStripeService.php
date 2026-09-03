@@ -26,7 +26,28 @@ class WorkspaceStripeService
 {
     public function settings(Workspace $workspace): WorkspacePaymentSetting
     {
-        return WorkspacePaymentSetting::query()->firstOrCreate(['workspace_id' => $workspace->id]);
+        $row = WorkspacePaymentSetting::query()->firstOrCreate(['workspace_id' => $workspace->id]);
+
+        // Every workspace gets its endpoint the first time its settings are
+        // touched, so the address is ready to paste into Stripe before any key
+        // has been entered.
+        if (blank($row->webhook_token)) {
+            $row->forceFill(['webhook_token' => Str::lower(Str::random(48))])->save();
+        }
+
+        return $row;
+    }
+
+    /** The address Stripe should post this workspace's events to. */
+    public function webhookUrl(Workspace $workspace): string
+    {
+        return url('/api/v1/public/payments/stripe/'.$this->settings($workspace)->webhook_token.'/webhook');
+    }
+
+    /** The workspace an incoming webhook belongs to, or null if nothing matches. */
+    public function settingsForToken(string $token): ?WorkspacePaymentSetting
+    {
+        return WorkspacePaymentSetting::query()->with('workspace')->where('webhook_token', $token)->first();
     }
 
     /**
@@ -52,6 +73,7 @@ class WorkspaceStripeService
             'secret_hint' => $secret ? Str::substr($secret, -4) : null,
             'secret_unreadable' => EncryptedSettings::unreadable($row, 'secret_key'),
             'webhook_set' => EncryptedSettings::read($row, 'webhook_secret') !== null,
+            'webhook_url' => $this->webhookUrl($workspace),
             'verified_at' => $row->verified_at?->toIso8601String(),
             'last_error' => $row->last_error,
         ];
