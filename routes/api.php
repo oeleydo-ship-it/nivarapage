@@ -18,6 +18,8 @@ use App\Http\Controllers\Api\V1\BlockPresetController;
 use App\Http\Controllers\Api\V1\BlogPostController;
 use App\Http\Controllers\Api\V1\ClientController;
 use App\Http\Controllers\Api\V1\DomainController;
+use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\WorkspacePaymentController;
 use App\Http\Controllers\Api\V1\FormController;
 use App\Http\Controllers\Api\V1\FunnelController;
 use App\Http\Controllers\Api\V1\FunnelRenderController;
@@ -157,6 +159,18 @@ Route::prefix('v1')->group(function () {
             Route::post('/sites/{site}/restore', [SiteController::class, 'restore']);
             Route::get('/sites/{site}/settings', [SiteController::class, 'settings']);
             Route::put('/sites/{site}/settings', [SiteController::class, 'updateSettings']);
+            // A workspace's own product catalogue and its own Stripe account.
+            // Nothing here touches the platform gateway the super admin owns.
+            Route::get('/products', [ProductController::class, 'index']);
+            Route::post('/products', [ProductController::class, 'store']);
+            Route::get('/products/{product}', [ProductController::class, 'show']);
+            Route::patch('/products/{product}', [ProductController::class, 'update']);
+            Route::delete('/products/{product}', [ProductController::class, 'destroy']);
+            Route::get('/payments/stripe', [WorkspacePaymentController::class, 'show']);
+            Route::put('/payments/stripe', [WorkspacePaymentController::class, 'update']);
+            Route::post('/payments/stripe/verify', [WorkspacePaymentController::class, 'verify']);
+            Route::delete('/payments/stripe', [WorkspacePaymentController::class, 'destroy']);
+
             Route::get('/sites/{site}/chrome', [SiteChromeController::class, 'show']);
             Route::put('/sites/{site}/chrome', [SiteChromeController::class, 'update']);
             Route::post('/sites/{site}/chrome/adopt', [SiteChromeController::class, 'adopt']);
