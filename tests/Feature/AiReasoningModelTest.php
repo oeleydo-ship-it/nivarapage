@@ -103,3 +103,36 @@ it('still returns a normal string answer', function () {
 
     expect((new OpenAiProvider(kimiConfig()))->complete('sys', 'user'))->toBe('ok');
 });
+
+/**
+ * Moonshot accepts exactly one temperature on K2.5 and rejects every other
+ * value outright, so the model could be configured and saved but never used:
+ * the admin default of 0.7 failed on generation, and the connectivity probe's
+ * deliberate 0 failed on Test connection.
+ */
+it('pins K2.5 to the only temperature Moonshot accepts', function () {
+    // What the probe sends.
+    $probe = AiChatPayload::openaiCompatible(
+        kimiConfig('kimi-k2.5'),
+        'sys',
+        'user',
+        ['max_tokens' => 16, 'temperature' => 0, 'json' => false],
+    );
+
+    // What a workspace with the admin default configured sends.
+    $configured = new AiConfig(true, 'kimi', 'kimi-k2.5', 'https://api.moonshot.ai/v1', 'sk-test', 4000, 0.7, 30);
+    $generation = AiChatPayload::openaiCompatible($configured, 'sys', 'user', ['json' => true]);
+
+    expect($probe['temperature'])->toBe(0.6)
+        ->and($generation['temperature'])->toBe(0.6)
+        ->and(AiChatPayload::fixedTemperature('kimi-k2.5'))->toBe(0.6);
+});
+
+it('leaves models without a fixed temperature free to choose one', function () {
+    $k25Only = AiChatPayload::fixedTemperature('kimi-k3');
+    $configured = new AiConfig(true, 'kimi', 'kimi-k2', 'https://api.moonshot.ai/v1', 'sk-test', 4000, 0.9, 30);
+
+    expect($k25Only)->toBeNull()
+        ->and(AiChatPayload::openaiCompatible($configured, 'sys', 'user')['temperature'])->toBe(0.9)
+        ->and(AiChatPayload::openaiCompatible($configured, 'sys', 'user', ['temperature' => 0])['temperature'])->toBe(0.0);
+});

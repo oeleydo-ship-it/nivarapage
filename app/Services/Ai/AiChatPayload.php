@@ -51,7 +51,8 @@ final class AiChatPayload
         }
 
         if (self::supportsTemperature($model)) {
-            $payload['temperature'] = (float) ($options['temperature'] ?? $config->temperature);
+            $payload['temperature'] = self::fixedTemperature($model)
+                ?? (float) ($options['temperature'] ?? $config->temperature);
         }
 
         if ($json) {
@@ -106,6 +107,21 @@ final class AiChatPayload
         $model = strtolower($model);
 
         return str_starts_with($model, 'gpt-5') || self::isKimiK3($model);
+    }
+
+    /**
+     * The one temperature a model will accept, when it accepts only one.
+     *
+     * Moonshot answers anything else on K2.5 with "invalid temperature: only
+     * 0.6 is allowed for this model" - which both the 0.7 default and the
+     * connectivity probe's deliberate 0 walked straight into, so the model
+     * could be selected and saved but never used. Pinning it where the body is
+     * built fixes generation and the probe together, instead of asking every
+     * caller to remember which models are fussy.
+     */
+    public static function fixedTemperature(string $model): ?float
+    {
+        return self::isKimiK25($model) ? 0.6 : null;
     }
 
     public static function supportsTemperature(string $model): bool
