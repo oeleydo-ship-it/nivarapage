@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
 use App\Services\Commerce\WorkspaceStripeService;
@@ -224,4 +225,30 @@ it('settles the order by session id when the reference is missing', function () 
     postWebhook($fx['url'], $payload, 'whsec_test_secret')->assertOk()->assertJsonPath('handled', true);
 
     expect($fx['order']->fresh()->status)->toBe('paid');
+});
+
+it('counts the coupon only when the money arrives', function () {
+    $fx = webhookFixture();
+
+    $coupon = Coupon::query()->create([
+        'workspace_id' => $fx['workspace']->id,
+        'code' => 'SAVE20',
+        'type' => 'percent',
+        'value' => 20,
+        'max_redemptions' => 1,
+        'status' => 'active',
+    ]);
+    $fx['order']->update(['coupon_id' => $coupon->id, 'discount' => 980]);
+
+    // Opening the checkout must not spend it - an abandoned basket would use
+    // up somebody else's discount.
+    expect($coupon->fresh()->redeemed_count)->toBe(0);
+
+    $payload = checkoutPayload('ord_test_reference');
+    postWebhook($fx['url'], $payload, 'whsec_test_secret')->assertOk();
+    expect($coupon->fresh()->redeemed_count)->toBe(1);
+
+    // And a repeated delivery must not spend it twice.
+    postWebhook($fx['url'], $payload, 'whsec_test_secret')->assertOk();
+    expect($coupon->fresh()->redeemed_count)->toBe(1);
 });

@@ -18,6 +18,7 @@ class Order extends Model
     protected $fillable = [
         'workspace_id',
         'product_id',
+        'coupon_id',
         'site_id',
         'funnel_id',
         'reference',
@@ -25,6 +26,7 @@ class Order extends Model
         'provider_payment_id',
         'status',
         'amount',
+        'discount',
         'currency',
         'customer_email',
         'customer_name',
@@ -36,6 +38,7 @@ class Order extends Model
     {
         return [
             'amount' => 'integer',
+            'discount' => 'integer',
             'metadata' => 'array',
             'paid_at' => 'datetime',
         ];

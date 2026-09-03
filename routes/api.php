@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\BillingController;
 use App\Http\Controllers\Api\V1\BlockPresetController;
 use App\Http\Controllers\Api\V1\BlogPostController;
 use App\Http\Controllers\Api\V1\ClientController;
+use App\Http\Controllers\Api\V1\CouponController;
 use App\Http\Controllers\Api\V1\DomainController;
 use App\Http\Controllers\Api\V1\FormController;
 use App\Http\Controllers\Api\V1\FunnelController;
@@ -176,6 +177,10 @@ Route::prefix('v1')->group(function () {
             // A workspace's own product catalogue and its own Stripe account.
             // Nothing here touches the platform gateway the super admin owns.
             Route::get('/orders', [OrderController::class, 'index']);
+            Route::get('/coupons', [CouponController::class, 'index']);
+            Route::post('/coupons', [CouponController::class, 'store']);
+            Route::patch('/coupons/{coupon}', [CouponController::class, 'update']);
+            Route::delete('/coupons/{coupon}', [CouponController::class, 'destroy']);
             Route::get('/products', [ProductController::class, 'index']);
             Route::post('/products', [ProductController::class, 'store']);
             Route::get('/products/{product}', [ProductController::class, 'show']);

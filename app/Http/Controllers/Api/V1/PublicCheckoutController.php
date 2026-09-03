@@ -27,6 +27,8 @@ class PublicCheckoutController extends Controller
     {
         $data = $request->validate([
             'email' => ['nullable', 'email', 'max:255'],
+            // Only the code travels. What it is worth is read from the row.
+            'coupon' => ['nullable', 'string', 'max:60'],
             'success_url' => ['nullable', 'url', 'max:2048'],
             'cancel_url' => ['nullable', 'url', 'max:2048'],
             'site_id' => ['nullable', 'integer'],
@@ -49,6 +51,7 @@ class PublicCheckoutController extends Controller
         try {
             $result = $this->stripe->checkout($model, [
                 'email' => $data['email'] ?? null,
+                'coupon' => $data['coupon'] ?? null,
                 'success_url' => $data['success_url'] ?? null,
                 'cancel_url' => $data['cancel_url'] ?? null,
                 // Only used to say where the sale came from; the money and the

@@ -2,6 +2,7 @@
 
 namespace App\Services\Commerce;
 
+use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Workspace;
@@ -209,14 +210,22 @@ class WorkspaceStripeService
             throw new RuntimeException('That product is not on sale.');
         }
 
+        // A code arrives in the request; the amount it is worth never does. The
+        // coupon is looked up here and the discount worked out from the row.
+        $coupon = $this->couponFor($product, $context['coupon'] ?? null);
+        $discount = $coupon ? $coupon->discountFor($product) : 0;
+        $charge = max(0, $product->price - $discount);
+
         $order = Order::query()->create([
             'workspace_id' => $workspace->id,
             'product_id' => $product->id,
+            'coupon_id' => $coupon?->id,
             'site_id' => $context['site_id'] ?? null,
             'funnel_id' => $context['funnel_id'] ?? null,
             'reference' => 'ord_'.Str::lower(Str::random(18)),
             'status' => 'pending',
-            'amount' => $product->price,
+            'amount' => $charge,
+            'discount' => $discount,
             'currency' => $product->currency,
             'customer_email' => $context['email'] ?? null,
             'metadata' => $context['metadata'] ?? null,
@@ -233,7 +242,7 @@ class WorkspaceStripeService
                     'quantity' => 1,
                     'price_data' => [
                         'currency' => Str::lower($product->currency),
-                        'unit_amount' => $product->price,
+                        'unit_amount' => $charge,
                         'product_data' => array_filter([
                             'name' => $product->name,
                             'description' => $product->description ? Str::limit($product->description, 500, '') : null,
@@ -321,7 +330,33 @@ class WorkspaceStripeService
             $product->decrement('inventory');
         }
 
+        // Same for the coupon. Counting it when the checkout opened would let
+        // an abandoned basket use up somebody else's discount.
+        if ($order->coupon_id) {
+            Coupon::query()->whereKey($order->coupon_id)->increment('redeemed_count');
+        }
+
         return ['handled' => true, 'order' => $order->fresh()];
+    }
+
+    /**
+     * The coupon a code names, when it can be used on this product.
+     *
+     * An unusable code is treated as no code rather than an error: the shopper
+     * still gets to buy the thing, at the price on the page.
+     */
+    private function couponFor(Product $product, mixed $code): ?Coupon
+    {
+        if (! is_string($code) || trim($code) === '') {
+            return null;
+        }
+
+        $coupon = Coupon::query()
+            ->where('workspace_id', $product->workspace_id)
+            ->where('code', Coupon::normalizeCode($code))
+            ->first();
+
+        return $coupon && $coupon->usableFor($product) ? $coupon : null;
     }
 
     /**

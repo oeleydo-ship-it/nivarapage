@@ -55,6 +55,16 @@ class Workspace extends Model
         return $this->hasMany(Site::class);
     }
 
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
+
+    public function coupons(): HasMany
+    {
+        return $this->hasMany(Coupon::class);
+    }
+
     public function clients(): HasMany
     {
         return $this->hasMany(Client::class);
