@@ -40,6 +40,7 @@ import {
   contentTextImage,
   contentTwoColumns,
 } from './blocks/content'
+import { funnelOptin } from './blocks/funnel'
 import { galleryCarousel, galleryGrid, galleryLogos, galleryMasonry, galleryShowcase } from './blocks/gallery'
 import { pricingComparison, pricingThree, pricingTwo } from './blocks/pricing'
 import { faqAccordion, faqTwoColumn } from './blocks/faq'
@@ -414,6 +415,7 @@ const blocks = [
   galleryCarousel,
   galleryLogos,
   galleryShowcase,
+  funnelOptin,
   galleryCompare,
   galleryProjects,
   pricingTwo,

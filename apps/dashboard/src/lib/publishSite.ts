@@ -1,6 +1,6 @@
 import { renderSiteDocument } from '@uidesired/site-render'
 import type { SiteChromeContent } from '@uidesired/site-render'
-import type { Menu, PublicPage, ResolvedSite } from '@uidesired/site-render'
+import type { FunnelStepContext, Menu, PublicPage, ResolvedSite } from '@uidesired/site-render'
 import { http } from './api'
 import { funnelsApi, sitesApi } from './endpoints'
 
@@ -78,7 +78,11 @@ export async function publishSiteWithRenders(siteId: string | number): Promise<P
   return renderSiteHtml(siteId)
 }
 
-type FunnelRenderPayload = RenderPayload & { site_id: number }
+/** Funnel steps carry the ids an opt-in on the page needs at runtime. */
+type FunnelRenderPayload = Omit<RenderPayload, 'pages'> & {
+  site_id: number
+  pages: Array<RenderPayload['pages'][number] & { context?: FunnelStepContext }>
+}
 
 /**
  * Publishes a funnel and rebuilds the HTML of its steps.
@@ -104,6 +108,9 @@ export async function publishFunnelWithRenders(funnelId: string | number): Promi
         menus,
         path: entry.path,
         host: window.location.host,
+        // Which funnel and step this page is, so an opt-in on it can record
+        // its lead and send the visitor to the next step.
+        funnel: entry.context,
       }),
     }))
 

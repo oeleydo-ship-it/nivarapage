@@ -17,6 +17,24 @@ export type RenderSiteInput = {
   runtimeBase?: string;
   /** The site-wide header and footer this page is wrapped in. */
   chrome?: SiteChromeContent;
+  /**
+   * Set when this document is a funnel step.
+   *
+   * A published step is static HTML served from /f/{public_id}/{slug}, and the
+   * events API is addressed by numeric ids, so a block on the page cannot work
+   * out which funnel it belongs to from the URL. Writing it in at publish time
+   * is what lets an opt-in form record its lead and move the visitor on.
+   */
+  funnel?: FunnelStepContext;
+};
+
+/** Identifies the funnel step a published document is, and where it leads. */
+export type FunnelStepContext = {
+  funnel_id: number | string;
+  funnel_slug: string;
+  step_id: number | string;
+  step_slug: string;
+  next_step?: string | null;
 };
 
 /** Turns a style object into an inline style attribute value. */
@@ -38,7 +56,7 @@ function styleAttribute(style: Record<string, unknown>): string {
  * browser by the site runtime, so interactive blocks keep working.
  */
 export function renderSiteDocument(input: RenderSiteInput): string {
-  const { site, page, menus, path, host, runtimeBase = "/site", chrome } = input;
+  const { site, page, menus, path, host, runtimeBase = "/site", chrome, funnel } = input;
   const tokens = (site.theme ?? {}) as Record<string, unknown>;
   const { title, tags } = pageSeoTags(site, page, path, host);
 
@@ -90,6 +108,15 @@ export function renderSiteDocument(input: RenderSiteInput): string {
     .split(String.fromCharCode(0x2029))
     .join(BS + "u2029");
 
+  // Escaped the same way as the hydration payload: a slug is author-supplied
+  // and must not be able to close the script tag.
+  const funnelTag = funnel
+    ? `
+<script id="ud-funnel" type="application/json">${JSON.stringify(funnel)
+        .split("<")
+        .join(BS + "u003c")}</script>`
+    : "";
+
   const head = [
     '<meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
@@ -110,7 +137,7 @@ ${head}
 </head>
 <body class="min-h-full antialiased">
 <div id="site-root">${body}</div>
-<script id="site-data" type="application/json">${hydrationData}</script>
+<script id="site-data" type="application/json">${hydrationData}</script>${funnelTag}
 <script src="${attr(runtimeBase)}/site.js" defer></script>${livechatTag}
 </body>
 </html>

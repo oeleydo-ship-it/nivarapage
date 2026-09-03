@@ -25,7 +25,20 @@ class FunnelTrackingService
         $sessionUuid = $this->uuid($data['session_id'] ?? null);
         $consent = in_array($data['consent'] ?? null, ['analytics', 'all'], true) ? $data['consent'] : 'essential';
         if ($consent === 'essential') {
-            return ['visitor_id' => $visitorUuid, 'session_id' => $sessionUuid, 'next_step' => $this->nextStep($funnel, $step)?->slug, 'tracked' => false];
+            // Analytics needs consent. Details somebody typed into a form and
+            // submitted are not analytics - they are the thing the funnel
+            // exists to collect, and dropping them silently meant an opt-in on
+            // a funnel recorded nothing at all. The lead is stored; the
+            // visitor, session and event rows that profile behaviour are not.
+            $lead = $this->recordLead($funnel, $step, $data, null);
+
+            return [
+                'visitor_id' => $visitorUuid,
+                'session_id' => $sessionUuid,
+                'next_step' => $this->nextStep($funnel, $step)?->slug,
+                'tracked' => false,
+                'lead_id' => $lead?->id,
+            ];
         }
         $now = now();
         $referrer = $data['referrer'] ?? $request->headers->get('referer');
@@ -47,44 +60,105 @@ class FunnelTrackingService
         );
         $session->update(['last_activity_at' => $now]);
 
-        $lead = null;
-        if (in_array($data['event_type'], ['lead_created', 'form_submission'], true)) {
-            $contact = is_array($metadata['contact'] ?? null) ? $metadata['contact'] : $metadata;
-            $email = isset($contact['email']) ? Str::lower(trim((string) $contact['email'])) : null;
-            $lead = $email ? FunnelLead::query()->where('email', $email)->where('workspace_id', $funnel->workspace_id)->where('funnel_id', $funnel->id)->first() : null;
-            $payload = ['workspace_id' => $funnel->workspace_id, 'funnel_id' => $funnel->id, 'funnel_step_id' => $step->id, 'visitor_id' => $visitor->id, 'first_name' => $contact['first_name'] ?? $contact['name'] ?? null, 'last_name' => $contact['last_name'] ?? null, 'email' => $email, 'phone' => $contact['phone'] ?? null, 'company' => $contact['company'] ?? null, 'country' => $contact['country'] ?? $location['country'], 'source' => $source, 'campaign' => $campaign, 'data' => $contact];
-            $lead ? $lead->update($payload) : $lead = FunnelLead::query()->create($payload);
-        }
+        $lead = $this->recordLead($funnel, $step, $data, $visitor->id, $location['country'], $source, $campaign);
 
         $currency = strtoupper((string) ($metadata['currency'] ?? ''));
         $eventPayload = ['workspace_id' => $funnel->workspace_id, 'funnel_id' => $funnel->id, 'step_id' => $step->id, 'visitor_id' => $visitor->id, 'session_id' => $session->id, 'lead_id' => $lead?->id, 'idempotency_key' => $data['idempotency_key'] ?? null, 'event_type' => $data['event_type'], 'source' => $source, 'medium' => $medium, 'campaign' => $campaign, 'device' => $agent['device'] ?? null, 'browser' => $agent['browser'] ?? null, 'country' => $location['country'], 'revenue' => in_array($data['event_type'], ['purchase', 'conversion'], true) ? (float) ($metadata['amount'] ?? 0) : 0, 'currency' => $currency !== '' ? $currency : null, 'is_bot' => $isBot, 'event_data' => $metadata, 'url' => $data['url'] ?? null, 'referrer' => $referrer, 'occurred_at' => $now];
         $event = ! empty($data['idempotency_key'])
             ? FunnelEvent::query()->firstOrCreate(['workspace_id' => $funnel->workspace_id, 'idempotency_key' => $data['idempotency_key']], $eventPayload)
             : FunnelEvent::query()->create($eventPayload);
-        if ($event->wasRecentlyCreated || empty($data['idempotency_key'])) ProcessFunnelEvent::dispatch($event->id);
-        if (in_array($data['event_type'], ['conversion', 'purchase', 'booking', 'form_submission', 'lead_created'], true) && ! $session->converted_at) $session->update(['converted_at' => $now]);
+        if ($event->wasRecentlyCreated || empty($data['idempotency_key'])) {
+            ProcessFunnelEvent::dispatch($event->id);
+        }
+        if (in_array($data['event_type'], ['conversion', 'purchase', 'booking', 'form_submission', 'lead_created'], true) && ! $session->converted_at) {
+            $session->update(['converted_at' => $now]);
+        }
 
         return ['visitor_id' => $visitorUuid, 'session_id' => $sessionUuid, 'next_step' => $this->nextStep($funnel, $step)?->slug, 'tracked' => true];
+    }
+
+    /**
+     * Stores the details a visitor submitted, whatever their analytics choice.
+     *
+     * Returns null for any event that carries no contact details, so callers
+     * can hand every event through without checking the type first.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function recordLead(Funnel $funnel, FunnelStep $step, array $data, ?int $visitorId, ?string $country = null, ?string $source = null, ?string $campaign = null): ?FunnelLead
+    {
+        if (! in_array($data['event_type'] ?? null, ['lead_created', 'form_submission'], true)) {
+            return null;
+        }
+
+        $metadata = is_array($data['metadata'] ?? null) ? $data['metadata'] : [];
+        $contact = is_array($metadata['contact'] ?? null) ? $metadata['contact'] : $metadata;
+        $email = isset($contact['email']) ? Str::lower(trim((string) $contact['email'])) : null;
+        if ($email === null || $email === '') {
+            return null;
+        }
+
+        $lead = FunnelLead::query()
+            ->where('email', $email)
+            ->where('workspace_id', $funnel->workspace_id)
+            ->where('funnel_id', $funnel->id)
+            ->first();
+
+        $payload = [
+            'workspace_id' => $funnel->workspace_id,
+            'funnel_id' => $funnel->id,
+            'funnel_step_id' => $step->id,
+            'visitor_id' => $visitorId,
+            'first_name' => $contact['first_name'] ?? $contact['name'] ?? null,
+            'last_name' => $contact['last_name'] ?? null,
+            'email' => $email,
+            'phone' => $contact['phone'] ?? null,
+            'company' => $contact['company'] ?? null,
+            'country' => $contact['country'] ?? $country,
+            'source' => $source,
+            'campaign' => $campaign,
+            'data' => $contact,
+        ];
+
+        if ($lead) {
+            // A visitor id only ever gets more specific, never blanked by a
+            // later consent-free submission.
+            if ($visitorId === null) {
+                unset($payload['visitor_id']);
+            }
+            $lead->update($payload);
+
+            return $lead;
+        }
+
+        return FunnelLead::query()->create($payload);
     }
 
     public function nextStep(Funnel $funnel, FunnelStep $step): ?FunnelStep
     {
         $connection = $funnel->connections()->where('source_step_id', $step->id)->orderBy('priority')->first();
+
         return $connection ? $funnel->steps()->find($connection->target_step_id) : null;
     }
 
     private function uuid(mixed $value): string
     {
         $value = is_string($value) ? $value : '';
+
         return Str::isUuid($value) ? $value : (string) Str::uuid();
     }
 
     private function source(mixed $utmSource, mixed $referrer): string
     {
         $utm = Str::lower(trim(is_string($utmSource) ? $utmSource : ''));
-        if ($utm !== '') return Str::limit($utm, 120, '');
+        if ($utm !== '') {
+            return Str::limit($utm, 120, '');
+        }
         $host = is_string($referrer) ? Str::lower((string) parse_url($referrer, PHP_URL_HOST)) : '';
-        if ($host === '') return 'direct';
+        if ($host === '') {
+            return 'direct';
+        }
+
         return match (true) {
             str_contains($host, 'google.') => 'google',
             str_contains($host, 'facebook.') => 'facebook',

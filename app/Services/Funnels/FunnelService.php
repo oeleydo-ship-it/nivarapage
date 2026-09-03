@@ -75,6 +75,7 @@ class FunnelService
     public function update(Funnel $funnel, array $data): Funnel
     {
         $funnel->fill(collect($data)->only(['name', 'description', 'type', 'goal', 'domain_id', 'settings'])->all())->save();
+
         return $this->load($funnel);
     }
 
@@ -106,6 +107,7 @@ class FunnelService
     {
         $this->assertStep($funnel, $step);
         $step->fill(collect($data)->only(['name', 'type', 'status', 'position', 'canvas_x', 'canvas_y', 'settings'])->all())->save();
+
         return $step->fresh('page');
     }
 
@@ -114,6 +116,7 @@ class FunnelService
     {
         $this->assertStep($funnel, $step);
         $step->update(['draft_content' => $this->validator->validate($content)]);
+
         return $step->fresh();
     }
 
@@ -122,7 +125,9 @@ class FunnelService
     {
         $source = $funnel->steps()->findOrFail($data['source_step_id']);
         $target = $funnel->steps()->findOrFail($data['target_step_id']);
-        if ($source->is($target)) throw ValidationException::withMessages(['target_step_id' => ['A step cannot connect to itself.']]);
+        if ($source->is($target)) {
+            throw ValidationException::withMessages(['target_step_id' => ['A step cannot connect to itself.']]);
+        }
 
         return FunnelConnection::query()->updateOrCreate([
             'source_step_id' => $source->id,
@@ -138,7 +143,9 @@ class FunnelService
 
     public function publish(Funnel $funnel, User $user): Funnel
     {
-        if ($funnel->steps()->count() < 1) throw ValidationException::withMessages(['steps' => ['Add at least one step before publishing.']]);
+        if ($funnel->steps()->count() < 1) {
+            throw ValidationException::withMessages(['steps' => ['Add at least one step before publishing.']]);
+        }
         DB::transaction(function () use ($funnel, $user) {
             foreach ($funnel->steps()->get() as $step) {
                 $step->update(['published_content' => $this->validator->validate($step->draft_content ?? ['schemaVersion' => 1, 'sections' => []]), 'status' => 'published']);
@@ -146,6 +153,7 @@ class FunnelService
             $funnel->update(['status' => 'published', 'published_at' => now()]);
             $this->audit->log('funnel.published', $funnel, [], $funnel->workspace, $user);
         });
+
         return $this->load($funnel);
     }
 
@@ -172,6 +180,7 @@ class FunnelService
             foreach ($source->connections as $connection) {
                 $this->connect($copy, ['source_step_id' => $map[$connection->source_step_id], 'target_step_id' => $map[$connection->target_step_id], 'connection_type' => $connection->connection_type, 'conditions' => $connection->conditions, 'priority' => $connection->priority]);
             }
+
             return $this->load($copy);
         });
     }
@@ -181,13 +190,42 @@ class FunnelService
         return $funnel->fresh(['site', 'steps', 'connections'])->loadCount(['steps', 'leads', 'events']);
     }
 
-    private function assertStep(Funnel $funnel, FunnelStep $step): void { abort_unless($step->funnel_id === $funnel->id, 404); }
-    private function uniqueFunnelSlug(int $workspaceId, string $value): string { return $this->uniqueSlug(Str::slug($value) ?: 'funnel', fn ($slug) => Funnel::withTrashed()->where('workspace_id', $workspaceId)->where('slug', $slug)->exists()); }
-    private function uniqueStepSlug(Funnel $funnel, string $value): string { return $this->uniqueSlug(Str::slug($value) ?: 'step', fn ($slug) => FunnelStep::withTrashed()->where('funnel_id', $funnel->id)->where('slug', $slug)->exists()); }
-    private function uniqueSlug(string $base, callable $exists): string { $slug=$base; $i=2; while ($exists($slug)) $slug=$base.'-'.$i++; return $slug; }
+    private function assertStep(Funnel $funnel, FunnelStep $step): void
+    {
+        abort_unless($step->funnel_id === $funnel->id, 404);
+    }
 
-    private function page(array $sections): array { return ['schemaVersion' => 1, 'sections' => $sections]; }
-    private function section(string $id, string $type, array $props): array { return ['id' => $id.'-'.Str::lower(Str::random(5)), 'type' => $type, 'version' => 1, 'hidden' => false, 'props' => $props]; }
+    private function uniqueFunnelSlug(int $workspaceId, string $value): string
+    {
+        return $this->uniqueSlug(Str::slug($value) ?: 'funnel', fn ($slug) => Funnel::withTrashed()->where('workspace_id', $workspaceId)->where('slug', $slug)->exists());
+    }
+
+    private function uniqueStepSlug(Funnel $funnel, string $value): string
+    {
+        return $this->uniqueSlug(Str::slug($value) ?: 'step', fn ($slug) => FunnelStep::withTrashed()->where('funnel_id', $funnel->id)->where('slug', $slug)->exists());
+    }
+
+    private function uniqueSlug(string $base, callable $exists): string
+    {
+        $slug = $base;
+        $i = 2;
+        while ($exists($slug)) {
+            $slug = $base.'-'.$i++;
+        }
+
+return $slug;
+    }
+
+    private function page(array $sections): array
+    {
+        return ['schemaVersion' => 1, 'sections' => $sections];
+    }
+
+    private function section(string $id, string $type, array $props): array
+    {
+        return ['id' => $id.'-'.Str::lower(Str::random(5)), 'type' => $type, 'version' => 1, 'hidden' => false, 'props' => $props];
+    }
+
     private function landingContent(string $name): array
     {
         return $this->page([$this->section('hero', 'hero.centered', [
@@ -203,8 +241,27 @@ class FunnelService
         ])]);
     }
 
+    /**
+     * The blocks a new step starts with.
+     *
+     * A step whose job is to collect details gets a form that actually collects
+     * them. Every type used to get the same placeholder hero, so a funnel built
+     * to capture leads shipped with nothing on it that could.
+     */
     private function stepContent(string $name, string $type): array
     {
+        if (in_array($type, ['lead_form', 'survey', 'opt_in'], true)) {
+            return $this->page([$this->section('optin', 'funnel.optin', [
+                'eyebrow' => Str::headline($type),
+                'heading' => $name,
+                'description' => 'Leave your details and we will take it from here.',
+                'fields' => $type === 'survey' ? ['name', 'email', 'company'] : ['name', 'email'],
+                'buttonLabel' => 'Continue',
+                'successMessage' => 'Thanks — that is everything we need.',
+                'footnote' => 'We will only use these details to get back to you.',
+            ])]);
+        }
+
         return $this->page([$this->section('step', 'hero.centered', [
             'eyebrow' => Str::headline($type),
             'heading' => $name,
