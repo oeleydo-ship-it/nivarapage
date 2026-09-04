@@ -340,6 +340,55 @@ function SectionFrame({
   )
 }
 
+/**
+ * Read-only preview of the site's shared header/footer, shown on a page that
+ * has none of its own so the canvas doesn't just look like the nav vanished.
+ * Not sortable or selectable - it isn't part of this page's content, so
+ * editing it happens on the dedicated header/footer canvas instead.
+ */
+function SharedChromeStrip({
+  slot,
+  sectionsList,
+  navigation,
+  pageId,
+  theme,
+  onEdit,
+}: {
+  slot: 'header' | 'footer'
+  sectionsList: PageSection[]
+  navigation?: Nav
+  pageId?: string | number
+  theme?: ThemeTokens
+  onEdit: () => void
+}) {
+  return (
+    <div className="relative">
+      <div className="pointer-events-none absolute left-0 top-0 z-20 flex w-full items-start justify-between p-1.5">
+        <span className="pointer-events-auto rounded-md bg-zinc-900/90 px-1.5 py-1 text-[10px] font-medium text-white shadow">
+          Shared {slot} (every page)
+        </span>
+        <button
+          type="button"
+          className="pointer-events-auto rounded-md bg-blue-600/90 px-1.5 py-1 text-[10px] font-medium text-white shadow hover:bg-blue-500"
+          onClick={onEdit}
+        >
+          Edit
+        </button>
+      </div>
+      <div className="pointer-events-none opacity-90">
+        <PageRenderer
+          content={{ schemaVersion: 1, sections: sectionsList }}
+          theme={theme}
+          navigation={navigation}
+          pageId={pageId}
+          includeStyles={false}
+          formApiBase="/api/v1/public/forms"
+        />
+      </div>
+    </div>
+  )
+}
+
 function DropZone({ id, label, active }: { id: string; label: string; active: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id })
   if (!active) return <div ref={setNodeRef} className="h-6" />
@@ -611,6 +660,18 @@ export function BuilderPage() {
     () => withSiteBlogPosts(sections, currentPage?.slug, sitePosts.data || []),
     [currentPage?.slug, sections, sitePosts.data],
   )
+
+  /**
+   * A page adopted into the shared site header/footer (or one that never had
+   * its own) has nothing in its own sections for either slot, so the canvas
+   * would otherwise show no navigation at all. Mirror the published renderer's
+   * rule here - show the shared sections, read-only, so the page doesn't look
+   * broken - with a way to jump to the real editor for them.
+   */
+  const hasOwnHeader = sections.some((section) => chromeSlotOf(section.type) === 'header')
+  const hasOwnFooter = sections.some((section) => chromeSlotOf(section.type) === 'footer')
+  const sharedHeaderSections = !chromeSlot && !hasOwnHeader ? chromeQuery.data?.header?.sections || [] : []
+  const sharedFooterSections = !chromeSlot && !hasOwnFooter ? chromeQuery.data?.footer?.sections || [] : []
   const selected = sections.find((section) => section.id === selectedId)
   const def = selected ? getBlock(selected.type) : undefined
   const viewProps = selected ? mergeResponsiveProps(selected.props, device) : {}
@@ -1055,6 +1116,9 @@ export function BuilderPage() {
               <History size={15} />
               History
             </Button>
+            <Button variant="ghost" disabled={saveStatus === 'saving' || !dirty} onClick={saveNow}>
+              {saveStatus === 'saving' ? 'Saving…' : 'Save'}
+            </Button>
             <Button variant="outline" disabled={previewing} onClick={openPreview}>
               {previewing ? 'Opening…' : 'Preview'}
             </Button>
@@ -1106,6 +1170,16 @@ export function BuilderPage() {
               style={{ width: DEVICE_WIDTHS[device], maxWidth: '100%', ...cssVars }}
             >
               <BlockStyles />
+              {sharedHeaderSections.length ? (
+                <SharedChromeStrip
+                  slot="header"
+                  sectionsList={sharedHeaderSections}
+                  theme={theme}
+                  navigation={navigation}
+                  pageId={currentPage?.id}
+                  onEdit={() => void switchChrome('header')}
+                />
+              ) : null}
               <SortableContext items={canvasSections.map((section) => section.id)} strategy={verticalListSortingStrategy}>
                 {canvasSections.map((section, index) => (
                   <SectionFrame
@@ -1141,6 +1215,16 @@ export function BuilderPage() {
                   active
                 />
               )}
+              {sharedFooterSections.length ? (
+                <SharedChromeStrip
+                  slot="footer"
+                  sectionsList={sharedFooterSections}
+                  theme={theme}
+                  navigation={navigation}
+                  pageId={currentPage?.id}
+                  onEdit={() => void switchChrome('footer')}
+                />
+              ) : null}
             </div>
           </div>
 

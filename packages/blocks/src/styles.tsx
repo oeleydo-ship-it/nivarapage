@@ -4032,7 +4032,8 @@ export const blockCss = `
 .ud-an-principles__item{display:grid;gap:8px}
 .ud-an-principles__label{font-size:calc(15px * var(--ud-font-scale,1));letter-spacing:.1em;text-transform:uppercase;font-family:var(--font-heading,inherit)}
 .ud-an-principles__text{font-size:calc(14px * var(--ud-font-scale,1));line-height:1.66;max-width:56ch}
-.ud-an-principles__media{display:grid;place-items:center;padding-block:clamp(24px,4cqi,52px);padding-inline-start:clamp(20px,4cqi,52px)}
+.ud-an-principles__media{display:grid;padding-block:clamp(24px,4cqi,52px);padding-inline-start:clamp(20px,4cqi,52px)}
+.ud-an-principles__media .ud-media-box{width:100%}
 .ud-an-principles.is-reverse .ud-an-principles__media{padding-inline-start:0;padding-inline-end:clamp(20px,4cqi,52px)}
 .ud-an-principles__media img{border-radius:var(--card-radius,4px)}
 
