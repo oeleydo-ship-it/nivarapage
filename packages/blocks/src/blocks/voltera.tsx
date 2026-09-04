@@ -170,11 +170,13 @@ function Logo({ props, light = false }: { props: Props; light?: boolean }) {
   const edit = editOf(props)
   const src = str(props.logoImage)
   const height = Math.min(Math.max(num(props.logoHeight, 30), 14), 120)
+  const widthRaw = Number(props.logoWidth)
+  const width = Number.isFinite(widthRaw) && widthRaw > 0 ? Math.min(Math.max(widthRaw, 16), 400) : 'auto'
   return (
     <a className={cx('ud-vt-logo', light && 'ud-vt-logo--light')} href={str(props.logoUrl, '/')}>
       {src ? (
         <span className="ud-vt-logo__img">
-          <img src={src} alt={str(props.logo, 'Logo')} style={{ height, width: 'auto', display: 'block' }} />
+          <img src={src} alt={str(props.logo, 'Logo')} style={{ height, width, display: 'block' }} />
           <EditableImage edit={edit} path={['logoImage']} current={src} label="Replace logo" />
         </span>
       ) : (
@@ -193,6 +195,7 @@ const logoFields = [
   text('logo', 'Wordmark'),
   image('logoImage', 'Logo image'),
   field('logoHeight', 'slider', 'Logo height', 'design', { min: 14, max: 120, unit: 'px' }),
+  field('logoWidth', 'slider', 'Logo width', 'design', { min: 16, max: 400, unit: 'px', help: 'Leave empty to keep the logo\'s natural aspect ratio.' }),
   link('logoUrl', 'Logo link'),
 ]
 

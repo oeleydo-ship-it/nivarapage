@@ -130,11 +130,13 @@ function Wordmark({ props, small = false }: { props: Props; small?: boolean }) {
   const edit = editOf(props)
   const src = str(props.logoImage)
   const height = Math.min(Math.max(num(props.logoHeight, small ? 24 : 32), 12), 120)
+  const widthRaw = Number(props.logoWidth)
+  const width = Number.isFinite(widthRaw) && widthRaw > 0 ? Math.min(Math.max(widthRaw, 16), 400) : 'auto'
   return (
     <a className={cx('ud-kd-wordmark', small && 'ud-kd-wordmark--sm')} href={str(props.logoUrl, '/')}>
       {src ? (
         <span className="ud-kd-wordmark__img">
-          <img src={src} alt={str(props.logo, 'Logo')} style={{ height, width: 'auto', display: 'block' }} />
+          <img src={src} alt={str(props.logo, 'Logo')} style={{ height, width, display: 'block' }} />
           <EditableImage edit={edit} path={['logoImage']} current={src} label="Replace logo" />
         </span>
       ) : (
@@ -206,6 +208,7 @@ export const navbarKindred = defineBlock({
     text('logo', 'Wordmark'),
     image('logoImage', 'Logo image'),
     field('logoHeight', 'slider', 'Logo height', 'design', { min: 12, max: 120, unit: 'px' }),
+    field('logoWidth', 'slider', 'Logo width', 'design', { min: 16, max: 400, unit: 'px', help: 'Leave empty to keep the logo\'s natural aspect ratio.' }),
     link('logoUrl', 'Wordmark link'),
     navLinksField('links', 'Links'),
     toggle('showLinkRow', 'Show link row', 'layout'),
@@ -329,6 +332,7 @@ export const subnavKindred = defineBlock({
     text('logo', 'Wordmark'),
     image('logoImage', 'Logo image'),
     field('logoHeight', 'slider', 'Logo height', 'design', { min: 12, max: 120, unit: 'px' }),
+    field('logoWidth', 'slider', 'Logo width', 'design', { min: 16, max: 400, unit: 'px', help: 'Leave empty to keep the logo\'s natural aspect ratio.' }),
     link('logoUrl', 'Wordmark link'),
     navLinksField('links', 'Links'),
     field('activeIndex', 'number', 'Active link index', 'layout', { min: 0, max: 12 }),
@@ -1562,6 +1566,7 @@ export const footerKindred = defineBlock({
     text('logo', 'Wordmark'),
     image('logoImage', 'Logo image'),
     field('logoHeight', 'slider', 'Logo height', 'design', { min: 12, max: 120, unit: 'px' }),
+    field('logoWidth', 'slider', 'Logo width', 'design', { min: 16, max: 400, unit: 'px', help: 'Leave empty to keep the logo\'s natural aspect ratio.' }),
     repeater('columns', 'Link columns', [repeater('links', 'Links', [text('label', 'Label'), link('url', 'URL')], { itemLabel: 'Link' })], { itemLabel: 'Column' }),
     textarea('quote', 'Quote'),
     text('quoteAuthor', 'Quote author'),

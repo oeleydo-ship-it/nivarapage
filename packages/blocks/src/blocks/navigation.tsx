@@ -17,6 +17,12 @@ const brandFields = [
   field('logoIcon', 'icon', 'Logo mark', 'content'),
   toggle('showMark', 'Show logo mark', 'design'),
   field('logoHeight', 'slider', 'Logo height', 'design', { min: 16, max: 96, unit: 'px' }),
+  field('logoWidth', 'slider', 'Logo width', 'design', {
+    min: 16,
+    max: 400,
+    unit: 'px',
+    help: 'Leave empty to keep the logo\'s natural aspect ratio.',
+  }),
 ]
 
 const ctaGroup = [

@@ -35,6 +35,8 @@ export function Logo({ props }: { props: Props }) {
   const edit = editOf(props)
   const logoImage = str(props.logoImage)
   const height = Math.min(Math.max(Number(props.logoHeight) || 32, 16), 96)
+  const widthRaw = Number(props.logoWidth)
+  const width = Number.isFinite(widthRaw) && widthRaw > 0 ? Math.min(Math.max(widthRaw, 16), 400) : 'auto'
   return (
     <a
       className="ud-nav__logo"
@@ -45,7 +47,7 @@ export function Logo({ props }: { props: Props }) {
     >
       {logoImage ? (
         <span style={{ position: 'relative', display: 'inline-flex' }}>
-          <img src={logoImage} alt={str(props.logo, 'Logo')} style={{ height, width: 'auto', display: 'block' }} />
+          <img src={logoImage} alt={str(props.logo, 'Logo')} style={{ height, width, display: 'block' }} />
           <EditableImage edit={edit} path={['logoImage']} current={logoImage} label="Replace logo" />
         </span>
       ) : (

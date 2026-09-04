@@ -846,6 +846,12 @@
           "group": "design"
         },
         {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
+          "group": "design"
+        },
+        {
           "key": "links",
           "type": "repeater",
           "label": "Menu links",
@@ -1620,6 +1626,12 @@
           "key": "logoHeight",
           "type": "slider",
           "label": "Logo height",
+          "group": "design"
+        },
+        {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
           "group": "design"
         },
         {
@@ -2404,6 +2416,12 @@
           "group": "design"
         },
         {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
+          "group": "design"
+        },
+        {
           "key": "links",
           "type": "repeater",
           "label": "Menu links",
@@ -3182,6 +3200,12 @@
           "key": "logoHeight",
           "type": "slider",
           "label": "Logo height",
+          "group": "design"
+        },
+        {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
           "group": "design"
         },
         {
@@ -3969,6 +3993,12 @@
           "group": "design"
         },
         {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
+          "group": "design"
+        },
+        {
           "key": "links",
           "type": "repeater",
           "label": "Menu links",
@@ -4733,6 +4763,12 @@
           "group": "design"
         },
         {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
+          "group": "design"
+        },
+        {
           "key": "links",
           "type": "repeater",
           "label": "Menu links",
@@ -5487,6 +5523,12 @@
           "key": "logoHeight",
           "type": "slider",
           "label": "Logo height",
+          "group": "design"
+        },
+        {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
           "group": "design"
         },
         {
@@ -6251,6 +6293,12 @@
           "group": "design"
         },
         {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
+          "group": "design"
+        },
+        {
           "key": "links",
           "type": "repeater",
           "label": "Menu links",
@@ -7010,6 +7058,12 @@
           "key": "logoHeight",
           "type": "slider",
           "label": "Logo height",
+          "group": "design"
+        },
+        {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
           "group": "design"
         },
         {
@@ -7781,6 +7835,12 @@
           "key": "logoHeight",
           "type": "slider",
           "label": "Logo height",
+          "group": "design"
+        },
+        {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
           "group": "design"
         },
         {
@@ -162470,6 +162530,12 @@
           "group": "design"
         },
         {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
+          "group": "design"
+        },
+        {
           "key": "logoUrl",
           "type": "link",
           "label": "Wordmark link",
@@ -163200,6 +163266,12 @@
           "key": "logoHeight",
           "type": "slider",
           "label": "Logo height",
+          "group": "design"
+        },
+        {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
           "group": "design"
         },
         {
@@ -175018,6 +175090,12 @@
           "group": "design"
         },
         {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
+          "group": "design"
+        },
+        {
           "key": "columns",
           "type": "repeater",
           "label": "Link columns",
@@ -176530,6 +176608,12 @@
           "key": "logoHeight",
           "type": "slider",
           "label": "Logo height",
+          "group": "design"
+        },
+        {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
           "group": "design"
         },
         {
@@ -190916,6 +191000,12 @@
           "group": "design"
         },
         {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
+          "group": "design"
+        },
+        {
           "key": "logoUrl",
           "type": "link",
           "label": "Logo link",
@@ -191719,6 +191809,12 @@
           "key": "logoHeight",
           "type": "slider",
           "label": "Logo height",
+          "group": "design"
+        },
+        {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
           "group": "design"
         },
         {
@@ -207694,6 +207790,12 @@
           "group": "design"
         },
         {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
+          "group": "design"
+        },
+        {
           "key": "logoUrl",
           "type": "link",
           "label": "Logo link",
@@ -208469,6 +208571,12 @@
           "key": "logoHeight",
           "type": "slider",
           "label": "Logo height",
+          "group": "design"
+        },
+        {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
           "group": "design"
         },
         {
@@ -222105,6 +222213,12 @@
           "group": "design"
         },
         {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
+          "group": "design"
+        },
+        {
           "key": "logoUrl",
           "type": "link",
           "label": "Logo link",
@@ -233861,6 +233975,12 @@
           "group": "design"
         },
         {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
+          "group": "design"
+        },
+        {
           "key": "logoUrl",
           "type": "link",
           "label": "Logo link",
@@ -235211,6 +235331,12 @@
           "key": "logoHeight",
           "type": "slider",
           "label": "Logo height",
+          "group": "design"
+        },
+        {
+          "key": "logoWidth",
+          "type": "slider",
+          "label": "Logo width",
           "group": "design"
         },
         {
