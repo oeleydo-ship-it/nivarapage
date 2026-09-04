@@ -4,6 +4,7 @@ import { DashboardLayout } from './layouts/DashboardLayout'
 import { AuthCallbackPage, ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage } from './pages/AuthPages'
 import { BuilderPage } from './pages/BuilderPage'
 import { MediaPage, TemplatesPage } from './pages/MiscPages'
+import { TemplateDemoPage } from './pages/TemplateDemoPage'
 import { TemplateFullPreviewPage } from './pages/TemplateFullPreviewPage'
 import { ActivityPage } from './pages/ActivityPage'
 import { AdminPage } from './pages/AdminPage'
@@ -50,6 +51,10 @@ export default function App() {
           signed token is the credential, so a client can open it without
           a dashboard session. */}
       <Route path="/preview" element={<SitePreviewPage />} />
+      {/* Public template demos. No session: this is what the marketing site
+          links to, so a visitor can walk a real template before signing up. */}
+      <Route path="/demo/:slug" element={<TemplateDemoPage />} />
+      <Route path="/demo/:slug/:pageSlug" element={<TemplateDemoPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />

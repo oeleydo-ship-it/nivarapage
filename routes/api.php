@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\V1\PageController;
 use App\Http\Controllers\Api\V1\PreviewController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\PublicBrandingController;
+use App\Http\Controllers\Api\V1\PublicTemplateController;
 use App\Http\Controllers\Api\V1\PublicCheckoutController;
 use App\Http\Controllers\Api\V1\PublicFunnelController;
 use App\Http\Controllers\Api\V1\PublicLivechatController;
@@ -87,6 +88,14 @@ Route::prefix('v1')->group(function () {
 
     // Read before sign-in: the login screen renders the platform's branding.
     Route::get('/public/branding', [PublicBrandingController::class, 'show']);
+
+    // Live demos of the ready-made templates, linked from the marketing site.
+    // Throttled because they are the only unauthenticated route that returns
+    // whole pages of content.
+    Route::get('/public/templates', [PublicTemplateController::class, 'index'])
+        ->middleware('throttle:60,1');
+    Route::get('/public/templates/{template}', [PublicTemplateController::class, 'show'])
+        ->middleware('throttle:120,1');
 
     Route::get('/public/forms/{publicForm}', [FormController::class, 'publicShow'])
         ->middleware('throttle:public-forms');

@@ -349,6 +349,12 @@ export const templatesApi = {
   get: (id: string | number) => http.get<Template>(`/templates/${id}`),
 }
 
+/** Template demos, readable without a session. Used by the public demo page. */
+export const publicTemplatesApi = {
+  list: () => http.get<Template[]>('/public/templates'),
+  get: (slug: string) => http.get<Template>(`/public/templates/${encodeURIComponent(slug)}`),
+}
+
 export const blockPresetsApi = {
   list: () => http.get<BlockPreset[]>('/block-presets'),
 }

@@ -22,6 +22,9 @@ class TemplateResource extends JsonResource
             'is_active' => $this->is_active,
             'is_featured' => $this->is_featured,
             'thumbnail' => $this->thumbnail,
+            // Where the public demo of this template lives, so the marketing
+            // site can link to it without knowing how the app routes.
+            'demo_path' => '/demo/'.$this->slug,
             'theme_tokens' => $this->theme_tokens,
             'page_count' => $this->whenCounted('pages'),
             'category' => $this->whenLoaded('category'),
