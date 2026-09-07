@@ -205,6 +205,13 @@ function cssValue(key: string, value: unknown): string | undefined {
 
 function elementDecls(style: ElementTextStyle): string {
   const decls: string[] = []
+  for (const key of ['backgroundColor', 'borderColor', 'width', 'boxShadow'] as const) {
+    if (style[key]) decls.push(`${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}:${style[key]} !important`)
+  }
+  for (const key of ['borderWidth', 'borderRadius', 'paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight'] as const) {
+    if (typeof style[key] === 'number' && Number.isFinite(style[key])) decls.push(`${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}:${style[key]}px !important`)
+  }
+  if (style.borderWidth !== undefined) decls.push('border-style:solid !important')
   if (style.color) decls.push(`color:${style.color} !important`)
   if (style.fontFamily) decls.push(`font-family:${quoteFontStack(style.fontFamily)} !important`)
   if (typeof style.fontSize === 'number') decls.push(`font-size:${style.fontSize}px !important`)
@@ -261,4 +268,3 @@ export function responsiveSectionCss(sectionId: string, props: Record<string, un
   }
   return chunks.join('')
 }
-

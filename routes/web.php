@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Route;
 
 // Published customer sites answer on their own hostnames, so these paths are
 // registered once and resolve to whichever site the Host header names.
+Route::get('/store/order/{reference}', [\App\Http\Controllers\StoreReceiptController::class, 'show'])->name('store.receipt')->middleware('throttle:60,1');
+
 Route::get('/sitemap.xml', [PublishedSeoController::class, 'sitemap']);
 Route::get('/robots.txt', [PublishedSeoController::class, 'robots']);
 

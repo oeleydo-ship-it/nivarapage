@@ -184,6 +184,13 @@ class PublicSiteController extends Controller
     {
         $site = Site::query()->findOrFail($request->query('site'));
         $site->load(['pages.draftRevision', 'theme', 'menus.items', 'settings']);
+        $productBlocks = app(\App\Services\Commerce\ProductBlockService::class);
+        foreach ($site->pages as $page) {
+            if ($page->draftRevision && is_array($page->draftRevision->content_json)) {
+                $page->draftRevision->content_json = $productBlocks->hydrateContent($site, $page->draftRevision->content_json);
+            }
+        }
+
 
         return $this->privateJson([
             'site' => $site->only(['id', 'name', 'status']),

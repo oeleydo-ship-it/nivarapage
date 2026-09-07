@@ -118,6 +118,7 @@ Route::prefix('v1')->group(function () {
 
     // A buy button on a published page. Public, because the person clicking is
     // the workspace's customer, not a user of the platform.
+    Route::get('/public/products/{product}', [PublicCheckoutController::class, 'show'])->middleware('throttle:60,1');
     Route::post('/public/products/{product}/checkout', [PublicCheckoutController::class, 'start'])
         ->middleware('throttle:public-checkout');
 
@@ -209,6 +210,7 @@ Route::prefix('v1')->group(function () {
                 // A workspace's own product catalogue and its own Stripe account.
                 // Nothing here touches the platform gateway the super admin owns.
                 Route::get('/orders', [OrderController::class, 'index']);
+                Route::patch('/orders/{order}/fulfillment', [OrderController::class, 'fulfillment']);
                 Route::get('/coupons', [CouponController::class, 'index']);
                 Route::post('/coupons', [CouponController::class, 'store']);
                 Route::patch('/coupons/{coupon}', [CouponController::class, 'update']);

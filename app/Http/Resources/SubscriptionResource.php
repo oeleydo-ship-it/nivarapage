@@ -23,6 +23,7 @@ class SubscriptionResource extends JsonResource
             'interval' => $this->interval,
             'current_period_end' => $this->current_period_end,
             'cancel_at_period_end' => $this->cancel_at_period_end,
+            'trial_ends_at' => $this->trial_ends_at,
             'workspace' => $this->whenLoaded('workspace', fn () => $this->workspace ? [
                 'id' => $this->workspace->id,
                 'name' => $this->workspace->name,

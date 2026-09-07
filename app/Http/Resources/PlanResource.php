@@ -19,8 +19,11 @@ class PlanResource extends JsonResource
             'prices' => $this->prices,
             'limits' => $this->limits,
             'is_active' => $this->is_active,
+            'billing_type' => $this->billing_type ?? 'recurring',
+            'trial_days' => $this->trial_days,
             'stripe_price_monthly' => $this->stripe_price_monthly,
             'stripe_price_yearly' => $this->stripe_price_yearly,
+            'stripe_price_lifetime' => $this->stripe_price_lifetime,
             'subscriptions_count' => $this->whenCounted('subscriptions'),
         ];
     }

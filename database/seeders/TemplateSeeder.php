@@ -372,6 +372,116 @@ class TemplateSeeder extends Seeder
             theme: TemplateKirki::theme(),
             pages: TemplateKirki::pages(),
         );
+
+        $this->publish(
+            category: ['slug' => 'fitness', 'name' => 'Fitness & Coaching'],
+            slug: 'curalo',
+            name: 'Curalo',
+            description: 'A personal-training and coaching kit: a photographic hero and CTA bands broken by pure-black navigation, testimonial and footer sections, one bright cyan accent on every button and eyebrow, tight uppercase IBM Plex Mono headlines over plain Inter body copy, a coach grid, transparent pricing and a two-column FAQ, across five fully editable pages.',
+            featured: true,
+            theme: TemplateCuralo::theme(),
+            pages: TemplateCuralo::pages(),
+        );
+
+        $this->publish(
+            category: ['slug' => 'salon', 'name' => 'Salon & Spa'],
+            slug: 'salone',
+            name: 'Salone',
+            description: 'A beauty-salon and spa kit: a warm cream sheet broken only by a near-black footer, one antique-gold accent on every button and icon, Playfair Display serif headlines over Work Sans body copy, a Dancing Script cursive kicker above every heading, a bordered service grid, a specialist team grid with hover overlays and a single-quote testimonial carousel, across six fully editable pages.',
+            featured: true,
+            theme: TemplateSalone::theme(),
+            pages: TemplateSalone::pages(),
+        );
+
+        $this->publish(
+            category: ['slug' => 'insurance', 'name' => 'Insurance & Finance'],
+            slug: 'lifesure',
+            name: 'LifeSure',
+            description: 'A life-insurance and financial-services kit: a two-tier header with a slim contact topbar over a pill-shaped nav bar, a royal-blue hero band, DM Sans headlines over Inter body copy, heavily rounded cards that flood with royal blue on hover, a coverage grid, a news grid, an agent team grid and a near-navy footer with an Instagram photo grid, across six fully editable pages.',
+            featured: true,
+            theme: TemplateLifesure::theme(),
+            pages: TemplateLifesure::pages(),
+        );
+
+        $this->publish(
+            category: ['slug' => 'fintech', 'name' => 'Fintech'],
+            slug: 'raft',
+            name: 'Raft',
+            description: 'A dark fintech and neobank landing-page kit: an all-black canvas lit by one vivid signal-green accent that floods full-bleed statement and testimonial bands, a darker forest green on every button, softly rounded charcoal cards, a light-weight geometric sans for headlines, a feature showcase, a fee-free benefits list, a counter row, a next-gen cards section and a FAQ accordion, as a single long-scroll page.',
+            featured: true,
+            theme: TemplateRaft::theme(),
+            pages: TemplateRaft::pages(),
+        );
+
+        $this->publish(
+            category: ['slug' => 'architecture', 'name' => 'Architecture & Interior'],
+            slug: 'aterra',
+            name: 'Aterra',
+            description: 'An architecture and interior-design studio kit: a white sheet broken only by full-bleed photography and one deep-teal brand colour that carries every button, heading and dark band, DM Sans headlines throughout, a pill-shaped floating nav bar, numbered process steps, a photo-tile service grid, a client-review wall and a project gallery, across five fully editable pages.',
+            featured: true,
+            theme: TemplateAterra::theme(),
+            pages: TemplateAterra::pages(),
+        );
+
+        $this->publish(
+            category: ['slug' => 'cleaning', 'name' => 'Cleaning & Home Services'],
+            slug: 'gleam',
+            name: 'Gleam',
+            description: 'A home and office cleaning-services kit: a playful high-contrast palette of one bold indigo-violet and one warm yellow over navy-ink headlines, fully-pill buttons, big rounded Rubik type, full-bleed photography with a light wash instead of a dark scrim, an icon service grid, an overlapping photo collage, a solid-colour feature band, a quote carousel and a recent-posts grid, across five fully editable pages.',
+            featured: true,
+            theme: TemplateGleam::theme(),
+            pages: TemplateGleam::pages(),
+        );
+
+        $this->publish(
+            category: ['slug' => 'automotive', 'name' => 'Automotive & Repair'],
+            slug: 'mechanic',
+            name: 'The Mechanic',
+            description: 'An auto-repair and garage-services kit: a deep navy blue carries every dark band, headline and outline button, one warm gold accent lifts eyebrows and highlights, pill buttons throughout, big bold Epilogue type, a photo-caption stack, solid navy feature cards, a numbered full-bleed service grid, a photo FAQ and a footer booking form, across five fully editable pages.',
+            featured: true,
+            theme: TemplateMechanic::theme(),
+            pages: TemplateMechanic::pages(),
+        );
+
+        $this->publish(
+            category: ['slug' => 'finance', 'name' => 'Finance & SaaS'],
+            slug: 'finlio',
+            name: 'Finlio',
+            description: 'A personal-finance and fintech SaaS kit: a pale-cream page shows between big rounded dark-green card sections, one bright lime-green accent lights highlighted words, buttons and stat gradients, confident medium-weight Archivo type, a dashboard-mockup feature stack with stat cards and mini bar charts, labelled progress bars, a gradient stat callout and a plain-list FAQ, across five fully editable pages.',
+            featured: true,
+            theme: TemplateFinlio::theme(),
+            pages: TemplateFinlio::pages(),
+        );
+
+        $this->publish(
+            category: ['slug' => 'agency', 'name' => 'Agency'],
+            slug: 'havven',
+            name: 'Havven',
+            description: 'A digital-agency and creative-studio kit: a warm cream page with white cards, one near-black forest ink carrying every heading, pill button and dark band, bold tight-tracked Plus Jakarta Sans headlines over plain Inter body copy, a hero proof card with star rating and client avatars, a numbered accordion service list, a project gallery, numbered roadmap steps and a dark quote carousel, across six fully editable pages.',
+            featured: true,
+            theme: TemplateHavven::theme(),
+            pages: TemplateHavven::pages(),
+        );
+
+        $this->publish(
+            category: ['slug' => 'agency', 'name' => 'Agency'],
+            slug: 'corewave',
+            name: 'Corewave',
+            description: 'A software and product-development studio kit: a warm off-white page carries a floating gradient-blob hero card, medium-weight Space Grotesk headlines over plain Sora body copy, one vivid violet accent and one lime-green accent trading off across highlighted words, pill badges and buttons, organic blob-cropped photography, giant ghost numerals behind numbered process steps, tinted-card testimonials and a dark navy footer, across six fully editable pages.',
+            featured: true,
+            theme: TemplateCorewave::theme(),
+            pages: TemplateCorewave::pages(),
+        );
+
+        $this->publish(
+            category: ['slug' => 'ai', 'name' => 'AI & Technology'],
+            slug: 'novalta',
+            name: 'Novalta',
+            description: 'An AI-innovation studio kit: a soft off-white page carries one signature blue-to-coral gradient painted across every primary button and highlighted headline word, playful rounded Fredoka display type over plain Manrope body copy, arch-topped photography, floating pastel stat bubbles, full-bleed stacked colour panels telling the studio story, a filtered work grid, a client case-study accordion and a near-black gradient footer band, across six fully editable pages.',
+            featured: true,
+            theme: TemplateNovalta::theme(),
+            pages: TemplateNovalta::pages(),
+        );
     }
 
     /**

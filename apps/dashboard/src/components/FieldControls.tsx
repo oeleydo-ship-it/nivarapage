@@ -339,7 +339,40 @@ const ELEMENT_FONT_WEIGHTS = [
   { value: '900', label: '900 Black' },
 ]
 
-function ElementStyleEditor({ path, context }: { path: EditPath; context: FieldContext }) {
+function BoxStyleEditor({ path, context, label, textPath }: { path: EditPath; context: FieldContext; label: string; textPath?: EditPath }) {
+  if (!context.onElementStyleChange) return null
+  const value = context.elementStyles?.[pathId(path)] || {}
+  function patch(property: keyof ElementTextStyle, next: string | number | undefined) {
+    const updated = { ...value, [property]: next }
+    if (next === undefined || next === '') delete updated[property]
+    context.onElementStyleChange?.(path, Object.keys(updated).length ? updated : undefined)
+  }
+  return <details className="rounded-lg border border-zinc-800 bg-zinc-900/40">
+    <summary className="cursor-pointer px-3 py-2 text-xs text-zinc-300">{label} appearance{context.device && context.device !== 'desktop' ? ` - ${context.device}` : ''}</summary>
+    <div className="space-y-3 border-t border-zinc-800 p-3">
+      {(['backgroundColor', 'borderColor'] as const).map((key) => <Row key={key} label={key === 'backgroundColor' ? 'Background color' : 'Border color'}>
+        <ColorField value={value[key] || ''} onChange={(next) => patch(key, next)} theme={context.theme} fieldKey={`element:${pathId(path)}:${key}`} />
+      </Row>)}
+      {([
+        ['borderWidth', 'Border width', 16], ['borderRadius', 'Corner radius', 100],
+        ['paddingTop', 'Top padding', 160], ['paddingBottom', 'Bottom padding', 160],
+        ['paddingLeft', 'Left padding', 160], ['paddingRight', 'Right padding', 160],
+      ] as const).map(([key, title, max]) => <Row key={key} label={title}>
+        <SliderField value={value[key]} onChange={(next) => patch(key, typeof next === 'number' ? next : undefined)} field={{ key, type: 'slider', label: title, min: 0, max, step: 1, unit: 'px', placeholder: 'theme' }} fallback={0} />
+      </Row>)}
+      <Row label="Width"><Select value={value.width || ''} onChange={(next) => patch('width', next)} options={[
+        { value: '', label: 'Theme default' }, { value: 'auto', label: 'Auto' }, { value: '100%', label: 'Full width' }, { value: 'fit-content', label: 'Fit content' },
+      ]} /></Row>
+      <Row label="Shadow"><Select value={value.boxShadow || ''} onChange={(next) => patch('boxShadow', next)} options={[
+        { value: '', label: 'Theme default' }, { value: 'none', label: 'None' }, { value: '0 4px 12px #00000018', label: 'Soft' }, { value: '0 12px 30px #00000030', label: 'Elevated' },
+      ]} /></Row>
+      <button type="button" className="flex items-center gap-1 text-xs text-zinc-400 hover:text-white" onClick={() => context.onElementStyleChange?.(path, undefined)}><RotateCcw size={12} /> Reset appearance</button>
+      {textPath ? <div className="border-t border-zinc-800 pt-3"><p className="mb-3 text-xs font-medium text-zinc-300">Text style</p><ElementStyleEditor path={textPath} context={context} embedded /></div> : null}
+    </div>
+  </details>
+}
+
+function ElementStyleEditor({ path, context, embedded = false }: { path: EditPath; context: FieldContext; embedded?: boolean }) {
   const [open, setOpen] = useState(false)
   if (!context.onElementStyleChange) return null
   const key = pathId(path)
@@ -355,8 +388,8 @@ function ElementStyleEditor({ path, context }: { path: EditPath; context: FieldC
   }
 
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/40">
-      <button
+    <div className={embedded ? undefined : "rounded-lg border border-zinc-800 bg-zinc-900/40"}>
+      {!embedded ? <button
         type="button"
         className="flex w-full items-center justify-between px-3 py-2 text-xs text-zinc-300 hover:text-white"
         onClick={() => setOpen(!open)}
@@ -373,10 +406,10 @@ function ElementStyleEditor({ path, context }: { path: EditPath; context: FieldC
           {active ? <span className="h-1.5 w-1.5 rounded-full bg-blue-500" /> : null}
           {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
         </span>
-      </button>
-      {open ? (
-        <div className="space-y-3 border-t border-zinc-800 p-3">
-          <Row label="Color">
+      </button> : null}
+      {open || embedded ? (
+        <div className={embedded ? "space-y-3" : "space-y-3 border-t border-zinc-800 p-3"}>
+          <Row label={embedded ? "Text color" : "Color"}>
             <ColorField
               value={value.color || ''}
               onChange={(next) => patch('color', next || undefined)}
@@ -653,6 +686,34 @@ function RichTextField({ value, onChange }: { value: string; onChange: (v: strin
   )
 }
 
+function ProductPicker({ value, onChange, context }: { value: unknown; onChange: (value: unknown) => void; context: FieldContext }) {
+  const [search, setSearch] = useState('')
+  const selected = Array.isArray(value) ? value.map(String) : []
+  const catalogue = context.products || []
+  const matches = catalogue.filter((product) => product.name.toLowerCase().includes(search.toLowerCase()))
+  return <div className="space-y-2">
+    <Input aria-label="Search dashboard products" placeholder="Search products" value={search} onChange={(event) => setSearch(event.target.value)} />
+    <p className="text-xs text-zinc-400">{selected.length} selected</p>
+    {!catalogue.length ? <p className="text-xs text-zinc-400">No products available. Create products in Dashboard / Products, then return here.</p> : null}
+    <div className="max-h-72 space-y-1 overflow-y-auto">
+      {matches.map((product) => {
+        const id = String(product.id)
+        const checked = selected.includes(id)
+        return <label key={id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-800 p-2 text-sm">
+          <input type="checkbox" checked={checked} disabled={product.status !== 'active' && !checked} onChange={() => onChange(checked ? selected.filter((entry) => entry !== id) : [...selected, id])} />
+          <span className="min-w-0 flex-1">{product.name}</span>
+          {product.status !== 'active' ? <span className="text-xs text-zinc-500">{product.status}</span> : null}
+        </label>
+      })}
+      {catalogue.length > 0 && !matches.length ? <p className="text-xs text-zinc-400">No matching products.</p> : null}
+      {selected.filter((id) => !catalogue.some((product) => String(product.id) === id)).map((id) => <label key={id} className="flex items-center gap-2 text-xs text-zinc-400">
+        <input type="checkbox" checked onChange={() => onChange(selected.filter((entry) => entry !== id))} /> Unavailable product #{id}
+      </label>)}
+    </div>
+    {selected.length ? <button type="button" className="text-xs text-blue-400" onClick={() => onChange([])}>Clear selection</button> : null}
+  </div>
+}
+
 function RepeaterField({
   field,
   value,
@@ -835,7 +896,11 @@ function FieldControlFields({
     )
   }
 
+  if (field.styleTarget === 'column') return <BoxStyleEditor path={elementPath} context={context} label={field.label} />
+
   switch (field.type) {
+    case 'products':
+      return <Row label={field.label} help={field.help}><ProductPicker value={value} onChange={onChange} context={context} /></Row>
     case 'repeater':
       return <RepeaterField field={field} value={value} onChange={onChange} context={context} />
     case 'toggle':
@@ -851,7 +916,8 @@ function FieldControlFields({
           <Row label={field.label} help={field.help}>
             <TextArea value={asString} onChange={onChange} />
           </Row>
-          {showElementStyle ? <ElementStyleEditor path={elementPath} context={context} /> : null}
+          {field.styleTarget === 'button' ? <BoxStyleEditor path={[...elementPath, '$box']} context={context} label="Button" textPath={elementPath} /> : null}
+          {showElementStyle && field.styleTarget !== 'button' ? <ElementStyleEditor path={elementPath} context={context} /> : null}
         </div>
       )
     case 'richtext':
@@ -860,7 +926,8 @@ function FieldControlFields({
           <Row label={field.label} help={field.help}>
             <RichTextField value={asString} onChange={onChange} />
           </Row>
-          {showElementStyle ? <ElementStyleEditor path={elementPath} context={context} /> : null}
+          {field.styleTarget === 'button' ? <BoxStyleEditor path={[...elementPath, '$box']} context={context} label="Button" textPath={elementPath} /> : null}
+          {showElementStyle && field.styleTarget !== 'button' ? <ElementStyleEditor path={elementPath} context={context} /> : null}
         </div>
       )
     case 'color':
@@ -963,7 +1030,8 @@ function FieldControlFields({
           <Row label={field.label} help={field.help}>
             <Input value={asString} placeholder={field.placeholder} onChange={(event) => onChange(event.target.value)} />
           </Row>
-          {showElementStyle ? <ElementStyleEditor path={elementPath} context={context} /> : null}
+          {field.styleTarget === 'button' ? <BoxStyleEditor path={[...elementPath, '$box']} context={context} label="Button" textPath={elementPath} /> : null}
+          {showElementStyle && field.styleTarget !== 'button' ? <ElementStyleEditor path={elementPath} context={context} /> : null}
         </div>
       )
     default:

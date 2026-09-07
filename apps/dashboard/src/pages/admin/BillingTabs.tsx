@@ -191,8 +191,11 @@ function NewPlanForm({
 }) {
   const [slug, setSlug] = useState('')
   const [name, setName] = useState('')
+  const [billingType, setBillingType] = useState<'recurring' | 'one_time'>('recurring')
   const [monthly, setMonthly] = useState('0')
   const [yearly, setYearly] = useState('0')
+  const [lifetime, setLifetime] = useState('0')
+  const [trialDays, setTrialDays] = useState('0')
 
   return (
     <Card>
@@ -210,13 +213,39 @@ function NewPlanForm({
           <Input className="mt-1" placeholder="Studio" value={name} onChange={(e) => setName(e.target.value)} />
         </label>
         <label className="text-xs text-zinc-500">
-          Monthly (cents)
-          <Input className="mt-1" value={monthly} onChange={(e) => setMonthly(e.target.value)} />
+          Billing type
+          <select
+            className="mt-1 w-full rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1.5 text-sm text-zinc-200"
+            value={billingType}
+            onChange={(e) => setBillingType(e.target.value as 'recurring' | 'one_time')}
+          >
+            <option value="recurring">Recurring (monthly/yearly)</option>
+            <option value="one_time">One-time (lifetime)</option>
+          </select>
         </label>
-        <label className="text-xs text-zinc-500">
-          Yearly (cents)
-          <Input className="mt-1" value={yearly} onChange={(e) => setYearly(e.target.value)} />
-        </label>
+        {billingType === 'recurring' ? (
+          <label className="text-xs text-zinc-500">
+            Free trial (days)
+            <Input className="mt-1" value={trialDays} onChange={(e) => setTrialDays(e.target.value)} placeholder="0 = no trial" />
+          </label>
+        ) : null}
+        {billingType === 'recurring' ? (
+          <>
+            <label className="text-xs text-zinc-500">
+              Monthly (cents)
+              <Input className="mt-1" value={monthly} onChange={(e) => setMonthly(e.target.value)} />
+            </label>
+            <label className="text-xs text-zinc-500">
+              Yearly (cents)
+              <Input className="mt-1" value={yearly} onChange={(e) => setYearly(e.target.value)} />
+            </label>
+          </>
+        ) : (
+          <label className="text-xs text-zinc-500">
+            Lifetime price (cents)
+            <Input className="mt-1" value={lifetime} onChange={(e) => setLifetime(e.target.value)} />
+          </label>
+        )}
       </div>
       {errorMessage(error) ? <p className="mt-3 text-xs text-red-400">{errorMessage(error)}</p> : null}
       <div className="mt-4">
@@ -227,7 +256,13 @@ function NewPlanForm({
               slug: slug.trim().toLowerCase(),
               name: name.trim(),
               is_active: true,
-              prices: { monthly: Number(monthly) || 0, yearly: Number(yearly) || 0 },
+              billing_type: billingType,
+              trial_days: billingType === 'recurring' ? Number(trialDays) || 0 : null,
+              prices: {
+                monthly: billingType === 'recurring' ? Number(monthly) || 0 : 0,
+                yearly: billingType === 'recurring' ? Number(yearly) || 0 : 0,
+                lifetime: billingType === 'one_time' ? Number(lifetime) || 0 : 0,
+              },
               limits: Object.fromEntries(Object.entries(schema).map(([key, definition]) => [key, definition.default])),
             })
           }
@@ -257,10 +292,14 @@ function PlanEditor({
   onDelete: () => void
 }) {
   const [name, setName] = useState(plan.name)
+  const [billingType, setBillingType] = useState<'recurring' | 'one_time'>(plan.billing_type === 'one_time' ? 'one_time' : 'recurring')
+  const [trialDays, setTrialDays] = useState(String(plan.trial_days ?? 0))
   const [monthly, setMonthly] = useState(String(plan.prices?.monthly ?? 0))
   const [yearly, setYearly] = useState(String(plan.prices?.yearly ?? 0))
+  const [lifetime, setLifetime] = useState(String(plan.prices?.lifetime ?? 0))
   const [stripeMonthly, setStripeMonthly] = useState(String(plan.stripe_price_monthly ?? ''))
   const [stripeYearly, setStripeYearly] = useState(String(plan.stripe_price_yearly ?? ''))
+  const [stripeLifetime, setStripeLifetime] = useState(String(plan.stripe_price_lifetime ?? ''))
   const [active, setActive] = useState(plan.is_active !== false)
   const [limits, setLimits] = useState<Record<string, number | boolean>>(() =>
     Object.fromEntries(Object.entries(schema).map(([key, definition]) => [key, limitValue(plan, key, definition)])),
@@ -282,7 +321,11 @@ function PlanEditor({
             {plan.slug} · {subscriptions} subscription{subscriptions === 1 ? '' : 's'}
           </p>
         </div>
-        <Badge tone={active ? 'success' : 'warning'}>{active ? 'active' : 'inactive'}</Badge>
+        <div className="flex items-center gap-2">
+          {billingType === 'one_time' ? <Badge tone="info">lifetime</Badge> : null}
+          {billingType === 'recurring' && Number(trialDays) > 0 ? <Badge tone="info">{trialDays}-day trial</Badge> : null}
+          <Badge tone={active ? 'success' : 'warning'}>{active ? 'active' : 'inactive'}</Badge>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -291,31 +334,68 @@ function PlanEditor({
           <Input className="mt-1" value={name} onChange={(e) => setName(e.target.value)} />
         </label>
         <label className="text-xs text-zinc-500">
-          Monthly (cents)
-          <Input className="mt-1" value={monthly} onChange={(e) => setMonthly(e.target.value)} />
+          Billing type
+          <select
+            className="mt-1 w-full rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1.5 text-sm text-zinc-200"
+            value={billingType}
+            onChange={(e) => setBillingType(e.target.value as 'recurring' | 'one_time')}
+          >
+            <option value="recurring">Recurring (monthly/yearly)</option>
+            <option value="one_time">One-time (lifetime)</option>
+          </select>
         </label>
-        <label className="text-xs text-zinc-500">
-          Yearly (cents)
-          <Input className="mt-1" value={yearly} onChange={(e) => setYearly(e.target.value)} />
-        </label>
-        <label className="text-xs text-zinc-500 lg:col-span-2">
-          Stripe price ID (monthly)
-          <Input
-            className="mt-1 font-mono text-xs"
-            placeholder="price_…"
-            value={stripeMonthly}
-            onChange={(e) => setStripeMonthly(e.target.value)}
-          />
-        </label>
-        <label className="text-xs text-zinc-500">
-          Stripe price ID (yearly)
-          <Input
-            className="mt-1 font-mono text-xs"
-            placeholder="price_…"
-            value={stripeYearly}
-            onChange={(e) => setStripeYearly(e.target.value)}
-          />
-        </label>
+        {billingType === 'recurring' ? (
+          <label className="text-xs text-zinc-500">
+            Free trial (days)
+            <Input className="mt-1" value={trialDays} onChange={(e) => setTrialDays(e.target.value)} placeholder="0 = no trial" />
+          </label>
+        ) : null}
+        {billingType === 'recurring' ? (
+          <>
+            <label className="text-xs text-zinc-500">
+              Monthly (cents)
+              <Input className="mt-1" value={monthly} onChange={(e) => setMonthly(e.target.value)} />
+            </label>
+            <label className="text-xs text-zinc-500">
+              Yearly (cents)
+              <Input className="mt-1" value={yearly} onChange={(e) => setYearly(e.target.value)} />
+            </label>
+            <label className="text-xs text-zinc-500 lg:col-span-2">
+              Stripe price ID (monthly)
+              <Input
+                className="mt-1 font-mono text-xs"
+                placeholder="price_…"
+                value={stripeMonthly}
+                onChange={(e) => setStripeMonthly(e.target.value)}
+              />
+            </label>
+            <label className="text-xs text-zinc-500">
+              Stripe price ID (yearly)
+              <Input
+                className="mt-1 font-mono text-xs"
+                placeholder="price_…"
+                value={stripeYearly}
+                onChange={(e) => setStripeYearly(e.target.value)}
+              />
+            </label>
+          </>
+        ) : (
+          <>
+            <label className="text-xs text-zinc-500">
+              Lifetime price (cents)
+              <Input className="mt-1" value={lifetime} onChange={(e) => setLifetime(e.target.value)} />
+            </label>
+            <label className="text-xs text-zinc-500 lg:col-span-2">
+              Stripe price ID (lifetime)
+              <Input
+                className="mt-1 font-mono text-xs"
+                placeholder="price_…"
+                value={stripeLifetime}
+                onChange={(e) => setStripeLifetime(e.target.value)}
+              />
+            </label>
+          </>
+        )}
       </div>
 
       <div className="mt-5 space-y-5">
@@ -345,10 +425,17 @@ function PlanEditor({
             onSave({
               name,
               is_active: active,
-              prices: { monthly: Number(monthly) || 0, yearly: Number(yearly) || 0 },
+              billing_type: billingType,
+              trial_days: billingType === 'recurring' ? Number(trialDays) || 0 : null,
+              prices: {
+                monthly: Number(monthly) || 0,
+                yearly: Number(yearly) || 0,
+                lifetime: Number(lifetime) || 0,
+              },
               limits,
               stripe_price_monthly: stripeMonthly.trim() || null,
               stripe_price_yearly: stripeYearly.trim() || null,
+              stripe_price_lifetime: stripeLifetime.trim() || null,
             })
           }
         >

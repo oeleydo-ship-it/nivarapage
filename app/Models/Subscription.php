@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['workspace_id', 'plan_id', 'status', 'provider', 'provider_ref', 'current_period_end', 'cancel_at_period_end', 'interval'])]
+#[Fillable(['workspace_id', 'plan_id', 'status', 'provider', 'provider_ref', 'current_period_end', 'cancel_at_period_end', 'interval', 'trial_ends_at'])]
 class Subscription extends Model
 {
     /**
@@ -17,6 +17,7 @@ class Subscription extends Model
         return [
             'current_period_end' => 'datetime',
             'cancel_at_period_end' => 'boolean',
+            'trial_ends_at' => 'datetime',
         ];
     }
 

@@ -1,4 +1,5 @@
 export type BlockCategory =
+  | 'products'
   | 'navigation'
   | 'hero'
   | 'features'
@@ -15,6 +16,7 @@ export type BlockCategory =
   | 'blog'
 
 export type BlockFieldType =
+  | 'products'
   | 'text'
   | 'textarea'
   | 'richtext'
@@ -43,6 +45,8 @@ export type BlockFieldGroup =
   | 'image'
 
 export interface BlockField {
+  /** Appearance controls for a rendered button or column container. */
+  styleTarget?: 'button' | 'column'
   key: string
   type: BlockFieldType
   label: string
@@ -385,11 +389,16 @@ export interface Plan {
   id: number
   slug: string
   name: string
-  prices?: { monthly?: number; yearly?: number } & Record<string, number | undefined>
+  prices?: { monthly?: number; yearly?: number; lifetime?: number } & Record<string, number | undefined>
   limits?: PlanLimits
   is_active?: boolean
+  /** 'recurring' bills monthly/yearly; 'one_time' is a single lifetime purchase with no renewal. */
+  billing_type?: 'recurring' | 'one_time'
+  /** Free-trial length in days for a recurring plan; null/0 means no trial. */
+  trial_days?: number | null
   stripe_price_monthly?: string | null
   stripe_price_yearly?: string | null
+  stripe_price_lifetime?: string | null
   subscriptions_count?: number
 }
 
@@ -405,7 +414,8 @@ export interface Subscription {
   provider?: string | null
   current_period_end?: string | null
   cancel_at_period_end?: boolean
-  interval?: 'monthly' | 'yearly' | string | null
+  interval?: 'monthly' | 'yearly' | 'lifetime' | string | null
+  trial_ends_at?: string | null
   stripe_enabled?: boolean
   portal_available?: boolean
   plan?: Plan | null
@@ -642,6 +652,7 @@ export interface FormFieldDef {
  * never passes through a float on its way anywhere.
  */
 export interface Product {
+  metadata?: { sku?: string; category?: string; images?: string[]; kind?: 'physical' | 'digital'; shipping_price?: number; shipping_countries?: string[]; delivery_url?: string } | null
   id: number
   workspace_id: number
   name: string
@@ -660,6 +671,7 @@ export interface Product {
 
 /** One attempt to buy something. */
 export interface Order {
+  metadata?: { kind?: string; fulfillment?: string; tracking_url?: string; shipping_address?: { name?: string; address?: Record<string, string> } } | null
   id: number
   reference: string
   product_id?: number | null

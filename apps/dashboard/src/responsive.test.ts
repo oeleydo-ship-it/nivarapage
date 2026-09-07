@@ -42,3 +42,14 @@ describe('responsive device styles', () => {
     expect(css).not.toContain('@media (max-width:768px)')
   })
 })
+
+
+it('preserves independent button and column appearance in responsive published CSS', () => {
+  const props = { elementStyles: { 'buttonLabel.$box': { backgroundColor: '#ff0000', paddingLeft: 24 } } }
+  const next = { ...props, ...patchResponsiveElementStyle(props, 'mobile', ['buttonLabel', '$box'], { backgroundColor: '#ff0000', paddingLeft: 0 }) }
+  expect((mergeResponsiveProps(next, 'desktop').elementStyles as typeof props.elementStyles)['buttonLabel.$box'].paddingLeft).toBe(24)
+  const css = responsiveSectionCss('hero-appearance', next)
+  expect(css).toContain('[data-ud-style="buttonLabel.$box"]')
+  expect(css).toContain('padding-left:0px !important')
+  expect(css).toContain('@media (max-width:480px)')
+})

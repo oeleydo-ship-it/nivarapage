@@ -33,7 +33,7 @@ class ProductController extends Controller
             $query->where('status', $status);
         }
         if ($term = $request->string('q')->toString()) {
-            $query->where('name', 'like', '%'.$term.'%');
+            $query->where(fn ($q) => $q->where('name', 'like', '%'.$term.'%')->orWhere('metadata->sku', 'like', '%'.$term.'%')->orWhere('metadata->category', 'like', '%'.$term.'%'));
         }
 
         return response()->json(['data' => $query->limit(200)->get()]);
@@ -74,7 +74,7 @@ class ProductController extends Controller
      */
     private function validated(Request $request, bool $creating = true): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'name' => [$creating ? 'required' : 'sometimes', 'string', 'max:160'],
             'slug' => ['nullable', 'string', 'max:160'],
             'description' => ['nullable', 'string', 'max:4000'],
@@ -88,7 +88,33 @@ class ProductController extends Controller
             'success_url' => ['nullable', 'url', 'max:2048'],
             'inventory' => ['nullable', 'integer', 'min:0', 'max:1000000'],
             'metadata' => ['nullable', 'array'],
+            'metadata.sku' => ['nullable', 'string', 'max:100'],
+            'metadata.category' => ['nullable', 'string', 'max:100'],
+            'metadata.images' => ['nullable', 'array', 'max:8'],
+            'metadata.images.*' => ['required', 'url:http,https', 'max:2048'],
+            'metadata.kind' => ['nullable', 'in:physical,digital'],
+            'metadata.shipping_price' => ['nullable', 'integer', 'min:0', 'max:99999999'],
+            'metadata.shipping_countries' => ['nullable', 'array', 'max:50'],
+            'metadata.shipping_countries.*' => ['required', 'string', 'regex:/^[A-Z]{2}$/'],
+            'metadata.delivery_url' => ['nullable', 'url:http,https', 'max:2048'],
         ]);
+        $existing = $creating ? null : $this->find((string) $request->route('product'));
+        $metadata = [...($existing?->metadata ?? []), ...($data['metadata'] ?? [])];
+        $type = $data['type'] ?? $existing?->type ?? 'one_time';
+        $status = $data['status'] ?? $existing?->status ?? 'draft';
+        if (($metadata['kind'] ?? null) === 'physical') {
+            if (empty($metadata['shipping_countries'])) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['metadata.shipping_countries' => 'Choose at least one shipping country.']);
+            }
+            if ($type === 'subscription') {
+                throw \Illuminate\Validation\ValidationException::withMessages(['type' => 'Physical products currently support one-time purchases.']);
+            }
+        }
+        if (($metadata['kind'] ?? null) === 'digital' && $status === 'active' && empty($metadata['delivery_url'])) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['metadata.delivery_url' => 'Add a delivery URL before activating this digital product.']);
+        }
+        if (array_key_exists('metadata', $data)) $data['metadata'] = $metadata;
+        return $data;
     }
 
     private function find(string $product): Product

@@ -24,6 +24,9 @@ final class BlockRegistry
     private static function fallbackTypes(): array
     {
         return [
+            'products.grid',
+            'products.featured',
+            'products.list',
             'navbar.simple',
             'navbar.centered',
             'navbar.cta',

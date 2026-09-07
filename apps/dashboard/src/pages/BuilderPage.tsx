@@ -78,6 +78,7 @@ import { useSelectionStore } from '../stores/selectionStore'
 import { useSiteStore } from '../stores/siteStore'
 import { Button } from '../ui/primitives'
 import { applyPageStyleProfile } from '../lib/sectionDefaults'
+import { withDashboardProducts } from '../lib/productSections'
 import { publishSiteWithRenders } from '@/lib/publishSite'
 
 const TABS: Array<{ id: BlockFieldGroup; label: string }> = [
@@ -657,8 +658,8 @@ export function BuilderPage() {
 
   const sections = content.sections
   const canvasSections = useMemo(
-    () => withSiteBlogPosts(sections, currentPage?.slug, sitePosts.data || []),
-    [currentPage?.slug, sections, sitePosts.data],
+    () => withDashboardProducts(withSiteBlogPosts(sections, currentPage?.slug, sitePosts.data || []), products.data || []),
+    [currentPage?.slug, sections, sitePosts.data, products.data],
   )
 
   /**

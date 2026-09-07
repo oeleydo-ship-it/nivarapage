@@ -14,6 +14,16 @@ import { quoteFontStack } from './theme'
 export type EditPath = Array<string | number>
 
 export type ElementTextStyle = {
+  backgroundColor?: string
+  borderColor?: string
+  borderWidth?: number
+  borderRadius?: number
+  paddingTop?: number
+  paddingBottom?: number
+  paddingLeft?: number
+  paddingRight?: number
+  width?: string
+  boxShadow?: string
   color?: string
   fontFamily?: string
   fontSize?: number
@@ -68,7 +78,7 @@ export function pathId(path: EditPath): string {
   return path.map(String).join('.')
 }
 
-function useElementStyle(path: EditPath): CSSProperties | undefined {
+export function useElementStyle(path: EditPath): CSSProperties | undefined {
   const styles = useContext(ElementStyleContext)
   const value = styles[pathId(path)]
   if (!value || typeof value !== 'object') return undefined
@@ -76,6 +86,17 @@ function useElementStyle(path: EditPath): CSSProperties | undefined {
   const lineHeight = typeof value.lineHeight === 'number' && Number.isFinite(value.lineHeight) ? value.lineHeight : undefined
   const letterSpacing = typeof value.letterSpacing === 'number' && Number.isFinite(value.letterSpacing) ? `${value.letterSpacing}px` : undefined
   return {
+    backgroundColor: value.backgroundColor || undefined,
+    borderColor: value.borderColor || undefined,
+    borderWidth: value.borderWidth,
+    borderStyle: value.borderWidth !== undefined ? 'solid' : undefined,
+    borderRadius: value.borderRadius,
+    paddingTop: value.paddingTop,
+    paddingBottom: value.paddingBottom,
+    paddingLeft: value.paddingLeft,
+    paddingRight: value.paddingRight,
+    width: value.width || undefined,
+    boxShadow: value.boxShadow || undefined,
     color: value.color || undefined,
     fontFamily: value.fontFamily ? quoteFontStack(value.fontFamily) : undefined,
     fontSize,

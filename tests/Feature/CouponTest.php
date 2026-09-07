@@ -147,24 +147,13 @@ it('opens the order at the discounted price', function () {
     expect($coupon->fresh()->redeemed_count)->toBe(0);
 });
 
-it('ignores an unusable code rather than refusing the sale', function () {
+it('rejects an unusable code before opening an order', function () {
     $fx = couponShop();
-    test()->withHeaders($fx['headers'])
-        ->putJson('/api/v1/payments/stripe', ['secret_key' => 'sk_test_key0001', 'enabled' => true])
-        ->assertOk();
+    test()->withHeaders($fx['headers'])->putJson('/api/v1/payments/stripe', ['secret_key' => 'sk_test_key0001', 'enabled' => true])->assertOk();
     $product = couponProduct($fx['workspace']->id, ['price' => 10000]);
-
-    try {
-        app(WorkspaceStripeService::class)->checkout($product, ['coupon' => 'NOSUCHCODE']);
-    } catch (RuntimeException) {
-        // Expected.
-    }
-
-    // The shopper still gets to buy, at the price on the page.
-    $order = Order::query()->latest('id')->first();
-    expect($order->amount)->toBe(10000);
-    expect($order->discount)->toBe(0);
-    expect($order->coupon_id)->toBeNull();
+    expect(fn () => app(WorkspaceStripeService::class)->checkout($product, ['coupon' => 'NOSUCHCODE']))
+        ->toThrow(RuntimeException::class, 'invalid or expired');
+    expect(Order::query()->count())->toBe(0);
 });
 
 it('does not let a code be created twice in one shop', function () {

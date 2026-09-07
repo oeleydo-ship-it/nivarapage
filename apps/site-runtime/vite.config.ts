@@ -16,6 +16,8 @@ const dir = fileURLToPath(new URL(".", import.meta.url));
  * build hash. Serve /site/* with a short max-age.
  */
 export default defineConfig({
+  root: dir,
+  publicDir: false,
   plugins: [react(), tailwindcss()],
   esbuild: { jsx: "automatic" },
   build: {

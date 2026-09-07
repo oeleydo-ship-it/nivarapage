@@ -27,8 +27,10 @@ export default defineConfig(({ command }) => ({
   },
   server: {
     host: '0.0.0.0',
-    port: 5174,
-    strictPort: true,
+    // The harness assigns a port when several sessions run the dev server at
+    // once; fall back to 5174 when nothing sets one.
+    port: Number(process.env.PORT) || 5174,
+    strictPort: false,
     proxy: {
       '/api': {
         // Prefer IPv4. On Windows, `localhost` often resolves to ::1 and can

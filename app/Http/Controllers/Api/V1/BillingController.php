@@ -39,7 +39,7 @@ class BillingController extends Controller
     ): JsonResponse {
         $data = $request->validate([
             'plan' => ['required', 'exists:plans,slug'],
-            'interval' => ['nullable', 'in:monthly,yearly'],
+            'interval' => ['nullable', 'in:monthly,yearly,lifetime'],
         ]);
         $plan = Plan::query()->where('slug', $data['plan'])->firstOrFail();
         $workspace = $current->workspace;
@@ -57,10 +57,10 @@ class BillingController extends Controller
     ): JsonResponse {
         $data = $request->validate([
             'plan' => ['required', 'exists:plans,slug'],
-            'interval' => ['required', 'in:monthly,yearly'],
+            'interval' => ['nullable', 'in:monthly,yearly,lifetime'],
         ]);
         $plan = Plan::query()->where('slug', $data['plan'])->where('is_active', true)->firstOrFail();
-        $session = $subscriptions->createCheckoutSession($current->workspace, $plan, $data['interval']);
+        $session = $subscriptions->createCheckoutSession($current->workspace, $plan, $data['interval'] ?? 'monthly');
 
         return response()->json(['data' => $session]);
     }
@@ -82,6 +82,7 @@ class BillingController extends Controller
             'current_period_end' => $subscription?->current_period_end,
             'cancel_at_period_end' => (bool) ($subscription?->cancel_at_period_end ?? false),
             'interval' => $subscription?->interval,
+            'trial_ends_at' => $subscription?->trial_ends_at,
             'stripe_enabled' => $stripe->enabled(),
             'portal_available' => $stripe->enabled() && filled($workspace?->stripe_customer_id),
             'plan' => $subscription?->plan ? new PlanResource($subscription->plan) : null,

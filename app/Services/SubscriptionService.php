@@ -31,9 +31,10 @@ class SubscriptionService
             'status' => 'active',
             'provider' => $provider,
             'provider_ref' => null,
-            'current_period_end' => Carbon::now()->addMonth(),
+            'current_period_end' => $plan->isOneTime() ? null : Carbon::now()->addMonth(),
             'cancel_at_period_end' => false,
             'interval' => $this->defaultInterval($plan),
+            'trial_ends_at' => null,
         ]);
 
         $this->syncBranding($workspace, $plan);
@@ -73,6 +74,10 @@ class SubscriptionService
             ]);
         }
 
+        if ($plan->isOneTime()) {
+            return $this->createOneTimeCheckoutSession($workspace, $plan);
+        }
+
         $amount = (int) ($plan->prices[$interval] ?? 0);
         if ($amount <= 0 && ! $this->priceId($plan, $interval)) {
             throw ValidationException::withMessages([
@@ -82,6 +87,17 @@ class SubscriptionService
 
         $client = $this->stripe->client();
         $customerId = $this->ensureCustomer($workspace);
+
+        $subscriptionData = [
+            'metadata' => [
+                'workspace_id' => (string) $workspace->id,
+                'plan_slug' => $plan->slug,
+                'interval' => $interval,
+            ],
+        ];
+        if ($plan->hasTrial()) {
+            $subscriptionData['trial_period_days'] = $plan->trial_days;
+        }
 
         $session = $client->checkout->sessions->create([
             'mode' => 'subscription',
@@ -95,14 +111,63 @@ class SubscriptionService
                 'plan_slug' => $plan->slug,
                 'interval' => $interval,
             ],
-            'subscription_data' => [
+            'subscription_data' => $subscriptionData,
+            'allow_promotion_codes' => true,
+        ]);
+
+        return [
+            'url' => (string) $session->url,
+            'id' => (string) $session->id,
+        ];
+    }
+
+    /**
+     * @return array{url: string, id: string}
+     */
+    private function createOneTimeCheckoutSession(Workspace $workspace, Plan $plan): array
+    {
+        $amount = (int) ($plan->prices['lifetime'] ?? 0);
+        if ($amount <= 0 && ! filled($plan->stripe_price_lifetime)) {
+            throw ValidationException::withMessages([
+                'plan' => ['This plan has no lifetime price configured.'],
+            ]);
+        }
+
+        $client = $this->stripe->client();
+        $customerId = $this->ensureCustomer($workspace);
+
+        $lineItem = filled($plan->stripe_price_lifetime)
+            ? ['price' => $plan->stripe_price_lifetime, 'quantity' => 1]
+            : [
+                'price_data' => [
+                    'currency' => 'usd',
+                    'product_data' => [
+                        'name' => $plan->name,
+                        'metadata' => ['plan_slug' => $plan->slug],
+                    ],
+                    'unit_amount' => $amount,
+                ],
+                'quantity' => 1,
+            ];
+
+        $session = $client->checkout->sessions->create([
+            'mode' => 'payment',
+            'customer' => $customerId,
+            'success_url' => rtrim((string) config('uidesired.frontend_url'), '/').'/billing?success=1',
+            'cancel_url' => rtrim((string) config('uidesired.frontend_url'), '/').'/billing?canceled=1',
+            'client_reference_id' => (string) $workspace->id,
+            'line_items' => [$lineItem],
+            'metadata' => [
+                'workspace_id' => (string) $workspace->id,
+                'plan_slug' => $plan->slug,
+                'interval' => 'lifetime',
+            ],
+            'payment_intent_data' => [
                 'metadata' => [
                     'workspace_id' => (string) $workspace->id,
                     'plan_slug' => $plan->slug,
-                    'interval' => $interval,
                 ],
             ],
-            'allow_promotion_codes' => true,
         ]);
 
         return [
@@ -166,14 +231,32 @@ class SubscriptionService
         $subscription = $workspace->subscription;
         $previous = $subscription?->plan?->slug;
 
+        if ($plan->isOneTime()) {
+            $interval = 'lifetime';
+        }
+
+        $resolvedStatus = $status ?? 'active';
+        $trialEndsAt = null;
+
+        // A trial only starts when a workspace lands on a trial-bearing plan
+        // through the direct (non-Stripe) path and it's a genuinely new
+        // plan; a Stripe subscription carries its own trial state via
+        // subscription_data.trial_period_days and mapStripeStatus().
+        if ($provider === 'local' && ! $plan->isOneTime() && $plan->hasTrial() && $previous !== $plan->slug && $resolvedStatus === 'active') {
+            $resolvedStatus = 'trialing';
+            $trialEndsAt = Carbon::now()->addDays((int) $plan->trial_days);
+            $periodEnd = $trialEndsAt;
+        }
+
         $attributes = [
             'plan_id' => $plan->id,
-            'status' => $status ?? 'active',
+            'status' => $resolvedStatus,
             'provider' => $provider,
             'provider_ref' => $providerRef ?? $subscription?->provider_ref,
-            'current_period_end' => $this->normalizePeriodEnd($periodEnd, $interval),
+            'current_period_end' => $plan->isOneTime() ? null : $this->normalizePeriodEnd($periodEnd, $interval),
             'cancel_at_period_end' => false,
             'interval' => $interval,
+            'trial_ends_at' => $trialEndsAt,
         ];
 
         if (! $subscription) {
@@ -231,7 +314,7 @@ class SubscriptionService
     private function onCheckoutCompleted(StripeObject $session): void
     {
         $mode = $session['mode'] ?? 'subscription';
-        if ($mode !== 'subscription') {
+        if (! in_array($mode, ['subscription', 'payment'], true)) {
             return;
         }
 
@@ -241,13 +324,34 @@ class SubscriptionService
         }
 
         $plan = $this->planFromStripe($session);
-        $interval = (string) ($this->metadata($session)['interval'] ?? 'monthly');
         $customerId = is_string($session['customer'] ?? null) ? $session['customer'] : null;
-        $subscriptionId = is_string($session['subscription'] ?? null) ? $session['subscription'] : null;
 
         if ($customerId) {
             $workspace->update(['stripe_customer_id' => $customerId]);
         }
+
+        if ($mode === 'payment') {
+            // A one-time/lifetime purchase never gets a Stripe subscription
+            // object, so the payment intent stands in as the reference used
+            // to reconcile this checkout.
+            if ($plan) {
+                $paymentRef = is_string($session['payment_intent'] ?? null) ? $session['payment_intent'] : (is_string($session['id'] ?? null) ? $session['id'] : null);
+                $this->applyLocalPlan(
+                    $workspace->fresh(['subscription.plan']),
+                    $plan,
+                    'lifetime',
+                    'stripe',
+                    $paymentRef,
+                    'active',
+                    null,
+                );
+            }
+
+            return;
+        }
+
+        $interval = (string) ($this->metadata($session)['interval'] ?? 'monthly');
+        $subscriptionId = is_string($session['subscription'] ?? null) ? $session['subscription'] : null;
 
         $previousRef = $workspace->subscription?->provider === 'stripe'
             ? $workspace->subscription?->provider_ref
@@ -430,6 +534,7 @@ class SubscriptionService
             return Plan::query()
                 ->where('stripe_price_monthly', $priceId)
                 ->orWhere('stripe_price_yearly', $priceId)
+                ->orWhere('stripe_price_lifetime', $priceId)
                 ->first();
         }
 
@@ -511,11 +616,19 @@ class SubscriptionService
 
     private function isFree(Plan $plan): bool
     {
-        return $plan->slug === 'free' || ((int) ($plan->prices['monthly'] ?? 0) === 0 && (int) ($plan->prices['yearly'] ?? 0) === 0);
+        if ($plan->slug === 'free') {
+            return true;
+        }
+
+        if ($plan->isOneTime()) {
+            return (int) ($plan->prices['lifetime'] ?? 0) === 0;
+        }
+
+        return (int) ($plan->prices['monthly'] ?? 0) === 0 && (int) ($plan->prices['yearly'] ?? 0) === 0;
     }
 
     private function defaultInterval(Plan $plan): string
     {
-        return $this->isFree($plan) ? 'monthly' : 'monthly';
+        return $plan->isOneTime() ? 'lifetime' : 'monthly';
     }
 }

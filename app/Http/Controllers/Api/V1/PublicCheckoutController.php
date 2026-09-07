@@ -23,6 +23,19 @@ class PublicCheckoutController extends Controller
 {
     public function __construct(private readonly WorkspaceStripeService $stripe) {}
 
+    public function show(string $product): JsonResponse
+    {
+        $model = Product::query()->whereKey($product)->where('status', 'active')->firstOrFail();
+        return response()->json(['data' => [
+            ...$model->only(['id', 'name', 'description', 'image', 'price', 'currency', 'type', 'interval', 'inventory']),
+            'sku' => $model->metadata['sku'] ?? '',
+            'category' => $model->metadata['category'] ?? '',
+            'images' => $model->metadata['images'] ?? [],
+            'kind' => $model->metadata['kind'] ?? null,
+            'shipping_price' => $model->metadata['shipping_price'] ?? 0,
+        ]])->header('Cache-Control', 'no-store');
+    }
+
     public function start(Request $request, string $product): JsonResponse
     {
         $data = $request->validate([

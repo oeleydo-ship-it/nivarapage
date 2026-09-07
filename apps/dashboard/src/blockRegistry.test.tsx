@@ -67,3 +67,24 @@ describe('blockRegistry', () => {
     }
   })
 })
+
+
+describe('Aperture element appearance', () => {
+  it('styles the entire button and individual hero columns without affecting siblings', () => {
+    const { container } = render(<BlockRenderer type="hero.aperture" props={{
+      heading: 'Studio', buttonLabel: 'Start', secondaryLabel: 'More',
+      elementStyles: {
+        'buttonLabel.$box': { backgroundColor: '#ff0000', borderRadius: 8, paddingLeft: 24, width: '100%' },
+        contentColumn: { backgroundColor: '#eeeeee', paddingTop: 40 },
+        imageColumn: { borderWidth: 2, borderColor: '#0000ff' },
+      },
+    }} />)
+    const buttons = container.querySelectorAll<HTMLAnchorElement>('.ud-ap-btn')
+    expect(buttons[0].style.backgroundColor).toBe('rgb(255, 0, 0)')
+    expect(buttons[0].style.paddingLeft).toBe('24px')
+    expect(buttons[0].style.width).toBe('100%')
+    expect(buttons[1].style.backgroundColor).toBe('')
+    expect(container.querySelector<HTMLElement>('.ud-ap-hero__copy')?.style.paddingTop).toBe('40px')
+    expect(container.querySelector<HTMLElement>('.ud-ap-hero__figure')?.style.borderWidth).toBe('2px')
+  })
+})

@@ -1,4 +1,4 @@
-import type { UsageEntry } from '@uidesired/types'
+import type { Plan, UsageEntry } from '@uidesired/types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, CreditCard, Loader2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -76,8 +76,10 @@ function UsageMeter({ name, entry }: { name: string; entry: UsageEntry }) {
   )
 }
 
-function isPaidPlan(slug?: string, monthly?: number) {
-  return slug !== 'free' && (monthly ?? 0) > 0
+function isPaidPlan(plan: Plan) {
+  if (plan.slug === 'free') return false
+  if (plan.billing_type === 'one_time') return (plan.prices?.lifetime ?? 0) > 0
+  return (plan.prices?.monthly ?? 0) > 0
 }
 
 export function BillingPage() {
@@ -105,7 +107,7 @@ export function BillingPage() {
   }
 
   const changePlan = useMutation({
-    mutationFn: (slug: string) => billingApi.changePlan(slug, cycle),
+    mutationFn: (vars: { slug: string; interval: 'monthly' | 'yearly' | 'lifetime' }) => billingApi.changePlan(vars.slug, vars.interval),
     onSuccess: () => {
       setError(null)
       refresh()
@@ -115,7 +117,7 @@ export function BillingPage() {
   })
 
   const checkout = useMutation({
-    mutationFn: (slug: string) => billingApi.checkout(slug, cycle),
+    mutationFn: (vars: { slug: string; interval: 'monthly' | 'yearly' | 'lifetime' }) => billingApi.checkout(vars.slug, vars.interval),
     onSuccess: (session) => {
       if (session.url) window.location.assign(session.url)
     },
@@ -133,17 +135,26 @@ export function BillingPage() {
 
   const busy = changePlan.isPending || checkout.isPending
 
-  function selectPlan(slug: string, paid: boolean) {
-    const label = currentSlug ? `Switch from ${currentSlug} to ${slug}?` : `Start the ${slug} plan?`
+  function selectPlan(plan: Plan) {
+    const oneTime = plan.billing_type === 'one_time'
+    const interval = oneTime ? 'lifetime' : cycle
+    const label = oneTime
+      ? `Buy lifetime access to ${plan.name}?`
+      : currentSlug
+        ? `Switch from ${currentSlug} to ${plan.slug}?`
+        : `Start the ${plan.slug} plan?`
     if (!window.confirm(label)) return
     setError(null)
-    setPendingSlug(slug)
-    if (stripeEnabled && paid) {
-      checkout.mutate(slug)
+    setPendingSlug(plan.slug)
+    if (stripeEnabled && isPaidPlan(plan)) {
+      checkout.mutate({ slug: plan.slug, interval })
       return
     }
-    changePlan.mutate(slug)
+    changePlan.mutate({ slug: plan.slug, interval })
   }
+
+  const trialEndsAt = sub.data?.trial_ends_at ? new Date(sub.data.trial_ends_at) : null
+  const isLifetime = sub.data?.interval === 'lifetime'
 
   const notice = useMemo(() => {
     if (success) return 'Payment completed. Your plan updates as soon as Stripe confirms the subscription.'
@@ -151,8 +162,11 @@ export function BillingPage() {
     if (sub.data?.cancel_at_period_end) {
       return `Cancellation is scheduled. You’ll stay on ${sub.data.plan?.name ?? 'your plan'} until ${periodEnd ? periodEnd.toLocaleDateString() : 'period end'}.`
     }
+    if (sub.data?.status === 'trialing' && trialEndsAt) {
+      return `You're on a free trial of ${sub.data.plan?.name ?? 'this plan'} until ${trialEndsAt.toLocaleDateString()}.`
+    }
     return null
-  }, [success, canceled, sub.data, periodEnd])
+  }, [success, canceled, sub.data, periodEnd, trialEndsAt])
 
   return (
     <div className="space-y-6">
@@ -200,13 +214,27 @@ export function BillingPage() {
             <div className="flex justify-between">
               <dt className="text-zinc-500">Price</dt>
               <dd className="text-zinc-300">
-                {formatPrice(sub.data?.plan?.prices?.[cycle])}
-                <span className="text-zinc-600">{cycle === 'monthly' ? '/mo' : '/yr'}</span>
+                {isLifetime ? (
+                  formatPrice(sub.data?.plan?.prices?.lifetime)
+                ) : (
+                  <>
+                    {formatPrice(sub.data?.plan?.prices?.[cycle])}
+                    <span className="text-zinc-600">{cycle === 'monthly' ? '/mo' : '/yr'}</span>
+                  </>
+                )}
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-zinc-500">Renews</dt>
-              <dd className="text-zinc-300">{periodEnd ? periodEnd.toLocaleDateString() : '—'}</dd>
+              <dt className="text-zinc-500">{sub.data?.status === 'trialing' ? 'Trial ends' : 'Renews'}</dt>
+              <dd className="text-zinc-300">
+                {isLifetime
+                  ? 'Never (lifetime)'
+                  : sub.data?.status === 'trialing' && trialEndsAt
+                    ? trialEndsAt.toLocaleDateString()
+                    : periodEnd
+                      ? periodEnd.toLocaleDateString()
+                      : '—'}
+              </dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-zinc-500">Provider</dt>
@@ -236,17 +264,23 @@ export function BillingPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {(plans.data || []).map((plan) => {
           const isCurrent = plan.slug === currentSlug
-          const price = plan.prices?.[cycle]
-          const paid = isPaidPlan(plan.slug, plan.prices?.monthly)
+          const oneTime = plan.billing_type === 'one_time'
+          const price = oneTime ? plan.prices?.lifetime : plan.prices?.[cycle]
+          const paid = isPaidPlan(plan)
+          const trialDays = plan.trial_days ?? 0
           return (
             <Card key={plan.id} className={isCurrent ? 'border-blue-600 ring-1 ring-blue-600/40' : undefined}>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <div className="text-lg font-medium text-white">{plan.name}</div>
-                {isCurrent ? <Badge tone="info">Current</Badge> : null}
+                <div className="flex items-center gap-1.5">
+                  {oneTime ? <Badge tone="neutral">lifetime</Badge> : null}
+                  {!oneTime && trialDays > 0 ? <Badge tone="neutral">{trialDays}-day trial</Badge> : null}
+                  {isCurrent ? <Badge tone="info">Current</Badge> : null}
+                </div>
               </div>
               <div className="mt-2 flex items-baseline gap-1">
                 <span className="text-3xl font-semibold text-white">{formatPrice(price)}</span>
-                {price ? <span className="text-sm text-zinc-500">{cycle === 'monthly' ? '/mo' : '/yr'}</span> : null}
+                {price ? <span className="text-sm text-zinc-500">{oneTime ? ' one-time' : cycle === 'monthly' ? '/mo' : '/yr'}</span> : null}
               </div>
               <ul className="mt-4 space-y-1.5 text-sm">
                 {FEATURE_ROWS.map((row) => {
@@ -265,10 +299,18 @@ export function BillingPage() {
                 className="mt-5 w-full"
                 variant={isCurrent ? 'outline' : 'primary'}
                 disabled={isCurrent || busy}
-                onClick={() => selectPlan(plan.slug, paid)}
+                onClick={() => selectPlan(plan)}
               >
                 {busy && pendingSlug === plan.slug ? <Loader2 size={14} className="animate-spin" /> : null}
-                {isCurrent ? 'Current plan' : stripeEnabled && paid ? 'Upgrade with Stripe' : 'Change plan'}
+                {isCurrent
+                  ? 'Current plan'
+                  : stripeEnabled && paid
+                    ? oneTime
+                      ? 'Buy with Stripe'
+                      : 'Upgrade with Stripe'
+                    : oneTime
+                      ? 'Get lifetime access'
+                      : 'Change plan'}
               </Button>
             </Card>
           )

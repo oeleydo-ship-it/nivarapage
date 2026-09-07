@@ -53,6 +53,18 @@ class OrderController extends Controller
         ]);
     }
 
+    public function fulfillment(Request $request, string $order): JsonResponse
+    {
+        $model = Order::query()->where('workspace_id', $this->workspace()->id)->whereKey($order)->firstOrFail();
+        abort_unless($model->status === 'paid' && ($model->metadata['kind'] ?? '') === 'physical', 422, 'Only paid physical orders can be fulfilled.');
+        $data = $request->validate([
+            'fulfillment' => ['required', 'in:unfulfilled,processing,shipped'],
+            'tracking_url' => ['nullable', 'url:http,https', 'max:2048'],
+        ]);
+        $model->update(['metadata' => [...($model->metadata ?? []), ...$data]]);
+        return response()->json(['data' => $model->fresh('product')]);
+    }
+
     private function workspace(): Workspace
     {
         $workspace = $this->currentWorkspace->workspace;

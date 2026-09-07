@@ -307,26 +307,41 @@ class AdminController extends Controller
             'slug' => ['required', 'string', 'max:60', 'regex:/^[a-z0-9][a-z0-9-]*$/', 'unique:plans,slug'],
             'name' => ['required', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
+            'billing_type' => ['sometimes', 'in:recurring,one_time'],
+            'trial_days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'prices' => ['sometimes', 'array'],
             'prices.monthly' => ['nullable', 'integer', 'min:0'],
             'prices.yearly' => ['nullable', 'integer', 'min:0'],
+            'prices.lifetime' => ['nullable', 'integer', 'min:0'],
             'limits' => ['sometimes', 'array'],
             'stripe_price_monthly' => ['nullable', 'string', 'max:255'],
             'stripe_price_yearly' => ['nullable', 'string', 'max:255'],
+            'stripe_price_lifetime' => ['nullable', 'string', 'max:255'],
             ...PlanLimits::rules(),
         ], [
             'slug.regex' => 'Use lowercase letters, numbers and hyphens, starting with a letter or number.',
         ]);
 
+        $billingType = $data['billing_type'] ?? 'recurring';
+
         $plan = Plan::query()->create([
             'slug' => $data['slug'],
             'name' => $data['name'],
             'is_active' => $data['is_active'] ?? true,
-            'prices' => ['monthly' => $data['prices']['monthly'] ?? 0, 'yearly' => $data['prices']['yearly'] ?? 0],
+            'billing_type' => $billingType,
+            // A trial only makes sense against a recurring plan; a one-time
+            // purchase has nothing to lapse back out of.
+            'trial_days' => $billingType === 'one_time' ? null : ($data['trial_days'] ?? null),
+            'prices' => [
+                'monthly' => $data['prices']['monthly'] ?? 0,
+                'yearly' => $data['prices']['yearly'] ?? 0,
+                'lifetime' => $data['prices']['lifetime'] ?? 0,
+            ],
             // Always stored complete, so a plan can never be half-authored.
             'limits' => PlanLimits::normalize($data['limits'] ?? []),
             'stripe_price_monthly' => $data['stripe_price_monthly'] ?? null,
             'stripe_price_yearly' => $data['stripe_price_yearly'] ?? null,
+            'stripe_price_lifetime' => $data['stripe_price_lifetime'] ?? null,
         ]);
 
         return (new PlanResource($plan->loadCount('subscriptions')))->response()->setStatusCode(201);
@@ -337,12 +352,16 @@ class AdminController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
+            'billing_type' => ['sometimes', 'in:recurring,one_time'],
+            'trial_days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'prices' => ['sometimes', 'array'],
             'prices.monthly' => ['nullable', 'integer', 'min:0'],
             'prices.yearly' => ['nullable', 'integer', 'min:0'],
+            'prices.lifetime' => ['nullable', 'integer', 'min:0'],
             'limits' => ['sometimes', 'array'],
             'stripe_price_monthly' => ['nullable', 'string', 'max:255'],
             'stripe_price_yearly' => ['nullable', 'string', 'max:255'],
+            'stripe_price_lifetime' => ['nullable', 'string', 'max:255'],
             ...PlanLimits::rules(),
         ]);
 
@@ -351,6 +370,11 @@ class AdminController extends Controller
         }
         if (isset($data['prices'])) {
             $data['prices'] = array_merge($plan->prices ?? [], $data['prices']);
+        }
+        // A trial only makes sense against a recurring plan; a one-time
+        // purchase has nothing to lapse back out of.
+        if (($data['billing_type'] ?? $plan->billing_type) === 'one_time') {
+            $data['trial_days'] = null;
         }
 
         $plan->update($data);

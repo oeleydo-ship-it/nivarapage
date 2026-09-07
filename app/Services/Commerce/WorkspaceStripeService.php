@@ -9,6 +9,8 @@ use App\Models\Workspace;
 use App\Models\WorkspacePaymentSetting;
 use App\Support\EncryptedSettings;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use RuntimeException;
 use Stripe\Exception\ApiErrorException;
 use Stripe\StripeClient;
@@ -215,6 +217,12 @@ class WorkspaceStripeService
         $coupon = $this->couponFor($product, $context['coupon'] ?? null);
         $discount = $coupon ? $coupon->discountFor($product) : 0;
         $charge = max(0, $product->price - $discount);
+        $physical = ($product->metadata['kind'] ?? '') === 'physical';
+        $shipping = $physical ? (int) ($product->metadata['shipping_price'] ?? 0) : 0;
+        $countries = $product->metadata['shipping_countries'] ?? [];
+        if ($physical && ($countries === [] || $product->type === 'subscription')) {
+            throw new RuntimeException('Shipping is not configured for this product. Please contact the shop.');
+        }
 
         $order = Order::query()->create([
             'workspace_id' => $workspace->id,
@@ -224,18 +232,31 @@ class WorkspaceStripeService
             'funnel_id' => $context['funnel_id'] ?? null,
             'reference' => 'ord_'.Str::lower(Str::random(18)),
             'status' => 'pending',
-            'amount' => $charge,
+            'amount' => $charge + $shipping,
             'discount' => $discount,
             'currency' => $product->currency,
             'customer_email' => $context['email'] ?? null,
-            'metadata' => $context['metadata'] ?? null,
+            'metadata' => [
+                ...($context['metadata'] ?? []),
+                'kind' => $product->metadata['kind'] ?? 'digital',
+                'delivery_url' => $product->metadata['delivery_url'] ?? null,
+                'shipping_amount' => $shipping,
+                'fulfillment' => 'unfulfilled',
+            ],
         ]);
 
         try {
             $session = $this->client($workspace)->checkout->sessions->create([
                 'mode' => $product->type === 'subscription' ? 'subscription' : 'payment',
-                'success_url' => $this->successUrl($product, $context),
+                'success_url' => $product->success_url ?: url(URL::temporarySignedRoute('store.receipt', now()->addDays(7), ['reference' => $order->reference], absolute: false)),
                 'cancel_url' => $context['cancel_url'] ?? url('/'),
+                ...($physical ? [
+                    'shipping_address_collection' => ['allowed_countries' => $countries],
+                    'shipping_options' => [['shipping_rate_data' => [
+                        'type' => 'fixed_amount', 'display_name' => $shipping > 0 ? 'Standard shipping' : 'Free shipping',
+                        'fixed_amount' => ['amount' => $shipping, 'currency' => Str::lower($product->currency)],
+                    ]]],
+                ] : []),
                 'client_reference_id' => $order->reference,
                 'customer_email' => $order->customer_email ?: null,
                 'line_items' => [[
@@ -257,7 +278,7 @@ class WorkspaceStripeService
                 'metadata' => ['order_reference' => $order->reference, 'product_id' => (string) $product->id],
             ]);
         } catch (ApiErrorException $e) {
-            $order->update(['status' => 'failed', 'metadata' => ['error' => Str::limit($e->getMessage(), 200, '')]]);
+            $order->update(['status' => 'failed', 'metadata' => [...($order->metadata ?? []), 'error' => Str::limit($e->getMessage(), 200, '')]]);
 
             throw new RuntimeException('Stripe refused to open a checkout: '.Str::limit($e->getMessage(), 160, ''));
         }
@@ -290,6 +311,9 @@ class WorkspaceStripeService
         }
 
         $session = $event->data->object;
+        if (! in_array($session->payment_status ?? '', ['paid', 'no_payment_required'], true)) {
+            return ['handled' => false, 'order' => null];
+        }
         $reference = $session->client_reference_id ?? ($session->metadata->order_reference ?? null);
 
         $sessionId = $session->id ?? null;
@@ -312,38 +336,32 @@ class WorkspaceStripeService
         if (! $order) {
             return ['handled' => false, 'order' => null];
         }
-        if ($order->status === 'paid') {
-            return ['handled' => true, 'order' => $order];
-        }
-
-        $order->update([
-            'status' => 'paid',
-            'paid_at' => now(),
-            'provider_payment_id' => $session->payment_intent ?? $session->subscription ?? null,
-            'customer_email' => $session->customer_details->email ?? $order->customer_email,
-            'customer_name' => $session->customer_details->name ?? $order->customer_name,
-        ]);
-
-        // Stock is only taken once the money actually arrived.
-        $product = $order->product;
-        if ($product && $product->inventory !== null) {
-            $product->decrement('inventory');
-        }
-
-        // Same for the coupon. Counting it when the checkout opened would let
-        // an abandoned basket use up somebody else's discount.
-        if ($order->coupon_id) {
-            Coupon::query()->whereKey($order->coupon_id)->increment('redeemed_count');
-        }
-
-        return ['handled' => true, 'order' => $order->fresh()];
+        return DB::transaction(function () use ($order, $session) {
+            $order = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if ($order->status === 'paid') return ['handled' => true, 'order' => $order];
+            $shipping = $session->collected_information->shipping_details ?? $session->shipping_details ?? null;
+            $metadata = $order->metadata ?? [];
+            if ($shipping) $metadata['shipping_address'] = $shipping->toArray();
+            if (($metadata['kind'] ?? '') === 'digital' && filled($metadata['delivery_url'] ?? null)) $metadata['fulfillment'] = 'delivered';
+            $order->update([
+                'status' => 'paid', 'paid_at' => now(),
+                'provider_payment_id' => $session->payment_intent ?? $session->subscription ?? null,
+                'customer_email' => $session->customer_details->email ?? $order->customer_email,
+                'customer_name' => $session->customer_details->name ?? $order->customer_name,
+                'metadata' => $metadata,
+            ]);
+            $product = Product::query()->whereKey($order->product_id)->lockForUpdate()->first();
+            if ($product && $product->inventory !== null) $product->update(['inventory' => max(0, $product->inventory - 1)]);
+            if ($order->coupon_id) Coupon::query()->whereKey($order->coupon_id)->increment('redeemed_count');
+            return ['handled' => true, 'order' => $order->fresh()];
+        });
     }
 
     /**
      * The coupon a code names, when it can be used on this product.
      *
-     * An unusable code is treated as no code rather than an error: the shopper
-     * still gets to buy the thing, at the price on the page.
+     * An unusable code returns an error so the shopper can correct or remove it
+     * before proceeding at the undiscounted price.
      */
     private function couponFor(Product $product, mixed $code): ?Coupon
     {
@@ -356,7 +374,10 @@ class WorkspaceStripeService
             ->where('code', Coupon::normalizeCode($code))
             ->first();
 
-        return $coupon && $coupon->usableFor($product) ? $coupon : null;
+        if (! $coupon || ! $coupon->usableFor($product)) {
+            throw new RuntimeException('This discount code is invalid or expired for this product.');
+        }
+        return $coupon;
     }
 
     /**

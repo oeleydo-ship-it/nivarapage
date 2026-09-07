@@ -14,8 +14,8 @@
  * is reusable on any page.
  */
 import type { CSSProperties, ReactNode } from 'react'
-import { useState } from 'react'
-import { EditableImage, EditableRich, EditableText, editOf } from '../editable'
+import { isValidElement, useState } from 'react'
+import { EditableImage, EditableRich, EditableText, editOf, useElementStyle, pathId, type EditPath } from '../editable'
 import { Icon } from '../icons'
 import {
   Media,
@@ -120,8 +120,11 @@ function ApButton({
   variant?: 'dark' | 'outline' | 'light' | 'accent'
   arrow?: boolean
 }) {
+  const labelPath = isValidElement<{ path?: EditPath }>(children) ? children.props.path : undefined
+  const boxPath = [...(labelPath || []), '$box']
+  const appearance = useElementStyle(boxPath)
   return (
-    <a className={cx('ud-ap-btn', `ud-ap-btn--${variant}`)} href={href || '#'}>
+    <a style={appearance} data-ud-style={pathId(boxPath)} className={cx('ud-ap-btn', `ud-ap-btn--${variant}`)} href={href || '#'}>
       <span className="ud-ap-btn__label">{children}</span>
       {arrow ? (
         <span className="ud-ap-btn__arrow" aria-hidden>
@@ -154,9 +157,9 @@ function ApButtons({ props, primary = 'dark' }: { props: Props; primary?: 'dark'
 }
 
 const buttonFields = [
-  text('buttonLabel', 'Button label'),
+  { ...text('buttonLabel', 'Button label'), styleTarget: 'button' as const },
   link('buttonUrl', 'Button link'),
-  text('secondaryLabel', 'Second button label'),
+  { ...text('secondaryLabel', 'Second button label'), styleTarget: 'button' as const },
   link('secondaryUrl', 'Second button link'),
 ]
 
@@ -277,7 +280,7 @@ export const navbarAperture = defineBlock({
     navLinksField('links', 'Links'),
     text('phoneLabel', 'Phone label'),
     text('phone', 'Phone number'),
-    text('buttonLabel', 'Button label'),
+    { ...text('buttonLabel', 'Button label'), styleTarget: 'button' as const },
     link('buttonUrl', 'Button link'),
     stickyField,
   ),
@@ -386,13 +389,17 @@ export const heroAperture = defineBlock({
     ...buttonFields,
     image('image', 'Hero image'),
     text('badge', 'Image badge'),
+    { ...text('contentColumn', 'Content column'), group: 'design', styleTarget: 'column' },
+    { ...text('imageColumn', 'Image column'), group: 'design', styleTarget: 'column' },
   ),
   component: function HeroAperture(props) {
     const edit = editOf(props)
+    const contentStyle = useElementStyle(['contentColumn'])
+    const imageStyle = useElementStyle(['imageColumn'])
     return (
       <SectionShell props={props} tone="default" className="ud-ap ud-ap-hero">
         <div className="ud-ap-hero__grid">
-          <div className="ud-ap-hero__copy">
+          <div className="ud-ap-hero__copy" data-ud-style="contentColumn" style={contentStyle}>
             <Kicker props={props} />
             <EditableText
               edit={edit}
@@ -413,7 +420,7 @@ export const heroAperture = defineBlock({
             ) : null}
             <ApButtons props={props} />
           </div>
-          <div className="ud-ap-hero__figure">
+          <div className="ud-ap-hero__figure" data-ud-style="imageColumn" style={imageStyle}>
             <Media
               src={props.image}
               alt={str(props.heading)}
@@ -615,7 +622,7 @@ export const aboutAperture = defineBlock({
       [text('value', 'Value'), text('suffix', 'Suffix'), text('label', 'Label')],
       { itemLabel: 'Counter' },
     ),
-    text('buttonLabel', 'Button label'),
+    { ...text('buttonLabel', 'Button label'), styleTarget: 'button' as const },
     link('buttonUrl', 'Button link'),
     text('phoneLabel', 'Phone label'),
     text('phone', 'Phone number'),
@@ -818,7 +825,7 @@ export const servicesAperture = defineBlock({
     repeater('items', 'Services', [text('title', 'Title'), textarea('text', 'Description'), icon('icon', 'Icon'), link('url', 'Link')], {
       itemLabel: 'Service',
     }),
-    text('buttonLabel', 'Button label'),
+    { ...text('buttonLabel', 'Button label'), styleTarget: 'button' as const },
     link('buttonUrl', 'Button link'),
   ),
   component: function ServicesAperture(props) {
@@ -935,7 +942,7 @@ export const portfolioAperture = defineBlock({
       ],
       { itemLabel: 'Project' },
     ),
-    text('buttonLabel', 'Button label'),
+    { ...text('buttonLabel', 'Button label'), styleTarget: 'button' as const },
     link('buttonUrl', 'Button link'),
   ),
   component: function PortfolioAperture(props) {
@@ -1032,7 +1039,7 @@ export const processAperture = defineBlock({
     headingField,
     descriptionField,
     repeater('items', 'Steps', [text('title', 'Title'), textarea('text', 'Description')], { itemLabel: 'Step' }),
-    text('buttonLabel', 'Button label'),
+    { ...text('buttonLabel', 'Button label'), styleTarget: 'button' as const },
     link('buttonUrl', 'Button link'),
   ),
   component: function ProcessAperture(props) {
@@ -1401,7 +1408,7 @@ export const pricingAperture = defineBlock({
         text('period', 'Period'),
         textarea('text', 'Description'),
         textarea('features', 'Features (one per line)'),
-        text('buttonLabel', 'Button label'),
+        { ...text('buttonLabel', 'Button label'), styleTarget: 'button' as const },
         link('buttonUrl', 'Button link'),
         toggle('featured', 'Highlight', 'content'),
       ],
@@ -1610,7 +1617,7 @@ export const blogAperture = defineBlock({
       ],
       { itemLabel: 'Article' },
     ),
-    text('buttonLabel', 'Button label'),
+    { ...text('buttonLabel', 'Button label'), styleTarget: 'button' as const },
     link('buttonUrl', 'Button link'),
   ),
   component: function BlogAperture(props) {

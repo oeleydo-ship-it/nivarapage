@@ -229,6 +229,158 @@ it('lets super admins update plan prices and limits', function () {
         ->assertJsonPath('data.stripe_price_monthly', 'price_test_monthly');
 });
 
+it('lets super admins configure a plan as a free trial or a one-time lifetime purchase', function () {
+    ['user' => $user] = tenant(['is_super_admin' => true]);
+    Sanctum::actingAs($user);
+
+    $plan = App\Models\Plan::query()->where('slug', 'starter')->firstOrFail();
+
+    $this->patchJson('/api/v1/admin/plans/'.$plan->id, [
+        'billing_type' => 'recurring',
+        'trial_days' => 14,
+    ])->assertOk()
+        ->assertJsonPath('data.billing_type', 'recurring')
+        ->assertJsonPath('data.trial_days', 14);
+
+    $lifetime = App\Models\Plan::query()->create([
+        'slug' => 'lifetime-deal',
+        'name' => 'Lifetime Deal',
+        'is_active' => true,
+        'billing_type' => 'one_time',
+        'prices' => ['monthly' => 0, 'yearly' => 0, 'lifetime' => 29900],
+        'limits' => App\Support\PlanLimits::normalize([]),
+    ]);
+
+    $this->patchJson('/api/v1/admin/plans/'.$lifetime->id, [
+        'stripe_price_lifetime' => 'price_test_lifetime',
+        // A trial makes no sense on a one-time purchase, so it must be
+        // dropped even if the request tries to sneak one in.
+        'trial_days' => 30,
+    ])->assertOk()
+        ->assertJsonPath('data.billing_type', 'one_time')
+        ->assertJsonPath('data.trial_days', null)
+        ->assertJsonPath('data.stripe_price_lifetime', 'price_test_lifetime');
+});
+
+it('starts a trial when changing locally to a trial-bearing plan', function () {
+    config(['services.stripe.secret' => '']);
+    ['user' => $user, 'workspace' => $workspace] = tenant();
+    Sanctum::actingAs($user);
+
+    $plan = App\Models\Plan::query()->where('slug', 'starter')->firstOrFail();
+    $plan->update(['trial_days' => 14]);
+
+    $response = $this->withHeaders(['X-Workspace-Id' => (string) $workspace->id])
+        ->postJson('/api/v1/billing/change-plan', ['plan' => 'starter'])
+        ->assertOk()
+        ->assertJsonPath('data.plan.slug', 'starter')
+        ->assertJsonPath('data.status', 'trialing');
+
+    $trialEndsAt = $response->json('data.trial_ends_at');
+    expect($trialEndsAt)->not->toBeNull();
+    expect(\Illuminate\Support\Carbon::parse($trialEndsAt)->isSameDay(now()->addDays(14)))->toBeTrue();
+});
+
+it('applies a one-time plan as a lifetime subscription with no renewal date', function () {
+    config(['services.stripe.secret' => '']);
+    ['user' => $user, 'workspace' => $workspace] = tenant();
+    Sanctum::actingAs($user);
+
+    App\Models\Plan::query()->create([
+        'slug' => 'lifetime-deal',
+        'name' => 'Lifetime Deal',
+        'is_active' => true,
+        'billing_type' => 'one_time',
+        'prices' => ['monthly' => 0, 'yearly' => 0, 'lifetime' => 0],
+        'limits' => App\Support\PlanLimits::normalize([]),
+    ]);
+
+    $this->withHeaders(['X-Workspace-Id' => (string) $workspace->id])
+        ->postJson('/api/v1/billing/change-plan', ['plan' => 'lifetime-deal'])
+        ->assertOk()
+        ->assertJsonPath('data.plan.slug', 'lifetime-deal')
+        ->assertJsonPath('data.interval', 'lifetime')
+        ->assertJsonPath('data.current_period_end', null)
+        ->assertJsonPath('data.status', 'active');
+});
+
+it('returns a one-time checkout session for a lifetime plan', function () {
+    config(['services.stripe.secret' => 'sk_test_fake', 'services.stripe.key' => 'pk_test_fake']);
+    \Stripe\ApiRequestor::setHttpClient(new FakeStripeHttpClient);
+
+    ['user' => $user, 'workspace' => $workspace] = tenant();
+    Sanctum::actingAs($user);
+
+    App\Models\Plan::query()->create([
+        'slug' => 'lifetime-deal',
+        'name' => 'Lifetime Deal',
+        'is_active' => true,
+        'billing_type' => 'one_time',
+        'prices' => ['monthly' => 0, 'yearly' => 0, 'lifetime' => 29900],
+        'limits' => App\Support\PlanLimits::normalize([]),
+    ]);
+
+    $this->withHeaders(['X-Workspace-Id' => (string) $workspace->id])
+        ->postJson('/api/v1/billing/checkout', ['plan' => 'lifetime-deal'])
+        ->assertOk()
+        ->assertJsonPath('data.url', 'https://checkout.stripe.com/c/pay/cs_test_fake')
+        ->assertJsonPath('data.id', 'cs_test_fake');
+});
+
+it('applies a lifetime plan from a signed one-time-payment checkout webhook', function () {
+    $secret = 'whsec_test_secret';
+    config(['services.stripe.webhook_secret' => $secret]);
+
+    ['user' => $user, 'workspace' => $workspace] = tenant();
+
+    App\Models\Plan::query()->create([
+        'slug' => 'lifetime-deal',
+        'name' => 'Lifetime Deal',
+        'is_active' => true,
+        'billing_type' => 'one_time',
+        'prices' => ['monthly' => 0, 'yearly' => 0, 'lifetime' => 29900],
+        'limits' => App\Support\PlanLimits::normalize([]),
+    ]);
+
+    $payload = json_encode([
+        'id' => 'evt_test_onetime',
+        'object' => 'event',
+        'type' => 'checkout.session.completed',
+        'data' => [
+            'object' => [
+                'id' => 'cs_test_onetime',
+                'object' => 'checkout.session',
+                'mode' => 'payment',
+                'customer' => 'cus_test_onetime',
+                'payment_intent' => 'pi_test_onetime',
+                'client_reference_id' => (string) $workspace->id,
+                'metadata' => [
+                    'workspace_id' => (string) $workspace->id,
+                    'plan_slug' => 'lifetime-deal',
+                    'interval' => 'lifetime',
+                ],
+            ],
+        ],
+    ], JSON_THROW_ON_ERROR);
+
+    $timestamp = time();
+    $signature = hash_hmac('sha256', $timestamp.'.'.$payload, $secret);
+
+    $this->call('POST', '/api/v1/billing/webhook', [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_ACCEPT' => 'application/json',
+        'HTTP_STRIPE_SIGNATURE' => 't='.$timestamp.',v1='.$signature,
+    ], $payload)->assertOk();
+
+    $workspace->refresh()->load('subscription.plan');
+    expect($workspace->subscription?->plan?->slug)->toBe('lifetime-deal');
+    expect($workspace->subscription?->provider)->toBe('stripe');
+    expect($workspace->subscription?->provider_ref)->toBe('pi_test_onetime');
+    expect($workspace->subscription?->interval)->toBe('lifetime');
+    expect($workspace->subscription?->current_period_end)->toBeNull();
+    expect($workspace->stripe_customer_id)->toBe('cus_test_onetime');
+});
+
 it('lets super admins configure the stripe payment gateway from admin', function () {
     ['user' => $admin] = adminTenant();
     Sanctum::actingAs($admin);

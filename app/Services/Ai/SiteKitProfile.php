@@ -112,6 +112,50 @@ class SiteKitProfile
             'label' => 'Verdara',
             'note' => 'Light AI product launch with a green cast. Inter, mint glow, overlapping photography and scroll motion - fresh and optimistic.',
         ],
+        'curalo' => [
+            'label' => 'Curalo',
+            'note' => 'Personal training and coaching. Photographic hero and CTA bands broken by pure-black navigation, testimonial and footer sections, one bright cyan accent on every button and eyebrow, tight uppercase IBM Plex Mono headlines over plain Inter body copy.',
+        ],
+        'salone' => [
+            'label' => 'Salone',
+            'note' => 'Beauty salon and spa. A warm cream sheet broken only by a near-black footer, one antique-gold accent on every button and icon, Playfair Display serif headlines over Work Sans body copy, a Dancing Script cursive kicker above every heading, a bordered service grid and a specialist team with hover overlays.',
+        ],
+        'lifesure' => [
+            'label' => 'LifeSure',
+            'note' => 'Life insurance and financial services. A two-tier header - a slim contact topbar over a pill-shaped nav bar - a royal-blue hero band, DM Sans headlines over Inter body copy, heavily rounded cards that flood with royal blue on hover, and a near-navy footer with an Instagram photo grid.',
+        ],
+        'raft' => [
+            'label' => 'Raft',
+            'note' => 'Dark fintech and neobank landing page. An all-black canvas lit by one vivid signal-green accent that floods full-bleed statement and testimonial bands, a darker forest green on every button, softly rounded charcoal cards, and a light-weight geometric sans for headlines. Single long-scroll page, not a multi-page site.',
+        ],
+        'aterra' => [
+            'label' => 'Aterra',
+            'note' => 'Architecture and interior-design studio. A white sheet broken by full-bleed photography and one deep-teal brand colour that carries every button, heading and dark band, DM Sans headlines throughout, a pill-shaped floating nav bar, numbered process steps, a photo-tile service grid and project gallery, across Home, About, Services, Projects and Contact pages.',
+        ],
+        'gleam' => [
+            'label' => 'Gleam',
+            'note' => 'Home and office cleaning services. A playful high-contrast palette of one bold indigo-violet and one warm yellow over navy-ink headlines, fully-pill buttons, big rounded Rubik type, full-bleed photography with a light wash instead of a dark scrim, an overlapping photo collage, a solid-colour feature band and a quote carousel, across Home, About, Services, Blog and Contact pages.',
+        ],
+        'mechanic' => [
+            'label' => 'The Mechanic',
+            'note' => 'Auto-repair and garage services. A deep navy blue carries every dark band, headline and outline button, one warm gold accent lifts eyebrows and highlights, pill buttons throughout, big bold Epilogue type, a photo-caption stack, solid navy feature cards, a numbered full-bleed service grid and a footer booking form, across Home, About, Services, Team and Contact pages.',
+        ],
+        'finlio' => [
+            'label' => 'Finlio',
+            'note' => 'Personal-finance and fintech SaaS. A pale-cream page shows between big rounded dark-green card sections, one bright lime-green accent lights highlighted words, buttons and stat gradients, confident medium-weight Archivo type, a dashboard-mockup feature stack with stat cards and mini bar charts, labelled progress bars and a plain-list FAQ.',
+        ],
+        'havven' => [
+            'label' => 'Havven',
+            'note' => 'Digital agency and creative studio. A warm cream page with white cards, one near-black forest ink carrying every heading, pill button and dark band, bold tight-tracked Plus Jakarta Sans headlines over plain Inter body copy, pill badges with a hairline border above every heading, a hero proof card with star rating and client avatars, a numbered accordion service list, a project gallery, numbered roadmap steps and a dark quote carousel.',
+        ],
+        'corewave' => [
+            'label' => 'Corewave',
+            'note' => 'Software and product-development studio. A warm off-white page carries a floating gradient-blob hero card, medium-weight Space Grotesk headlines over plain Sora body copy, one vivid violet accent and one lime-green accent trading off across highlighted words, pill badges and buttons, organic blob-cropped photography, giant ghost numerals behind numbered process steps, tinted-card testimonials and a dark navy footer.',
+        ],
+        'novalta' => [
+            'label' => 'Novalta',
+            'note' => 'AI-innovation studio. A soft off-white page carries one signature blue-to-coral gradient painted across every primary button and highlighted headline word, playful rounded Fredoka display type over plain Manrope body copy, arch-topped photography, floating pastel stat bubbles, full-bleed stacked colour panels telling the studio story, a filtered work grid, a client case-study accordion and a near-black gradient footer band.',
+        ],
     ];
 
     /**

@@ -141,6 +141,7 @@ export const automationsApi = {
 }
 
 export const ordersApi = {
+  fulfillment: (id: number, body: { fulfillment: string; tracking_url?: string | null }) => http.patch<Order>(`/orders/${id}/fulfillment`, body),
   list: (params?: { status?: string; q?: string }) =>
     http.get<Order[]>(`/orders${queryString({ ...params })}`),
 }
@@ -485,9 +486,9 @@ export const activitiesApi = {
 export const billingApi = {
   plans: () => http.get<Plan[]>('/billing/plans'),
   subscription: () => http.get<Subscription>('/billing/subscription'),
-  changePlan: (plan: string, interval?: 'monthly' | 'yearly') =>
+  changePlan: (plan: string, interval?: 'monthly' | 'yearly' | 'lifetime') =>
     http.post<Subscription>('/billing/change-plan', { plan, interval }),
-  checkout: (plan: string, interval: 'monthly' | 'yearly') =>
+  checkout: (plan: string, interval: 'monthly' | 'yearly' | 'lifetime') =>
     http.post<{ url: string; id?: string }>('/billing/checkout', { plan, interval }),
   portal: () => http.post<{ url: string }>('/billing/portal'),
 }
@@ -873,6 +874,7 @@ export type AdminSubscription = {
   interval?: string | null
   current_period_end?: string | null
   cancel_at_period_end?: boolean
+  trial_ends_at?: string | null
   workspace?: { id: number; name: string; slug: string; status?: string } | null
   plan?: { id: number; slug: string; name: string } | null
 }

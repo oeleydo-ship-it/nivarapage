@@ -187,7 +187,9 @@ class SeoService
 
         $content = $this->forms->bindContent($page->site, $content);
 
-        return $this->blog->hydratePageContent($page->site, $content, $page);
+        return app(\App\Services\Commerce\ProductBlockService::class)->hydrateContent(
+            $page->site, $this->blog->hydratePageContent($page->site, $content, $page)
+        );
     }
 
     /**

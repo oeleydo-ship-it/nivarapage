@@ -11,6 +11,7 @@ import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from '
 const RENDER_WIDTH = 1240
 
 const CATEGORY_LABELS: Record<BlockCategory, string> = {
+  products: 'Products',
   navigation: 'Navigation',
   hero: 'Hero',
   features: 'Features',
@@ -64,6 +65,17 @@ export const TEMPLATE_KITS: TemplateKit[] = [
   { id: 'anchorline', label: 'Anchorline', matches: (type) => type.includes('.anchor') },
   { id: 'aperture', label: 'Aperture', matches: (type) => type.includes('.aperture') },
   { id: 'kirki', label: 'Kirki', matches: (type) => type.includes('.kirki') },
+  { id: 'curalo', label: 'Curalo', matches: (type) => type.includes('.curalo') },
+  { id: 'salone', label: 'Salone', matches: (type) => type.includes('.salone') },
+  { id: 'lifesure', label: 'LifeSure', matches: (type) => type.includes('.lifesure') },
+  { id: 'raft', label: 'Raft', matches: (type) => type.includes('.raft') },
+  { id: 'aterra', label: 'Aterra', matches: (type) => type.includes('.aterra') },
+  { id: 'gleam', label: 'Gleam', matches: (type) => type.includes('.gleam') },
+  { id: 'mechanic', label: 'The Mechanic', matches: (type) => type.includes('.mechanic') },
+  { id: 'finlio', label: 'Finlio', matches: (type) => type.includes('.finlio') },
+  { id: 'havven', label: 'Havven', matches: (type) => type.includes('.havven') },
+  { id: 'corewave', label: 'Corewave', matches: (type) => type.includes('.corewave') },
+  { id: 'novalta', label: 'Novalta', matches: (type) => type.includes('.novalta') },
   {
     id: 'studio',
     label: 'Studio',
@@ -133,7 +145,7 @@ export const BlockPreview = memo(function BlockPreview({
 }) {
   const scale = width / RENDER_WIDTH
   const section = useMemo(
-    () => ({ id: `preview-${def.type}`, type: def.type, version: def.version, hidden: false, props: def.defaultProps }),
+    () => ({ id: `preview-${def.type}`, type: def.type, version: def.version, hidden: false, props: def.category === 'products' ? { ...def.defaultProps, productPreview: true } : def.defaultProps }),
     [def],
   )
   return (
