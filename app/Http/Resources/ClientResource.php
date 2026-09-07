@@ -34,6 +34,7 @@ class ClientResource extends JsonResource
             'extras' => $this->extras ?? [],
             'contacts_count' => $this->whenCounted('contacts'),
             'sites_count' => $this->whenCounted('sites'),
+            'livechat_conversations_count' => $this->whenCounted('livechatConversations'),
             'contacts' => ClientContactResource::collection($this->whenLoaded('contacts')),
             'sites' => SiteResource::collection($this->whenLoaded('sites')),
             'created_at' => $this->created_at,

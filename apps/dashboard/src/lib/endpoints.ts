@@ -76,6 +76,8 @@ export const livechatApi = {
   takeover: (id: string | number) => http.post<LivechatConversation>(`/livechat/conversations/${id}/takeover`),
   close: (id: string | number) => http.post<LivechatConversation>(`/livechat/conversations/${id}/close`),
   reopen: (id: string | number) => http.post<LivechatConversation>(`/livechat/conversations/${id}/reopen`),
+  linkClient: (id: string | number, client_id: number | null) =>
+    http.post<LivechatConversation>(`/livechat/conversations/${id}/client`, { client_id }),
   widget: (siteId: string | number) => http.get<LivechatWidget>(`/sites/${siteId}/livechat`),
   updateWidget: (siteId: string | number, body: Record<string, unknown>) =>
     http.put<LivechatWidget>(`/sites/${siteId}/livechat`, body),
@@ -302,6 +304,7 @@ export const clientsApi = {
   attachSite: (id: string | number, site_id: number) => http.post<Site>(`/clients/${id}/sites`, { site_id }),
   detachSite: (id: string | number, siteId: string | number) =>
     http.delete<{ ok: boolean }>(`/clients/${id}/sites/${siteId}`),
+  conversations: (id: string | number) => http.get<LivechatConversation[]>(`/clients/${id}/conversations`),
 }
 
 export const blogApi = {

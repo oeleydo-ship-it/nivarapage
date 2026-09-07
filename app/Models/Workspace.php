@@ -70,6 +70,16 @@ class Workspace extends Model
         return $this->hasMany(Client::class);
     }
 
+    public function livechatConversations(): HasMany
+    {
+        return $this->hasMany(LivechatConversation::class);
+    }
+
+    public function livechatWidgets(): HasMany
+    {
+        return $this->hasMany(LivechatWidget::class);
+    }
+
     public function blogPosts(): HasMany
     {
         return $this->hasMany(BlogPost::class);

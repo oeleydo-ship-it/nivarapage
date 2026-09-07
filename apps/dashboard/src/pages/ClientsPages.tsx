@@ -8,6 +8,7 @@ import {
   FolderKanban,
   Globe,
   Mail,
+  MessageCircle,
   Phone,
   Plus,
   Search,
@@ -18,6 +19,7 @@ import {
 import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { primaryHost, relativeTime } from '../components/SiteCard'
+import { livechatStatusTone } from './LivechatPages'
 import { clientsApi, sitesApi } from '../lib/endpoints'
 import { Badge, Button, Card, DataTable, EmptyState, Input, Label, PageHeader, Select, type BadgeTone } from '../ui/primitives'
 
@@ -137,10 +139,10 @@ export function ClientsPage() {
 
       {clientsQuery.isPending ? (
         <Card>
-          <DataTable headers={['Client', 'Status', 'Email', 'Sites', 'Contacts', 'Added']}>
+          <DataTable headers={['Client', 'Status', 'Email', 'Sites', 'Contacts', 'Chats', 'Added']}>
             {Array.from({ length: 5 }).map((_, index) => (
               <tr key={index}>
-                <td className="py-3 pr-4" colSpan={6}>
+                <td className="py-3 pr-4" colSpan={7}>
                   <div className="h-10 animate-pulse rounded-lg bg-zinc-800/70" />
                 </td>
               </tr>
@@ -164,7 +166,7 @@ export function ClientsPage() {
         </Card>
       ) : !clientsQuery.isPending && clients.length > 0 ? (
         <Card>
-          <DataTable headers={['Client', 'Status', 'Email', 'Sites', 'Contacts', 'Added']}>
+          <DataTable headers={['Client', 'Status', 'Email', 'Sites', 'Contacts', 'Chats', 'Added']}>
             {clients.map((client) => (
               <ClientRow key={client.id} client={client} />
             ))}
@@ -184,6 +186,7 @@ function ClientRow({ client }: { client: Client }) {
   const created = relativeTime(client.created_at)
   const siteCount = client.sites_count ?? client.sites?.length ?? 0
   const contactCount = client.contacts_count ?? client.contacts?.length ?? 0
+  const chatCount = client.livechat_conversations_count ?? 0
   const href = `/clients/${client.id}`
   const company = client.company && client.company !== client.name ? client.company : null
 
@@ -223,6 +226,7 @@ function ClientRow({ client }: { client: Client }) {
       </td>
       <td className="py-3 pr-4 tabular-nums text-zinc-300">{siteCount}</td>
       <td className="py-3 pr-4 tabular-nums text-zinc-300">{contactCount}</td>
+      <td className="py-3 pr-4 tabular-nums text-zinc-300">{chatCount}</td>
       <td className="py-3 pr-4 whitespace-nowrap text-zinc-500">{created || '—'}</td>
     </tr>
   )
@@ -512,7 +516,56 @@ export function ClientDetailPage() {
 
       <ContactsCard client={client} onChanged={refresh} onError={setError} />
       <SitesCard client={client} availableSites={availableSites} onChanged={refresh} onError={setError} />
+      <LivechatCard clientId={client.id} />
     </div>
+  )
+}
+
+function LivechatCard({ clientId }: { clientId: number }) {
+  const conversationsQuery = useQuery({
+    queryKey: ['client-conversations', clientId],
+    queryFn: () => clientsApi.conversations(clientId),
+  })
+  const conversations = conversationsQuery.data || []
+
+  return (
+    <Card>
+      <h2 className="mb-1 font-medium text-white">Livechat</h2>
+      <p className="mb-4 text-sm text-zinc-500">Conversations this contact has had on your sites, matched by email or phone.</p>
+      {conversationsQuery.isPending ? (
+        <div className="h-10 animate-pulse rounded-lg bg-zinc-800/70" />
+      ) : conversations.length === 0 ? (
+        <EmptyState
+          icon={<MessageCircle size={20} className="text-blue-400/70" />}
+          title="No conversations yet"
+          description="Chats a visitor starts under this name, email, or phone link here automatically. You can also link one manually from the conversation."
+        />
+      ) : (
+        <ul className="divide-y divide-zinc-800">
+          {conversations.map((conversation) => (
+            <li key={conversation.id}>
+              <Link
+                to={`/livechat/${conversation.id}`}
+                className="flex items-center justify-between gap-3 py-3 hover:text-white"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-zinc-100">{conversation.site?.name || 'Conversation'}</span>
+                    <Badge tone={livechatStatusTone(conversation.status)}>{conversation.status}</Badge>
+                  </div>
+                  <p className="truncate text-xs text-zinc-500">
+                    {conversation.latest_message?.body || 'No messages yet'}
+                  </p>
+                </div>
+                <span className="shrink-0 text-xs whitespace-nowrap text-zinc-500">
+                  {relativeTime(conversation.last_message_at) || '—'}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   )
 }
 

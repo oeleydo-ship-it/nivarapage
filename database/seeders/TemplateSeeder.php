@@ -11,6 +11,8 @@ class TemplateSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(ConcourseTemplateSeeder::class);
+
         $this->publish(
             category: ['slug' => 'agency', 'name' => 'Agency'],
             slug: 'forma',

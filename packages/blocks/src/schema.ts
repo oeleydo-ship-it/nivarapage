@@ -100,6 +100,9 @@ export const ctaFields: BlockField[] = [
 
 export const headFields: BlockField[] = [eyebrowField, headingField, descriptionField]
 
+/** Lets an editor turn on click-to-zoom for a block's image(s) without wiring a bespoke toggle per block. */
+export const lightboxField = toggle('lightbox', 'Click image to zoom', 'design')
+
 /**
  * Nav links with an optional dropdown. Every navigation block uses this so the
  * submenu shape is identical across template families.

@@ -7,6 +7,7 @@ use App\Events\LivechatMessageCreated;
 use App\Jobs\GenerateLivechatAiReply;
 use App\Jobs\NotifyLivechatAgents;
 use App\Jobs\SyncLivechatLeadToClient;
+use App\Models\Client;
 use App\Models\LivechatConversation;
 use App\Models\LivechatKnowledge;
 use App\Models\LivechatMessage;
@@ -282,6 +283,31 @@ class LivechatService
         }
         $conversation->update(['agent_typing_until' => null]);
         LivechatConversationUpdated::dispatch($conversation->fresh(['site', 'assignee', 'client']));
+    }
+
+    /**
+     * Manually attaches or detaches this conversation's CRM record. The
+     * queued `SyncLivechatLeadToClient` job auto-matches on email/phone when
+     * a chat starts, but that match can be wrong or missing (no email
+     * captured, a duplicate record, a walk-up visitor an agent recognises) —
+     * this is the correction path for both.
+     */
+    public function linkClient(LivechatConversation $conversation, ?Client $client): LivechatConversation
+    {
+        if ((int) $conversation->client_id === (int) ($client?->id ?? 0)) {
+            return $conversation->fresh(['site', 'assignee', 'client', 'messages']);
+        }
+
+        $conversation->update(['client_id' => $client?->id]);
+        $this->addMessage(
+            $conversation,
+            'system',
+            $client ? 'Linked to '.$client->name.' in the CRM.' : 'Unlinked from the CRM.',
+            ['kind' => $client ? 'client_linked' : 'client_unlinked', 'client_id' => $client?->id],
+        );
+        LivechatConversationUpdated::dispatch($conversation->fresh(['site', 'assignee', 'client']));
+
+        return $conversation->fresh(['site', 'assignee', 'client', 'messages']);
     }
 
     public function assign(LivechatConversation $conversation, ?User $user): LivechatConversation

@@ -502,6 +502,9 @@ export function BuilderPage() {
   // Read inside the debounced save, which would otherwise close over a stale value.
   const chromeSlotRef = useRef<'header' | 'footer' | null>(chromeSlot)
   chromeSlotRef.current = chromeSlot
+  // Which slot's content is currently loaded into the editor store - see the
+  // effect below for why this can't just be derived from chromeSlot alone.
+  const loadedChromeSlotRef = useRef<'header' | 'footer' | null>(null)
 
   const chromeQuery = useQuery({
     queryKey: ['site-chrome', id],
@@ -544,6 +547,13 @@ export function BuilderPage() {
 
   useEffect(() => {
     if (!chromeSlot || !chromeQuery.data) return
+    // Saving header/footer content invalidates this query, which refetches
+    // and hands back a new object every time - without this guard, that
+    // background refetch would re-run this effect mid-edit and reset the
+    // selection, making the settings panel disappear moments after opening.
+    // Only an actual switch of slot should reload the canvas.
+    if (loadedChromeSlotRef.current === chromeSlot) return
+    loadedChromeSlotRef.current = chromeSlot
     // No page id: saving goes to the site's chrome endpoint instead of a draft.
     setContext(String(id), '')
     setContent(chromeQuery.data[chromeSlot] || { schemaVersion: 1 as const, sections: [] }, false)
@@ -551,6 +561,13 @@ export function BuilderPage() {
     select(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chromeSlot, chromeQuery.data])
+
+  // Leaving chrome mode (to edit a page) lets a page's own load effect
+  // overwrite the store's content, so re-entering the same slot later must
+  // force a fresh reload rather than trusting the stale "already loaded" ref.
+  useEffect(() => {
+    if (!chromeSlot) loadedChromeSlotRef.current = null
+  }, [chromeSlot])
 
   useEffect(() => {
     const forms = siteForms.data

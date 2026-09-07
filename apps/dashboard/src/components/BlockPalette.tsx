@@ -32,6 +32,7 @@ type TemplateKit = { id: string; label: string; matches: (type: string) => boole
 
 /** Bespoke blocks introduced by complete templates. Other kits stay out of this site’s palette. */
 export const TEMPLATE_KITS: TemplateKit[] = [
+  { id: 'concourse', label: 'Concourse', matches: (type) => type.endsWith('.concourse') },
   { id: 'forma', label: 'Forma', matches: (type) => type.endsWith('.forma') },
   { id: 'tessera', label: 'Tessera', matches: (type) => type.includes('.tessera') },
   { id: 'axiom-north', label: 'Axiom North', matches: (type) => type.includes('.axiom') },

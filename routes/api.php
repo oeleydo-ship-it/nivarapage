@@ -301,6 +301,7 @@ Route::prefix('v1')->group(function () {
                 Route::post('/livechat/conversations/{livechatConversation}/takeover', [LivechatController::class, 'takeover']);
                 Route::post('/livechat/conversations/{livechatConversation}/close', [LivechatController::class, 'close']);
                 Route::post('/livechat/conversations/{livechatConversation}/reopen', [LivechatController::class, 'reopen']);
+                Route::post('/livechat/conversations/{livechatConversation}/client', [LivechatController::class, 'linkClient']);
                 Route::get('/sites/{site}/livechat', [LivechatController::class, 'widget']);
                 Route::put('/sites/{site}/livechat', [LivechatController::class, 'updateWidget']);
                 Route::get('/sites/{site}/livechat/knowledge', [LivechatController::class, 'knowledge']);
@@ -318,6 +319,7 @@ Route::prefix('v1')->group(function () {
                 Route::delete('/client-contacts/{clientContact}', [ClientController::class, 'destroyContact']);
                 Route::post('/clients/{client}/sites', [ClientController::class, 'attachSite']);
                 Route::delete('/clients/{client}/sites/{site}', [ClientController::class, 'detachSite']);
+                Route::get('/clients/{client}/conversations', [ClientController::class, 'conversations']);
 
                 Route::get('/blog-posts', [BlogPostController::class, 'index']);
                 Route::post('/blog-posts', [BlogPostController::class, 'store']);

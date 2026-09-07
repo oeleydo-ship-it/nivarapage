@@ -20,7 +20,7 @@ import {
   str,
   type Props,
 } from '../primitives'
-import { ctaFields, columnsField, field, gapField, headFields, icon, image, link, repeater, schema, select, text, toggle } from '../schema'
+import { ctaFields, columnsField, field, gapField, headFields, icon, image, lightboxField, link, repeater, schema, select, text, toggle } from '../schema'
 import { defineBlock } from '../types'
 
 const featureItems = [
@@ -109,6 +109,7 @@ function FeatureItem({
             src={item.image}
             alt={str(item.title)}
             ratio="wide"
+            lightbox={bool(props.lightbox, false)}
             edit={edit}
             path={[collection, index, 'image']}
           />
@@ -153,7 +154,7 @@ export const featuresCards = defineBlock({
     iconStyle: 'tint',
     items: featureItems.slice(0, 3),
   },
-  schema: schema(...headFields, featureFields, columnsField(1, 4), gapField, cardStyleField, iconStyleField, toggle('roundIcons', 'Round icons', 'design')),
+  schema: schema(...headFields, featureFields, columnsField(1, 4), gapField, cardStyleField, iconStyleField, toggle('roundIcons', 'Round icons', 'design'), lightboxField),
   component: (props) => (
     <SectionShell props={props} tone="default">
       <SectionHead props={props} defaultHeading="Features" />
@@ -185,7 +186,7 @@ export const featuresIcons = defineBlock({
     roundIcons: true,
     items: featureItems,
   },
-  schema: schema(...headFields, featureFields, columnsField(2, 4), gapField, iconStyleField, toggle('roundIcons', 'Round icons', 'design')),
+  schema: schema(...headFields, featureFields, columnsField(2, 4), gapField, iconStyleField, toggle('roundIcons', 'Round icons', 'design'), lightboxField),
   component: (props) => (
     <SectionShell props={props} tone="surface">
       <SectionHead props={props} defaultHeading="Features" />
@@ -216,7 +217,7 @@ export const featuresGrid = defineBlock({
     iconStyle: 'plain',
     items: featureItems,
   },
-  schema: schema(...headFields, featureFields, columnsField(2, 4), gapField, iconStyleField, toggle('dividers', 'Show dividers', 'design')),
+  schema: schema(...headFields, featureFields, columnsField(2, 4), gapField, iconStyleField, toggle('dividers', 'Show dividers', 'design'), lightboxField),
   component: (props) => {
     const list = items(props.items, featureItems)
     const dividers = bool(props.dividers, true)
@@ -283,6 +284,7 @@ export const featuresShowcase = defineBlock({
     toggle('reverse', 'Image on the left', 'layout'),
     text('stat', 'Stat value'),
     text('statLabel', 'Stat label'),
+    lightboxField,
   ),
   component: (props) => {
     const edit = editOf(props)
@@ -332,6 +334,7 @@ export const featuresShowcase = defineBlock({
             alt={str(props.imageAlt)}
             ratio={str(props.imageRatio, 'landscape')}
             zoom
+            lightbox={bool(props.lightbox, false)}
             edit={editOf(props)}
             path={['image']}
           />

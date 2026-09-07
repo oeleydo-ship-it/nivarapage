@@ -1,4 +1,5 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { EditableImage, EditableRich, EditableText, EDIT_PROP, editOf, type EditBinding, type EditPath } from './editable'
 import { Icon } from './icons'
 import { markdownBoldToHtml, sanitizeRichText } from './sanitize'
@@ -760,6 +761,7 @@ export function Media({
   className,
   style,
   zoom = false,
+  lightbox = false,
   children,
   edit,
   path,
@@ -770,19 +772,64 @@ export function Media({
   className?: string
   style?: CSSProperties
   zoom?: boolean
+  lightbox?: boolean
   children?: ReactNode
   edit?: EditBinding
   path?: EditPath
 }) {
   const url = str(src)
+  // In edit mode a click must open the image picker, not the viewer, so the
+  // lightbox is only wired up on the published/preview render.
+  const canOpen = lightbox && !!url && !edit
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open])
+
   return (
     <div
-      className={cx('ud-media-box', zoom && 'ud-media-box--zoom', className)}
+      className={cx('ud-media-box', zoom && 'ud-media-box--zoom', canOpen && 'ud-media-box--lightbox', className)}
       style={{ aspectRatio: RATIOS[ratio] || ratio, ...style }}
     >
-      {url ? <img src={url} alt={alt} loading="lazy" /> : null}
+      {url ? (
+        <img
+          src={url}
+          alt={alt}
+          loading="lazy"
+          {...(canOpen
+            ? {
+                role: 'button' as const,
+                tabIndex: 0,
+                onClick: () => setOpen(true),
+                onKeyDown: (event: ReactKeyboardEvent) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    setOpen(true)
+                  }
+                },
+              }
+            : {})}
+        />
+      ) : null}
       {edit && path ? <EditableImage edit={edit} path={path} current={url} /> : null}
       {children}
+      {canOpen && open
+        ? createPortal(
+            <div className="ud-lightbox" role="dialog" aria-modal="true" aria-label={alt || 'Image preview'} onClick={() => setOpen(false)}>
+              <button type="button" className="ud-lightbox__close" aria-label="Close" onClick={() => setOpen(false)}>
+                <Icon name="close" size={22} />
+              </button>
+              <img src={url} alt={alt} className="ud-lightbox__img" onClick={(event) => event.stopPropagation()} />
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   )
 }

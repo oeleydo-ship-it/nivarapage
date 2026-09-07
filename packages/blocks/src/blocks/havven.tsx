@@ -36,6 +36,7 @@ import {
   headingField,
   icon,
   image,
+  lightboxField,
   link,
   navLinksField,
   repeater,
@@ -579,10 +580,12 @@ export const processHavven = defineBlock({
     text('badgeLabel', 'Badge label'),
     headingField,
     repeater('items', 'Steps', [text('step', 'Step number'), text('title', 'Title'), textarea('text', 'Description'), image('image', 'Photo')], { itemLabel: 'Step' }),
+    lightboxField,
   ),
   component: function ProcessHavven(props) {
     const edit = editOf(props)
     const rows = items(props.items, [])
+    const lightbox = bool(props.lightbox, false)
     return (
       <SectionShell props={props} tone="surface" align="center" className="ud-hv ud-hv-process">
         <HvHead props={props} align="center" />
@@ -599,7 +602,7 @@ export const processHavven = defineBlock({
                 <hr className="ud-hv-step__rule" />
                 <SafeText value={item.text} className="ud-hv-lead" edit={edit} path={['items', index, 'text']} placeholder="Description" />
               </div>
-              <Media src={item.image} alt="" ratio="square" className="ud-hv-step__img" edit={edit} path={['items', index, 'image']} />
+              <Media src={item.image} alt="" ratio="square" className="ud-hv-step__img" lightbox={lightbox} edit={edit} path={['items', index, 'image']} />
             </div>
           ))}
         </div>

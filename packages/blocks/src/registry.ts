@@ -1,3 +1,4 @@
+import { concourseBlocks } from './blocks/concourse'
 import type { BlockCategory } from '@uidesired/types'
 import { quarryBlocks } from './blocks/quarry'
 import { formaBlocks } from './blocks/forma'
@@ -543,6 +544,7 @@ import {
 import type { BlockDefinition } from './types'
 
 const blocks = [
+  ...concourseBlocks,
   generatedNav,
   navbarSimple,
   navbarCentered,

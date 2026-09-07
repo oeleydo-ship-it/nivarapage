@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ClientContactResource;
 use App\Http\Resources\ClientResource;
+use App\Http\Resources\LivechatConversationResource;
 use App\Http\Resources\SiteResource;
 use App\Models\Client;
 use App\Models\ClientContact;
+use App\Models\LivechatConversation;
 use App\Models\Site;
 use App\Services\ClientService;
 use App\Support\CurrentWorkspace;
@@ -23,7 +25,7 @@ class ClientController extends Controller
         $clients = Client::query()
             ->where('workspace_id', $current->id())
             ->with(['contacts', 'sites.domains'])
-            ->withCount(['contacts', 'sites'])
+            ->withCount(['contacts', 'sites', 'livechatConversations'])
             ->when($request->query('status'), fn ($query, $status) => $query->where('status', $status))
             ->when($request->filled('q'), function ($query) use ($request) {
                 $term = '%'.trim((string) $request->query('q')).'%';
@@ -57,7 +59,20 @@ class ClientController extends Controller
     {
         $this->authorize('view', $client);
 
-        return new ClientResource($client->load(['contacts', 'sites.domains'])->loadCount(['contacts', 'sites']));
+        return new ClientResource($client->load(['contacts', 'sites.domains'])->loadCount(['contacts', 'sites', 'livechatConversations']));
+    }
+
+    public function conversations(Client $client)
+    {
+        $this->authorize('view', $client);
+
+        $conversations = LivechatConversation::query()
+            ->where('client_id', $client->id)
+            ->with(['site', 'assignee', 'messages' => fn ($q) => $q->orderByDesc('id')->limit(1)])
+            ->orderByDesc('last_message_at')
+            ->get();
+
+        return LivechatConversationResource::collection($conversations);
     }
 
     public function update(Request $request, Client $client, ClientService $clients)

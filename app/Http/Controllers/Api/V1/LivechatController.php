@@ -7,6 +7,7 @@ use App\Http\Resources\LivechatConversationResource;
 use App\Http\Resources\LivechatKnowledgeResource;
 use App\Http\Resources\LivechatMessageResource;
 use App\Http\Resources\LivechatWidgetResource;
+use App\Models\Client;
 use App\Models\LivechatConversation;
 use App\Models\LivechatKnowledge;
 use App\Models\LivechatWidget;
@@ -101,6 +102,20 @@ class LivechatController extends Controller
         }
 
         return new LivechatConversationResource($livechat->assign($livechatConversation, $user));
+    }
+
+    public function linkClient(Request $request, LivechatConversation $livechatConversation, LivechatService $livechat)
+    {
+        $this->authorize('update', $livechatConversation);
+        $data = $request->validate(['client_id' => ['nullable', 'integer']]);
+        $client = null;
+        if (! empty($data['client_id'])) {
+            $client = Client::query()
+                ->where('workspace_id', $livechatConversation->workspace_id)
+                ->findOrFail($data['client_id']);
+        }
+
+        return new LivechatConversationResource($livechat->linkClient($livechatConversation, $client));
     }
 
     public function takeover(Request $request, LivechatConversation $livechatConversation, LivechatService $livechat)

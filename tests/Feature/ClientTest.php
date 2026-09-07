@@ -84,6 +84,38 @@ it('adds contacts and attaches a site from the same workspace', function () {
         ->assertJsonPath('data.client_id', null);
 });
 
+it("lists a client's livechat conversations, including those auto-matched by the sync job", function () {
+    ['user' => $user, 'workspace' => $workspace] = tenant();
+    $headers = authHeaders($user, $workspace);
+
+    $siteId = $this->withHeaders($headers)
+        ->postJson('/api/v1/sites', ['name' => 'History', 'subdomain' => 'historychat'])
+        ->assertCreated()
+        ->json('data.id');
+    $key = $this->withHeaders($headers)
+        ->putJson('/api/v1/sites/'.$siteId.'/livechat', ['enabled' => true, 'ai_enabled' => false])
+        ->json('data.public_key');
+
+    $started = $this->postJson('/api/v1/public/livechat/'.$key.'/conversations', [
+        'name' => 'Robin Vance',
+        'email' => 'robin@history.test',
+        'phone' => '555-0100',
+    ])->assertCreated()->json('data');
+
+    $client = Client::query()->where('email', 'robin@history.test')->firstOrFail();
+
+    $this->withHeaders($headers)
+        ->getJson('/api/v1/clients/'.$client->id)
+        ->assertOk()
+        ->assertJsonPath('data.livechat_conversations_count', 1);
+
+    $this->withHeaders($headers)
+        ->getJson('/api/v1/clients/'.$client->id.'/conversations')
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $started['id'])
+        ->assertJsonPath('data.0.visitor_name', 'Robin Vance');
+});
+
 it('hides clients from another workspace and blocks viewers from writing', function () {
     ['user' => $owner, 'workspace' => $workspace] = tenant();
     ['user' => $other, 'workspace' => $otherWorkspace] = tenant();

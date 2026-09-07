@@ -499,6 +499,7 @@ export interface Client {
   extras?: Record<string, unknown>
   contacts_count?: number
   sites_count?: number
+  livechat_conversations_count?: number
   contacts?: ClientContact[]
   sites?: Site[]
   created_at?: string

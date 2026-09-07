@@ -1,3 +1,4 @@
+import { concourseCss } from './concourse-styles'
 /**
  * Stylesheet shared by the builder canvas and the published renderer.
  *
@@ -8,7 +9,7 @@
 import { productCss } from './product-styles'
 import { formaCss } from './forma-styles'
 
-export const blockCss = productCss + formaCss + `
+export const blockCss = concourseCss + productCss + formaCss + `
 [data-page-renderer]{container-name:udpage;position:relative;}
 /* Size containment on the page root makes descendant sticky headers stick to the page box, which scrolls away. Keep query containers on each section instead. */
 [data-page-renderer] > *{container-type:inline-size;container-name:udpage;}
@@ -108,6 +109,14 @@ export const blockCss = productCss + formaCss + `
 .ud-media-box > img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
 .ud-media-box--zoom > img{transition:transform .4s ease;}
 .ud-media-box--zoom:hover > img{transform:scale(1.05);}
+.ud-media-box--lightbox > img{cursor:zoom-in;}
+.ud-media-box--lightbox > img:focus-visible{outline:2px solid var(--color-primary,#2563eb);outline-offset:2px;}
+
+.ud-lightbox{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:5vh 5vw;background:rgba(8,10,16,.88);backdrop-filter:blur(2px);animation:ud-lightbox-in .18s ease;}
+.ud-lightbox__img{max-width:90vw;max-height:90vh;width:auto;height:auto;object-fit:contain;border-radius:8px;box-shadow:0 30px 80px -20px rgba(0,0,0,.6);cursor:default;}
+.ud-lightbox__close{position:absolute;top:20px;right:20px;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;cursor:pointer;transition:background .15s ease;}
+.ud-lightbox__close:hover{background:rgba(255,255,255,.22);}
+@keyframes ud-lightbox-in{from{opacity:0;}to{opacity:1;}}
 
 .ud-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600;background:color-mix(in srgb,var(--color-primary,#2563eb) 12%,transparent);color:var(--color-primary,#2563eb);}
 .ud-badge--solid{background:var(--color-primary,#2563eb);color:#fff;}

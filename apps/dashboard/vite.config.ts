@@ -32,6 +32,10 @@ export default defineConfig(({ command }) => ({
     port: Number(process.env.PORT) || 5174,
     strictPort: false,
     proxy: {
+      '^/templates/concourse/.*\\.(webp|mp4|woff2)$': {
+        target: process.env.VITE_API_PROXY || 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
       '/api': {
         // Prefer IPv4. On Windows, `localhost` often resolves to ::1 and can
         // hit a different process already bound on port 8000.

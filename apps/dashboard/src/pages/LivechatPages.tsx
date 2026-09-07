@@ -1,13 +1,13 @@
-import type { LivechatConversation, LivechatMessage } from '@uidesired/types'
+import type { Client, LivechatConversation, LivechatMessage } from '@uidesired/types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bot, MessageCircle, RotateCcw, Send, Settings2, UserRoundCheck } from 'lucide-react'
+import { Bot, Link2, Loader2, MessageCircle, RotateCcw, Send, Settings2, UserRoundCheck, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { LivechatNav } from '../components/LivechatNav'
-import { livechatApi, sitesApi } from '../lib/endpoints'
+import { clientsApi, livechatApi, sitesApi } from '../lib/endpoints'
 import { Badge, Button, EmptyState, Input, PageHeader, Select, type BadgeTone } from '../ui/primitives'
 
-function statusTone(status: string): BadgeTone {
+export function livechatStatusTone(status: string): BadgeTone {
   if (status === 'open') return 'info'
   if (status === 'waiting') return 'warning'
   if (status === 'assigned') return 'success'
@@ -197,7 +197,7 @@ export function LivechatInboxPage() {
                           {row.unread_count > 9 ? '9+' : row.unread_count}
                         </span>
                       ) : null}
-                      <Badge tone={statusTone(row.status)}>{row.status}</Badge>
+                      <Badge tone={livechatStatusTone(row.status)}>{row.status}</Badge>
                     </div>
                   </div>
                   <div className="mt-1 truncate text-xs text-zinc-500">{row.site?.name}</div>
@@ -347,14 +347,7 @@ export function LivechatInboxPage() {
                 <div>{locationOf(conversation)}</div>
                 <div className="text-xs text-zinc-500">{conversation.timezone}</div>
               </div>
-              {conversation.client ? (
-                <div>
-                  <div className="text-xs text-zinc-500">CRM</div>
-                  <Link className="text-blue-400 hover:underline" to={`/clients/${conversation.client.id}`}>
-                    {conversation.client.name}
-                  </Link>
-                </div>
-              ) : null}
+              <CrmSection conversation={conversation} />
               {conversation.page_url ? (
                 <div>
                   <div className="text-xs text-zinc-500">Page</div>
@@ -369,6 +362,134 @@ export function LivechatInboxPage() {
           )}
         </aside>
       </div>
+    </div>
+  )
+}
+
+/**
+ * The auto-match job links a client by email/phone as soon as a chat
+ * starts, but that can miss (no email captured) or land on the wrong
+ * record. This is the agent's correction path — search-and-link, unlink, or
+ * spin up a fresh client from the visitor's captured details.
+ */
+function CrmSection({ conversation }: { conversation: LivechatConversation }) {
+  const qc = useQueryClient()
+  const [searching, setSearching] = useState(false)
+  const [q, setQ] = useState('')
+  const [debouncedQ, setDebouncedQ] = useState('')
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQ(q.trim()), 250)
+    return () => window.clearTimeout(timer)
+  }, [q])
+
+  const results = useQuery({
+    queryKey: ['clients', 'search', debouncedQ],
+    queryFn: () => clientsApi.list({ q: debouncedQ }),
+    enabled: searching && debouncedQ.length > 1,
+  })
+
+  function applyUpdate(updated: LivechatConversation) {
+    qc.setQueryData(['livechat', 'conversation', String(conversation.id)], updated)
+    void qc.invalidateQueries({ queryKey: ['livechat', 'inbox'] })
+  }
+
+  const link = useMutation({
+    mutationFn: (clientId: number | null) => livechatApi.linkClient(conversation.id, clientId),
+    onSuccess: (updated) => {
+      applyUpdate(updated)
+      setSearching(false)
+      setQ('')
+    },
+  })
+
+  const createAndLink = useMutation({
+    mutationFn: async () => {
+      const client: Client = await clientsApi.create({
+        name: conversation.visitor_name || conversation.visitor_email || 'Livechat visitor',
+        email: conversation.visitor_email || undefined,
+        phone: conversation.visitor_phone || undefined,
+        source: 'Livechat',
+        tags: ['livechat'],
+      })
+      return livechatApi.linkClient(conversation.id, client.id)
+    },
+    onSuccess: (updated) => {
+      applyUpdate(updated)
+      void qc.invalidateQueries({ queryKey: ['clients'] })
+    },
+  })
+
+  const canCreate = Boolean(conversation.visitor_name || conversation.visitor_email)
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-xs text-zinc-500">
+        <span>CRM</span>
+        {conversation.client ? (
+          <button
+            type="button"
+            className="text-zinc-500 hover:text-red-400 disabled:opacity-50"
+            disabled={link.isPending}
+            onClick={() => link.mutate(null)}
+          >
+            Unlink
+          </button>
+        ) : null}
+      </div>
+
+      {conversation.client ? (
+        <Link className="text-blue-400 hover:underline" to={`/clients/${conversation.client.id}`}>
+          {conversation.client.name}
+        </Link>
+      ) : searching ? (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <Input
+              autoFocus
+              placeholder="Search clients…"
+              value={q}
+              onChange={(event) => setQ(event.target.value)}
+            />
+            <Button variant="ghost" aria-label="Cancel" onClick={() => setSearching(false)}>
+              <X size={14} />
+            </Button>
+          </div>
+          {results.data && results.data.length > 0 ? (
+            <ul className="max-h-40 space-y-0.5 overflow-y-auto rounded-lg border border-zinc-800">
+              {results.data.slice(0, 6).map((client) => (
+                <li key={client.id}>
+                  <button
+                    type="button"
+                    disabled={link.isPending}
+                    className="block w-full truncate px-2 py-1.5 text-left text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
+                    onClick={() => link.mutate(client.id)}
+                  >
+                    {client.name}
+                    {client.email ? <span className="text-zinc-500"> · {client.email}</span> : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : debouncedQ.length > 1 && !results.isPending ? (
+            <p className="text-xs text-zinc-500">No matches.</p>
+          ) : null}
+          <Button
+            variant="outline"
+            className="w-full"
+            disabled={createAndLink.isPending || !canCreate}
+            onClick={() => createAndLink.mutate()}
+          >
+            {createAndLink.isPending ? <Loader2 size={13} className="animate-spin" /> : null}
+            {createAndLink.isPending ? 'Creating…' : 'Create new client from this visitor'}
+          </Button>
+        </div>
+      ) : (
+        <Button variant="outline" onClick={() => setSearching(true)}>
+          <Link2 size={13} />
+          Link to CRM
+        </Button>
+      )}
     </div>
   )
 }

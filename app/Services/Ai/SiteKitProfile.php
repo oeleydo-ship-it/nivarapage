@@ -36,6 +36,7 @@ class SiteKitProfile
      * @var array<string, array{label: string, note: string}>
      */
     public const KIT_NOTES = [
+        'concourse' => ['label' => 'Concourse', 'note' => 'Enterprise finance platform. Cinematic video hero, navy and white sections, large light-weight type, restrained motion, image cards, interactive agent reports, and editorial customer stories.'],
         'forma' => [
             'label' => 'Forma',
             'note' => 'Independent design studio, editorial and warm. Bone-white and oat pages, terracotta accent, near-black serif headlines set tight, pill buttons, numbered sections and full-bleed project artwork.',

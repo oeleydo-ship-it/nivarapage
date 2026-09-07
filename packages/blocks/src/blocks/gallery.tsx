@@ -14,7 +14,7 @@ import {
   str,
   type Props,
 } from '../primitives'
-import { columnsField, descriptionField, field, gapField, headFields, headingField, image, link, repeater, schema, select, text, textarea, toggle } from '../schema'
+import { columnsField, descriptionField, field, gapField, headFields, headingField, image, lightboxField, link, repeater, schema, select, text, textarea, toggle } from '../schema'
 import { defineBlock } from '../types'
 
 const galleryRepeater = repeater(
@@ -42,6 +42,7 @@ function Tile({
   index,
   ratio,
   zoom,
+  lightbox = false,
   props,
   collection = 'images',
 }: {
@@ -49,6 +50,7 @@ function Tile({
   index: number
   ratio: string
   zoom: boolean
+  lightbox?: boolean
   props: Props
   collection?: string
 }) {
@@ -62,6 +64,7 @@ function Tile({
       alt={str(item.alt, caption)}
       ratio={ratio}
       zoom={zoom}
+      lightbox={lightbox && !url}
       edit={edit}
       path={[collection, index, srcKey]}
       style={
@@ -112,6 +115,7 @@ export const galleryGrid = defineBlock({
     columns: 3,
     imageRatio: 'landscape',
     zoomOnHover: true,
+    lightbox: true,
     images: placeholders,
   },
   schema: schema(
@@ -121,13 +125,22 @@ export const galleryGrid = defineBlock({
     gapField,
     select('imageRatio', 'Image ratio', [['landscape', '4:3'], ['square', '1:1'], ['portrait', '3:4'], ['wide', '16:9']], 'design'),
     toggle('zoomOnHover', 'Zoom on hover', 'design'),
+    lightboxField,
   ),
   component: (props) => (
     <SectionShell props={props} tone="default">
       <SectionHead props={props} defaultHeading="Gallery" />
       <Grid cols={num(props.columns, 3)} gap={num(props.gap, 14)}>
         {galleryItems(props).map((item, index) => (
-          <Tile key={index} item={item} index={index} ratio={str(props.imageRatio, 'landscape')} zoom={bool(props.zoomOnHover, true)} props={props} />
+          <Tile
+            key={index}
+            item={item}
+            index={index}
+            ratio={str(props.imageRatio, 'landscape')}
+            zoom={bool(props.zoomOnHover, true)}
+            lightbox={bool(props.lightbox, true)}
+            props={props}
+          />
         ))}
       </Grid>
     </SectionShell>
@@ -149,9 +162,10 @@ export const galleryMasonry = defineBlock({
     description: 'Recent launches across hospitality, services, and retail.',
     textAlign: 'center',
     columns: 3,
+    lightbox: true,
     images: placeholders,
   },
-  schema: schema(...headFields, galleryRepeater, columnsField(2, 4), gapField, toggle('zoomOnHover', 'Zoom on hover', 'design')),
+  schema: schema(...headFields, galleryRepeater, columnsField(2, 4), gapField, toggle('zoomOnHover', 'Zoom on hover', 'design'), lightboxField),
   component: (props) => {
     const list = galleryItems(props)
     const ratios = ['portrait', 'landscape', 'square', 'tall', 'wide', 'square']
@@ -160,7 +174,15 @@ export const galleryMasonry = defineBlock({
         <SectionHead props={props} defaultHeading="Gallery" />
         <Body className="ud-masonry" style={{ '--ud-mcols': String(num(props.columns, 3)), '--ud-gap': `${num(props.gap, 16)}px` } as CSSProperties}>
           {list.map((item, index) => (
-            <Tile key={index} item={item} index={index} ratio={ratios[index % ratios.length]} zoom={bool(props.zoomOnHover, true)} props={props} />
+            <Tile
+              key={index}
+              item={item}
+              index={index}
+              ratio={ratios[index % ratios.length]}
+              zoom={bool(props.zoomOnHover, true)}
+              lightbox={bool(props.lightbox, true)}
+              props={props}
+            />
           ))}
         </Body>
       </SectionShell>
@@ -184,19 +206,29 @@ export const galleryCarousel = defineBlock({
     imageRatio: 'wide',
     images: placeholders,
     tone: 'surface',
+    lightbox: true,
   },
   schema: schema(
     ...headFields,
     galleryRepeater,
     select('imageRatio', 'Image ratio', [['wide', '16:9'], ['landscape', '4:3'], ['square', '1:1']], 'design'),
     gapField,
+    lightboxField,
   ),
   component: (props) => (
     <SectionShell props={props} tone="surface">
       <SectionHead props={props} defaultHeading="Gallery" />
       <Body className="ud-scroller" style={{ gap: num(props.gap, 20) }}>
         {galleryItems(props).map((item, index) => (
-          <Tile key={index} item={item} index={index} ratio={str(props.imageRatio, 'wide')} zoom={false} props={props} />
+          <Tile
+            key={index}
+            item={item}
+            index={index}
+            ratio={str(props.imageRatio, 'wide')}
+            zoom={false}
+            lightbox={bool(props.lightbox, true)}
+            props={props}
+          />
         ))}
       </Body>
     </SectionShell>

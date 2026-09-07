@@ -274,6 +274,75 @@ it('rejects chats when the widget is disabled', function () {
     ])->assertForbidden();
 });
 
+it('lets an agent manually link and unlink a conversation to a CRM client', function () {
+    ['user' => $user, 'workspace' => $workspace] = tenant();
+    $headers = authHeaders($user, $workspace);
+    $siteId = $this->withHeaders($headers)
+        ->postJson('/api/v1/sites', ['name' => 'Linkup', 'subdomain' => 'linkupchat'])
+        ->assertCreated()
+        ->json('data.id');
+    $key = $this->withHeaders($headers)
+        ->putJson('/api/v1/sites/'.$siteId.'/livechat', ['enabled' => true, 'ai_enabled' => false, 'require_contact' => false])
+        ->json('data.public_key');
+
+    $started = $this->postJson('/api/v1/public/livechat/'.$key.'/conversations', [])
+        ->assertCreated()
+        ->json('data');
+
+    $client = $this->withHeaders($headers)
+        ->postJson('/api/v1/clients', ['name' => 'Manual Match Co'])
+        ->assertCreated()
+        ->json('data');
+
+    $linked = $this->withHeaders($headers)
+        ->postJson('/api/v1/livechat/conversations/'.$started['id'].'/client', ['client_id' => $client['id']])
+        ->assertOk()
+        ->json('data');
+
+    expect($linked['client']['id'])->toBe($client['id']);
+    expect(collect($linked['messages'])->pluck('meta.kind'))->toContain('client_linked');
+
+    $this->withHeaders($headers)
+        ->getJson('/api/v1/clients/'.$client['id'].'/conversations')
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $started['id']);
+
+    $unlinked = $this->withHeaders($headers)
+        ->postJson('/api/v1/livechat/conversations/'.$started['id'].'/client', ['client_id' => null])
+        ->assertOk()
+        ->json('data');
+
+    expect($unlinked['client'])->toBeNull();
+    expect(collect($unlinked['messages'])->pluck('meta.kind'))->toContain('client_unlinked');
+});
+
+it('refuses to link a conversation to a client from another workspace', function () {
+    ['user' => $user, 'workspace' => $workspace] = tenant();
+    $headers = authHeaders($user, $workspace);
+    $siteId = $this->withHeaders($headers)
+        ->postJson('/api/v1/sites', ['name' => 'Cross', 'subdomain' => 'crosschat'])
+        ->assertCreated()
+        ->json('data.id');
+    $key = $this->withHeaders($headers)
+        ->putJson('/api/v1/sites/'.$siteId.'/livechat', ['enabled' => true, 'ai_enabled' => false, 'require_contact' => false])
+        ->json('data.public_key');
+    $started = $this->postJson('/api/v1/public/livechat/'.$key.'/conversations', [])
+        ->assertCreated()
+        ->json('data');
+
+    ['user' => $other, 'workspace' => $otherWorkspace] = tenant();
+    $otherClient = $this->withHeaders(authHeaders($other, $otherWorkspace))
+        ->postJson('/api/v1/clients', ['name' => 'Other Workspace Co'])
+        ->assertCreated()
+        ->json('data');
+
+    // authHeaders() switches Sanctum::actingAs() as a side effect, so acting
+    // as the original user has to be restored before the next request.
+    $this->withHeaders(authHeaders($user, $workspace))
+        ->postJson('/api/v1/livechat/conversations/'.$started['id'].'/client', ['client_id' => $otherClient['id']])
+        ->assertNotFound();
+});
+
 it('does not leak conversations across workspaces', function () {
     ['user' => $user, 'workspace' => $workspace] = tenant();
     $headers = authHeaders($user, $workspace);
